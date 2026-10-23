@@ -61,21 +61,25 @@ Themes: dark (default), light, system. The video area and controls over video ar
 apps/desktop/          — Tauri app (@kino/desktop)
   src/                 — React renderer, Feature-Sliced Design:
     app/               — entry (main.tsx), App (screen switch, drop overlay), startup sync and notices, styles
-    pages/             — home (hero + history + unfinished; Welcome when empty), history, player
-                         (+ useVideoLayer, useSubtitleLift, ResumeBanner), placeholder
-    widgets/           — app-title-bar, player-chrome, continue-hero, continue-grid, history-list
-    features/          — open-video, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys
-    entities/          — playback (store mirrored from the core, actions, OSD, resume, track labels),
-                         library (continue/history store, labels, day grouping, Thumb, ContinueCard, HistoryRow), app-window
+    pages/             — home (hero + history + unfinished + series; Welcome when empty), history, series (list + folders),
+                         show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner), placeholder
+    widgets/           — app-title-bar, player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
+                         history-list, series-grid, series-hero, episode-list
+    features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys
+    entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
+                         library (store: continue/history/series/folders, useSeriesDetail, labels, day grouping, Thumb,
+                         ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
                          window, app), lib/ (store, router, media, time), i18n/ (ru, en: common, player, library)
     test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge), track and library fixtures
   src-tauri/           — Rust core:
     src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
-    src/library/       — Library (positions, viewings, continue watching, history, track memory per series),
-                         episode (S02E05 / 2x05 / «Серия 5» → series key), track_pref (match by language and title), commands
+    src/library/       — Library (folders, positions, viewings, continue watching, history, series, settings, track memory),
+                         episode (S02E05 / 2x05 / «Серия 5» → series key and folder), scan (video files, natural order),
+                         series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title), commands
     src/player/        — Player (libmpv), video_host (child HWND), events (mpv event thread → player://state,
-                         player://position, player://notice; registers files, applies track memory), session (saves the
+                         player://position, player://notice, player://autoplay; registers files, applies track memory, scans
+                         the series folder of an opened episode, autoplays the next episode of the season), session (saves the
                          position, takes frames), state (snapshot, pure + tested), tracks (track-list parsing), commands
     later              — scanner, torrent (librqbit, archive, categories), trackers (isolated webview,
                          download/magnet interception), tray

@@ -4,9 +4,12 @@ import { HistoryPage } from '../pages/history'
 import { HomePage } from '../pages/home'
 import { PlaceholderPage } from '../pages/placeholder'
 import { PlayerPage } from '../pages/player'
-import { useScreen } from '../shared/lib/router'
+import { SeriesPage } from '../pages/series'
+import { ShowPage } from '../pages/show'
+import { useScreen, type Screen } from '../shared/lib/router'
 import { AppTitleBar } from '../widgets/app-title-bar'
 import { useAppStartup } from './model/useAppStartup'
+import { useCoreNotices } from './model/useCoreNotices'
 
 function DropOverlay() {
   const { t } = useTranslation()
@@ -20,9 +23,25 @@ function DropOverlay() {
   )
 }
 
+function Page({ screen }: { screen: Exclude<Screen, 'player'> }) {
+  switch (screen) {
+    case 'home':
+      return <HomePage />
+    case 'history':
+      return <HistoryPage />
+    case 'series':
+      return <SeriesPage />
+    case 'show':
+      return <ShowPage />
+    default:
+      return <PlaceholderPage screen={screen} />
+  }
+}
+
 export function App() {
   const screen = useScreen()
   const { dropping } = useAppStartup()
+  useCoreNotices()
 
   return (
     <>
@@ -32,7 +51,7 @@ export function App() {
         <div className="flex h-full flex-col bg-bg">
           <AppTitleBar />
           <main className="min-h-0 flex-1">
-            {screen === 'home' ? <HomePage /> : screen === 'history' ? <HistoryPage /> : <PlaceholderPage screen={screen} />}
+            <Page screen={screen} />
           </main>
         </div>
       )}

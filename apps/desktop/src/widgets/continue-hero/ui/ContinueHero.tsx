@@ -15,7 +15,7 @@ export function ContinueHero({ file }: { file: LibraryFile }) {
 
   return (
     <section className="relative isolate flex min-h-[392px] min-w-0 flex-[999_1_600px] flex-col justify-end overflow-hidden rounded-xl">
-      <Thumb file={file} className="absolute inset-0 -z-20" />
+      {file.thumb ? <Thumb file={file} className="absolute inset-0 -z-20" /> : <div className="absolute inset-0 -z-20 bg-panel" />}
       <div className="absolute inset-0 -z-10 bg-linear-to-b from-transparent from-25% via-bg/80 via-70% to-bg" />
       <div className="flex flex-col gap-3.5 px-8 pt-7 pb-[30px]">
         <div className="flex items-center gap-2.5 text-sm text-fg-2">
@@ -38,7 +38,12 @@ export function ContinueHero({ file }: { file: LibraryFile }) {
         </div>
         <div className="mt-1.5 flex flex-wrap gap-2.5">
           <Button variant="primary" size="lg" icon={<IconPlay size={16} />} isDisabled={!file.exists} onPress={() => void openFile(file)}>
-            {t('continueFrom', { time: formatTime(file.position) })}
+            {/* The next episode of a series is offered from its start */}
+            {file.position >= 10
+              ? t('continueFrom', { time: formatTime(file.position) })
+              : file.episode != null
+                ? t('playEpisode', { episode: file.episode })
+                : t('continue')}
           </Button>
           {!file.exists ? <span className="self-center text-sm text-danger">{t('missing')}</span> : null}
         </div>

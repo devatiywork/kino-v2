@@ -49,6 +49,22 @@ const MIGRATIONS: &[&str] = &[
         updated_at     INTEGER NOT NULL
     );
     "#,
+    // 2 — library folders (SPEC 3.3, 6), the series folder of each file, app settings
+    r#"
+    CREATE TABLE player_folders (
+        id       INTEGER PRIMARY KEY,
+        path     TEXT    NOT NULL UNIQUE,
+        added_at INTEGER NOT NULL
+    );
+    ALTER TABLE player_files ADD COLUMN folder_id INTEGER REFERENCES player_folders (id) ON DELETE SET NULL;
+    ALTER TABLE player_files ADD COLUMN series_dir TEXT;
+    CREATE INDEX player_files_folder ON player_files (folder_id);
+
+    CREATE TABLE app_settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
@@ -93,6 +109,6 @@ mod tests {
         let tables: i64 = conn
             .query_row("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'player_%'", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(tables, 3);
+        assert_eq!(tables, 4);
     }
 }

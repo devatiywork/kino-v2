@@ -2,6 +2,7 @@
 //! the library learns about opened files, positions and track memory from here
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -23,6 +24,16 @@ pub const STATE_EVENT: &str = "player://state";
 pub const POSITION_EVENT: &str = "player://position";
 /// Something the user should know: a remembered track is missing in this file
 pub const NOTICE_EVENT: &str = "player://notice";
+/// The next episode started by itself
+pub const AUTOPLAY_EVENT: &str = "player://autoplay";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Autoplay {
+    pub resumed_from: Option<f64>,
+    pub season: Option<u32>,
+    pub episode: Option<u32>,
+}
 
 /// time-pos changes every frame; the renderer needs ~10 updates a second
 const POSITION_INTERVAL: Duration = Duration::from_millis(100);
@@ -45,6 +56,7 @@ pub struct Context {
     pub snapshot: Arc<Mutex<PlayerSnapshot>>,
     pub session: Arc<Mutex<Option<Session>>>,
     pub library: Arc<Library>,
+    pub autoplay: Arc<AtomicBool>,
 }
 
 pub fn spawn(ctx: Context) -> libmpv2::Result<()> {
@@ -105,6 +117,9 @@ fn run(ctx: &Context) {
                         if (name == "pause" && state.paused) || (name == "eof-reached" && state.eof) {
                             save_now(ctx, name == "pause");
                         }
+                        if name == "eof-reached" && state.eof {
+                            autoplay_next(ctx);
+                        }
                     }
                     Change::Ignored => {}
                 }
@@ -139,7 +154,10 @@ fn file_loaded(ctx: &Context) {
         let mut s = lock(&ctx.snapshot);
         s.path = Some(path.clone());
         s.title = Some(info.title.clone());
+        s.series_key = info.series.as_ref().map(|(key, _)| key.clone());
         s.series_title = info.series.as_ref().map(|(_, title)| title.clone());
+        s.has_prev = false;
+        s.has_next = false;
         s.season = info.season;
         s.episode = info.episode;
         s.duration = duration;
@@ -157,8 +175,63 @@ fn file_loaded(ctx: &Context) {
             }
             *session::lock(&ctx.session) = Some(Session::new(file.id, file.series_key));
             emit(&ctx.app, CHANGED_EVENT, ());
+            update_neighbors(&ctx.app, &ctx.library, &ctx.snapshot, file.id);
+            // The other episodes: the series folder is scanned once per run, off this thread
+            if let Some(dir) = info.series_dir.filter(|d| ctx.library.needs_scan(d)) {
+                let (app, library, snapshot, session) = (ctx.app.clone(), ctx.library.clone(), ctx.snapshot.clone(), ctx.session.clone());
+                let spawned = thread::Builder::new().name("series-scan".into()).spawn(move || {
+                    if let Err(e) = library.scan_dir(Path::new(&dir), None) {
+                        return eprintln!("[library] scan {dir}: {e}");
+                    }
+                    emit(&app, CHANGED_EVENT, ());
+                    let current = session::lock(&session).as_ref().map(|s| s.file_id);
+                    if current == Some(file.id) {
+                        update_neighbors(&app, &library, &snapshot, file.id);
+                    }
+                });
+                if let Err(e) = spawned {
+                    eprintln!("[library] scan thread: {e}");
+                }
+            }
         }
         Err(e) => eprintln!("[library] register: {e}"),
+    }
+}
+
+/// Whether there are episodes before and after the open one (N / P, the buttons)
+fn update_neighbors(app: &AppHandle, library: &Library, snapshot: &Mutex<PlayerSnapshot>, file_id: i64) {
+    let exists = |step| match library.neighbor(file_id, step, false) {
+        Ok(found) => found.is_some(),
+        Err(e) => {
+            eprintln!("[library] neighbor: {e}");
+            false
+        }
+    };
+    let (has_prev, has_next) = (exists(-1), exists(1));
+    let state = {
+        let mut s = lock(snapshot);
+        s.has_prev = has_prev;
+        s.has_next = has_next;
+        s.clone()
+    };
+    emit(app, STATE_EVENT, state);
+}
+
+/// SPEC 3.3: the episode ended — the next one of the same season starts; at the end of the
+/// season playback stops on the last frame
+fn autoplay_next(ctx: &Context) {
+    if !ctx.autoplay.load(Ordering::Relaxed) {
+        return;
+    }
+    let Some(file_id) = session::lock(&ctx.session).as_ref().map(|s| s.file_id) else { return };
+    let next = match ctx.library.neighbor(file_id, 1, true) {
+        Ok(Some(next)) => next,
+        Ok(None) => return,
+        Err(e) => return eprintln!("[library] next episode: {e}"),
+    };
+    match super::load(&ctx.client, &ctx.library, &next.path) {
+        Ok(opened) => emit(&ctx.app, AUTOPLAY_EVENT, Autoplay { resumed_from: opened.resumed_from, season: next.season, episode: next.episode }),
+        Err(e) => eprintln!("[player] autoplay: {e}"),
     }
 }
 

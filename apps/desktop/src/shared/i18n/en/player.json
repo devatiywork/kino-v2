@@ -12,6 +12,12 @@
   "fullscreen": "Fullscreen",
   "exitFullscreen": "Exit fullscreen",
   "speed": "Speed",
+  "episodes": "Episodes",
+  "closeEpisodes": "Close the episode list",
+  "prevEpisode": "Previous episode",
+  "nextEpisode": "Next episode",
+  "autoplay": "Autoplay",
+  "autoplayHint": "The next episode of the season starts by itself",
   "tracks": {
     "button": "Audio and subtitles",
     "audio": "Audio",
@@ -28,7 +34,13 @@
     "subtitlesOn": "Subtitles on",
     "subtitlesOff": "Subtitles off",
     "audio": "Audio: {{name}}",
-    "subtitle": "Subtitles: {{name}}"
+    "subtitle": "Subtitles: {{name}}",
+    "episode": "Episode {{episode}}",
+    "seasonEpisode": "Season {{season}} · Episode {{episode}}",
+    "noNext": "This is the last episode",
+    "noPrev": "This is the first episode",
+    "autoplayOn": "Autoplay on",
+    "autoplayOff": "Autoplay off"
   },
   "loading": "Loading…"
 }

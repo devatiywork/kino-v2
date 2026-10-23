@@ -1,7 +1,18 @@
-import { Button, cn, IconBack10, IconButton, IconForward10, IconPause, IconPlay } from '@kino/ui'
+import {
+  Button,
+  cn,
+  IconBack10,
+  IconButton,
+  IconEpisodes,
+  IconForward10,
+  IconNext,
+  IconPause,
+  IconPlay,
+  IconPrevious,
+} from '@kino/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SEEK_STEP, seekBy, togglePause, usePlayback } from '../../../entities/playback'
+import { openNeighborEpisode, SEEK_STEP, seekBy, togglePause, usePlayback } from '../../../entities/playback'
 import { FullscreenButton } from '../../../features/fullscreen'
 import { SpeedButton } from '../../../features/playback-speed'
 import { SeekBar } from '../../../features/seek'
@@ -26,16 +37,28 @@ function Times() {
   )
 }
 
-/** Bottom controls over the video: progress, times, playback and tracks */
-export function PlayerBottomBar({ hidden, onMenuOpenChange }: { hidden: boolean; onMenuOpenChange: (open: boolean) => void }) {
+interface PlayerBottomBarProps {
+  hidden: boolean
+  onMenuOpenChange: (open: boolean) => void
+  episodesOpen: boolean
+  onToggleEpisodes: () => void
+}
+
+/** Bottom controls over the video: progress, times, playback, episodes and tracks */
+export function PlayerBottomBar({ hidden, onMenuOpenChange, episodesOpen, onToggleEpisodes }: PlayerBottomBarProps) {
   const { t } = useTranslation('player')
   const paused = usePlayback((s) => s.paused)
+  const isEpisode = usePlayback((s) => s.seriesKey != null)
+  const hasPrev = usePlayback((s) => s.hasPrev)
+  const hasNext = usePlayback((s) => s.hasNext)
 
   return (
     <div
       className={cn(
-        'absolute inset-x-0 bottom-0 z-10 bg-linear-to-t from-scrim via-scrim/45 to-transparent px-5.5 pt-[90px] pb-4',
-        'transition-[opacity,translate] duration-(--duration-base) ease-out',
+        'absolute bottom-0 left-0 z-10 bg-linear-to-t from-scrim via-scrim/45 to-transparent px-5.5 pt-[90px] pb-4',
+        'transition-[opacity,translate,right] duration-(--duration-base) ease-out',
+        // the episode panel takes the right side
+        episodesOpen ? 'right-[360px]' : 'right-0',
         hidden && 'pointer-events-none translate-y-3.5 opacity-0 duration-(--duration-slow) ease-in',
       )}
     >
@@ -46,18 +69,33 @@ export function PlayerBottomBar({ hidden, onMenuOpenChange }: { hidden: boolean;
           <IconButton label={paused ? t('play') : t('pause')} variant="solid" size="xl" shortcut={t('spaceKey')} onPress={togglePause}>
             {paused ? <IconPlay size={22} /> : <IconPause size={22} />}
           </IconButton>
+          {isEpisode ? (
+            <IconButton label={t('prevEpisode')} variant="overlay" size="lg" shortcut="P" isDisabled={!hasPrev} onPress={() => void openNeighborEpisode(-1)}>
+              <IconPrevious size={22} />
+            </IconButton>
+          ) : null}
           <IconButton label={t('back10')} variant="overlay" size="lg" shortcut="←" onPress={() => seekBy(-SEEK_STEP)}>
             <IconBack10 size={23} />
           </IconButton>
           <IconButton label={t('forward10')} variant="overlay" size="lg" shortcut="→" onPress={() => seekBy(SEEK_STEP)}>
             <IconForward10 size={23} />
           </IconButton>
+          {isEpisode ? (
+            <IconButton label={t('nextEpisode')} variant="overlay" size="lg" shortcut="N" isDisabled={!hasNext} onPress={() => void openNeighborEpisode(1)}>
+              <IconNext size={22} />
+            </IconButton>
+          ) : null}
           <VolumeControl />
         </div>
         <span className="flex-1" />
         <div className="flex items-center gap-0.5">
           <TracksButton onOpenChange={onMenuOpenChange} />
           <SpeedButton />
+          {isEpisode ? (
+            <Button variant="ghost" size="md" icon={<IconEpisodes size={20} />} className={cn('text-fg', episodesOpen && 'text-accent')} onPress={onToggleEpisodes}>
+              {t('episodes')}
+            </Button>
+          ) : null}
           <FullscreenButton />
         </div>
       </div>

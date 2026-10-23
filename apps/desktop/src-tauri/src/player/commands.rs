@@ -16,6 +16,17 @@ pub fn player_open(player: State<'_, Player>, path: String) -> AppResult<OpenRes
     player.open(&path)
 }
 
+/// Previous (−1) or next (+1) episode of the open one; None — there is none
+#[tauri::command]
+pub fn player_open_neighbor(player: State<'_, Player>, step: i32) -> AppResult<Option<OpenResult>> {
+    player.open_neighbor(step)
+}
+
+#[tauri::command]
+pub fn player_set_autoplay(player: State<'_, Player>, enabled: bool) -> AppResult<()> {
+    player.set_autoplay(enabled)
+}
+
 #[tauri::command]
 pub fn player_stop(player: State<'_, Player>) -> AppResult<()> {
     player.stop()
@@ -59,6 +70,12 @@ pub fn player_set_subtitle(player: State<'_, Player>, id: Option<i64>) -> AppRes
 #[tauri::command]
 pub fn player_set_subtitles_visible(player: State<'_, Player>, visible: bool) -> AppResult<()> {
     player.set_subtitles_visible(visible)
+}
+
+/// The episode panel covers the right side: the video and its subtitles move left of it
+#[tauri::command]
+pub fn player_set_right_margin(player: State<'_, Player>, ratio: f64) -> AppResult<()> {
+    player.set_right_margin(ratio)
 }
 
 #[tauri::command]

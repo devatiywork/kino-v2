@@ -18,6 +18,12 @@ export const appIpc = {
       else handler('over', p.type === 'enter' ? p.paths : [])
     }),
 
+  /** System folder picker; null if cancelled */
+  pickFolder: async (title: string): Promise<string | null> => {
+    const path = await open({ title, multiple: false, directory: true })
+    return typeof path === 'string' ? path : null
+  },
+
   /** System file picker filtered to video; null if cancelled */
   pickVideoFile: async (title: string, filterName: string): Promise<string | null> => {
     const path = await open({ title, multiple: false, directory: false, filters: [{ name: filterName, extensions: [...VIDEO_EXTENSIONS] }] })

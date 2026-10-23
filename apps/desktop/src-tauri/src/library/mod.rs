@@ -1,8 +1,10 @@
-//! Player's library in SQLite (SPEC 3.2, 7): files and their positions, viewing history,
-//! track memory per series. Knows nothing about torrents.
+//! Player's library in SQLite (SPEC 3.2, 3.3, 7): library folders, files and their positions,
+//! viewing history, series, track memory per series. Knows nothing about torrents.
 
 pub mod commands;
 pub mod episode;
+pub mod scan;
+pub mod series;
 pub mod track_pref;
 
 use std::path::{Path, PathBuf};
@@ -14,7 +16,8 @@ use serde::Serialize;
 
 use crate::db;
 use crate::player::tracks::TrackKind;
-use episode::FileInfo;
+use episode::{describe, FileInfo};
+use series::{Episode, Season, SeriesSummary};
 use track_pref::TrackPref;
 
 /// An episode counts as watched after 90% (SPEC 3.2)
@@ -88,9 +91,52 @@ pub struct FileRef {
     pub series_key: Option<String>,
 }
 
+/// A folder the library scans for series (SPEC 6 «папки сериалов»)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Folder {
+    pub id: i64,
+    pub path: String,
+    pub exists: bool,
+}
+
+/// What is remembered for a series, as the series page shows it
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum PrefLabel {
+    Track { label: String },
+    Off,
+}
+
+impl PrefLabel {
+    fn of(pref: &TrackPref) -> Self {
+        match pref {
+            TrackPref::Off => PrefLabel::Off,
+            TrackPref::Track { lang, title, .. } => {
+                PrefLabel::Track { label: title.clone().or_else(|| lang.clone()).unwrap_or_else(|| "—".into()) }
+            }
+        }
+    }
+}
+
+/// The series page (SPEC 3.3): seasons with episodes, what to watch, the track memory
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SeriesDetail {
+    pub key: String,
+    pub title: String,
+    pub dir: Option<String>,
+    pub seasons: Vec<Season>,
+    pub next_up: Option<i64>,
+    pub audio: Option<PrefLabel>,
+    pub subtitles: Option<PrefLabel>,
+}
+
 pub struct Library {
     conn: Mutex<Connection>,
     thumbs: PathBuf,
+    /// Series folders already scanned in this run (opening an episode scans its folder once)
+    scanned: Mutex<std::collections::HashSet<String>>,
 }
 
 const FILE_COLUMNS: &str =
@@ -98,12 +144,37 @@ const FILE_COLUMNS: &str =
 
 impl Library {
     pub fn open(db_path: &Path, thumbs: PathBuf) -> rusqlite::Result<Self> {
-        Ok(Self { conn: Mutex::new(db::open(db_path)?), thumbs })
+        Ok(Self { conn: Mutex::new(db::open(db_path)?), thumbs, scanned: Mutex::default() })
     }
 
     #[cfg(test)]
     pub fn in_memory() -> Self {
-        Self { conn: Mutex::new(db::open_in_memory().unwrap()), thumbs: std::env::temp_dir().join("kino-test-thumbs") }
+        Self {
+            conn: Mutex::new(db::open_in_memory().unwrap()),
+            thumbs: std::env::temp_dir().join("kino-test-thumbs"),
+            scanned: Mutex::default(),
+        }
+    }
+
+    /// Scan a folder for episodes; `folder_id` — when it is a library folder
+    pub fn scan_dir(&self, dir: &Path, folder_id: Option<i64>) -> rusqlite::Result<Vec<String>> {
+        self.scanned.lock().unwrap_or_else(|p| p.into_inner()).insert(dir.to_string_lossy().to_lowercase());
+        self.add_scanned(&scan::video_files(dir), folder_id)
+    }
+
+    /// The series folder of an opened episode has not been scanned in this run yet
+    pub fn needs_scan(&self, dir: &str) -> bool {
+        !self.scanned.lock().unwrap_or_else(|p| p.into_inner()).contains(&dir.to_lowercase())
+    }
+
+    /// Rescan every library folder (start of the app): new episodes appear, nothing is removed
+    pub fn rescan_folders(&self) -> rusqlite::Result<()> {
+        for folder in self.folders()? {
+            if folder.exists {
+                self.scan_dir(Path::new(&folder.path), Some(folder.id))?;
+            }
+        }
+        Ok(())
     }
 
     fn conn(&self) -> MutexGuard<'_, Connection> {
@@ -142,17 +213,142 @@ impl Library {
             None => (None, None),
         };
         let id = self.conn().query_row(
-            "INSERT INTO player_files (path, title, series_key, series_title, season, episode, duration, last_played_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            "INSERT INTO player_files (path, title, series_key, series_title, season, episode, series_dir, duration, last_played_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
              ON CONFLICT (path) DO UPDATE SET
                 title = excluded.title, series_key = excluded.series_key, series_title = excluded.series_title,
-                season = excluded.season, episode = excluded.episode,
+                season = excluded.season, episode = excluded.episode, series_dir = excluded.series_dir,
                 duration = COALESCE(excluded.duration, duration), last_played_at = excluded.last_played_at
              RETURNING id",
-            params![path, info.title, series_key, series_title, info.season, info.episode, duration, now_ms()],
+            params![path, info.title, series_key, series_title, info.season, info.episode, info.series_dir, duration, now_ms()],
             |r| r.get(0),
         )?;
         Ok(FileRef { id, series_key: series_key.map(str::to_owned) })
+    }
+
+    /// Episodes found on disk: new ones are added, known ones keep their position and history.
+    /// Films (no episode mark) are not part of the series library. Returns the series keys seen
+    pub fn add_scanned(&self, files: &[std::path::PathBuf], folder_id: Option<i64>) -> rusqlite::Result<Vec<String>> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        let mut keys: Vec<String> = Vec::new();
+        {
+            let mut stmt = tx.prepare(
+                "INSERT INTO player_files (path, title, series_key, series_title, season, episode, series_dir, folder_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                 ON CONFLICT (path) DO UPDATE SET
+                    title = excluded.title, series_key = excluded.series_key, series_title = excluded.series_title,
+                    season = excluded.season, episode = excluded.episode, series_dir = excluded.series_dir,
+                    folder_id = COALESCE(excluded.folder_id, folder_id)",
+            )?;
+            for path in files {
+                let info = describe(path);
+                let Some((key, title)) = &info.series else { continue };
+                stmt.execute(params![path.to_string_lossy(), info.title, key, title, info.season, info.episode, info.series_dir, folder_id])?;
+                if !keys.contains(key) {
+                    keys.push(key.clone());
+                }
+            }
+        }
+        tx.commit()?;
+        Ok(keys)
+    }
+
+    pub fn add_folder(&self, path: &str) -> rusqlite::Result<Folder> {
+        let id: i64 = self.conn().query_row(
+            "INSERT INTO player_folders (path, added_at) VALUES (?1, ?2)
+             ON CONFLICT (path) DO UPDATE SET path = excluded.path RETURNING id",
+            params![path, now_ms()],
+            |r| r.get(0),
+        )?;
+        Ok(Folder { id, path: path.to_string(), exists: Path::new(path).is_dir() })
+    }
+
+    /// The folder leaves the library; its files keep their history, unplayed series disappear
+    pub fn remove_folder(&self, id: i64) -> rusqlite::Result<()> {
+        let conn = self.conn();
+        conn.execute("UPDATE player_files SET folder_id = NULL WHERE folder_id = ?1", [id])?;
+        conn.execute("DELETE FROM player_folders WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    pub fn folders(&self) -> rusqlite::Result<Vec<Folder>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare("SELECT id, path FROM player_folders ORDER BY added_at")?;
+        let rows = stmt.query_map([], |r| {
+            let path: String = r.get(1)?;
+            Ok(Folder { id: r.get(0)?, exists: Path::new(&path).is_dir(), path })
+        })?;
+        rows.collect()
+    }
+
+    /// Files of all series (or of one), with what grouping into series needs
+    fn episodes(&self, key: Option<&str>) -> rusqlite::Result<Vec<Episode>> {
+        let conn = self.conn();
+        let sql = format!(
+            "SELECT {FILE_COLUMNS}, f.series_key, f.series_title, f.series_dir, f.folder_id
+             FROM player_files f WHERE f.series_key IS NOT NULL AND (?1 IS NULL OR f.series_key = ?1)"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map([key], |r| {
+            Ok(Episode {
+                file: self.file_from_row(r)?,
+                series_key: r.get(11)?,
+                series_title: r.get::<_, Option<String>>(12)?.unwrap_or_default(),
+                series_dir: r.get(13)?,
+                in_folder: r.get::<_, Option<i64>>(14)?.is_some(),
+            })
+        })?;
+        rows.collect()
+    }
+
+    pub fn series_list(&self) -> rusqlite::Result<Vec<SeriesSummary>> {
+        Ok(series::summaries(self.episodes(None)?))
+    }
+
+    pub fn series_detail(&self, key: &str) -> rusqlite::Result<Option<SeriesDetail>> {
+        let episodes = self.episodes(Some(key))?;
+        let Some(first) = episodes.first() else { return Ok(None) };
+        let (title, dir) = (first.series_title.clone(), episodes.iter().find_map(|e| e.series_dir.clone()));
+        let files: Vec<LibraryFile> = episodes.into_iter().map(|e| e.file).filter(|f| f.exists || f.last_played_at.is_some()).collect();
+        let seasons = series::seasons(files);
+        let ordered: Vec<LibraryFile> = seasons.iter().flat_map(|s| s.episodes.iter().cloned()).collect();
+        let next_up = series::next_up(&ordered).map(|i| ordered[i].id);
+        let prefs = self.series_prefs(key)?;
+        Ok(Some(SeriesDetail {
+            key: key.to_string(),
+            title,
+            dir,
+            seasons,
+            next_up,
+            audio: prefs.audio.as_ref().map(PrefLabel::of),
+            subtitles: prefs.sub.as_ref().map(PrefLabel::of),
+        }))
+    }
+
+    /// The episode next to a file of a series; `same_season` — for autoplay
+    pub fn neighbor(&self, file_id: i64, step: i32, same_season: bool) -> rusqlite::Result<Option<LibraryFile>> {
+        let key: Option<String> = self
+            .conn()
+            .query_row("SELECT series_key FROM player_files WHERE id = ?1", [file_id], |r| r.get(0))
+            .optional()?
+            .flatten();
+        let Some(key) = key else { return Ok(None) };
+        let mut files: Vec<LibraryFile> = self.episodes(Some(&key))?.into_iter().map(|e| e.file).collect();
+        series::order(&mut files);
+        Ok(series::neighbor(&files, file_id, step, same_season).cloned())
+    }
+
+    pub fn setting(&self, key: &str) -> rusqlite::Result<Option<String>> {
+        self.conn().query_row("SELECT value FROM app_settings WHERE key = ?1", [key], |r| r.get(0)).optional()
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
+        self.conn().execute(
+            "INSERT INTO app_settings (key, value) VALUES (?1, ?2) ON CONFLICT (key) DO UPDATE SET value = ?2",
+            params![key, value],
+        )?;
+        Ok(())
     }
 
     pub fn resume_position(&self, path: &str) -> rusqlite::Result<Option<f64>> {
@@ -244,22 +440,30 @@ impl Library {
         Ok(())
     }
 
-    /// Unfinished files, the latest per series first (SPEC 3.2 «Продолжить», «Не досмотрено»)
+    /// What to watch next, most recent first (SPEC 3.2 «Продолжить», «Не досмотрено»): unfinished
+    /// films, and per watched series its next episode — the unfinished one, or the one after
+    /// the last watched (it starts from the beginning)
     pub fn continue_watching(&self, limit: u32) -> rusqlite::Result<Vec<LibraryFile>> {
-        let conn = self.conn();
-        // The latest file of each series decides: an episode left halfway is not offered
-        // once the next ones were watched
-        let sql = format!(
-            "SELECT {FILE_COLUMNS} FROM (
-                SELECT *, ROW_NUMBER() OVER (PARTITION BY COALESCE(series_key, 'file:' || id) ORDER BY last_played_at DESC) AS n
-                FROM player_files WHERE last_played_at IS NOT NULL
-             ) AS f
-             WHERE f.n = 1 AND f.watched = 0 AND f.position >= ?1
-             ORDER BY f.last_played_at DESC LIMIT ?2"
-        );
-        let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map(params![RESUME_MIN, limit], |r| self.file_from_row(r))?;
-        rows.collect()
+        let films: Vec<LibraryFile> = {
+            let conn = self.conn();
+            let sql = format!(
+                "SELECT {FILE_COLUMNS} FROM player_files f
+                 WHERE f.series_key IS NULL AND f.last_played_at IS NOT NULL AND f.watched = 0 AND f.position >= ?1"
+            );
+            let mut stmt = conn.prepare(&sql)?;
+            let rows = stmt.query_map([RESUME_MIN], |r| self.file_from_row(r))?;
+            rows.collect::<rusqlite::Result<_>>()?
+        };
+        let mut items: Vec<(i64, LibraryFile)> = films.into_iter().map(|f| (f.last_played_at.unwrap_or_default(), f)).collect();
+        for s in self.series_list()? {
+            if let (Some(at), Some(next)) = (s.last_played_at, s.next_up) {
+                if next.exists {
+                    items.push((at, next));
+                }
+            }
+        }
+        items.sort_by_key(|(at, _)| std::cmp::Reverse(*at));
+        Ok(items.into_iter().take(limit as usize).map(|(_, f)| f).collect())
     }
 
     /// Viewings, newest first (SPEC 3.2 «История по дням»)
@@ -342,6 +546,84 @@ mod tests {
         assert_eq!(list.iter().map(|f| f.title.as_str()).collect::<Vec<_>>(), ["Interstellar 2014"]);
         assert_eq!(list[0].position, 4000.0);
         assert!(!list[0].exists);
+    }
+
+    /// A folder with a real season on disk: Show.S01E01…E03 and a film
+    fn season_on_disk(name: &str) -> (PathBuf, Vec<PathBuf>) {
+        let root = std::env::temp_dir().join(format!("kino-lib-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let season = root.join("Show").join("Season 1");
+        std::fs::create_dir_all(&season).unwrap();
+        let mut files = Vec::new();
+        for e in [10, 1, 2] {
+            let path = season.join(format!("Show.S01E{e:02}.mkv"));
+            std::fs::write(&path, b"").unwrap();
+            files.push(path);
+        }
+        std::fs::write(root.join("Film.2014.mkv"), b"").unwrap();
+        (root, files)
+    }
+
+    #[test]
+    fn scanned_folder_makes_a_series_with_ordered_episodes() {
+        let lib = Library::in_memory();
+        let (root, _) = season_on_disk("scan");
+        let folder = lib.add_folder(&root.to_string_lossy()).unwrap();
+        let keys = lib.add_scanned(&scan::video_files(&root), Some(folder.id)).unwrap();
+        assert_eq!(keys, ["show:show"], "the film is not a series");
+
+        let list = lib.series_list().unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!((list[0].title.as_str(), list[0].episodes, list[0].watched), ("Show", 3, 0));
+        assert_eq!(list[0].dir.as_deref(), Some(root.join("Show").to_string_lossy().as_ref()));
+        assert_eq!(list[0].next_up.as_ref().and_then(|f| f.episode), Some(1), "nothing watched — episode 1");
+
+        let detail = lib.series_detail("show:show").unwrap().unwrap();
+        assert_eq!(detail.seasons.len(), 1);
+        assert_eq!(detail.seasons[0].episodes.iter().map(|f| f.episode.unwrap()).collect::<Vec<_>>(), [1, 2, 10], "2 before 10");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn after_a_watched_episode_the_next_one_is_offered_and_neighbours_follow_the_order() {
+        let lib = Library::in_memory();
+        let (root, files) = season_on_disk("next");
+        lib.add_scanned(&files, None).unwrap();
+        let e1 = &files[1];
+        let file = lib.register(&e1.to_string_lossy(), &describe(e1), Some(1000.0)).unwrap();
+        lib.save_progress(file.id, 950.0, Some(1000.0), &mut None, now_ms()).unwrap();
+
+        let next = lib.continue_watching(10).unwrap();
+        assert_eq!(next.iter().map(|f| f.episode).collect::<Vec<_>>(), [Some(2)], "E01 watched → E02 from the start");
+        assert_eq!(next[0].position, 0.0);
+
+        let e2 = lib.neighbor(file.id, 1, true).unwrap().unwrap();
+        assert_eq!(e2.episode, Some(2));
+        assert_eq!(lib.neighbor(e2.id, 1, true).unwrap().and_then(|f| f.episode), Some(10));
+        assert_eq!(lib.neighbor(file.id, -1, false).unwrap(), None);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn removing_a_folder_hides_unplayed_series_but_keeps_history() {
+        let lib = Library::in_memory();
+        let (root, files) = season_on_disk("remove");
+        let folder = lib.add_folder(&root.to_string_lossy()).unwrap();
+        lib.add_scanned(&files, Some(folder.id)).unwrap();
+        assert_eq!(lib.folders().unwrap().len(), 1);
+        lib.remove_folder(folder.id).unwrap();
+        assert!(lib.folders().unwrap().is_empty());
+        assert!(lib.series_list().unwrap().is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn settings_round_trip() {
+        let lib = Library::in_memory();
+        assert_eq!(lib.setting("autoplay").unwrap(), None);
+        lib.set_setting("autoplay", "0").unwrap();
+        lib.set_setting("autoplay", "1").unwrap();
+        assert_eq!(lib.setting("autoplay").unwrap().as_deref(), Some("1"));
     }
 
     #[test]

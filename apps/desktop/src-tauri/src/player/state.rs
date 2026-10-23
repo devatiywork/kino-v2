@@ -10,9 +10,15 @@ pub struct PlayerSnapshot {
     pub path: Option<String>,
     pub title: Option<String>,
     /// From the file name (library/episode.rs): «The Sopranos», season 1, episode 5
+    pub series_key: Option<String>,
     pub series_title: Option<String>,
     pub season: Option<u32>,
     pub episode: Option<u32>,
+    /// Neighbouring episodes on disk (N / P, the buttons)
+    pub has_prev: bool,
+    pub has_next: bool,
+    /// Play the next episode of the season when this one ends (SPEC 3.3)
+    pub autoplay: bool,
     pub duration: Option<f64>,
     pub position: f64,
     pub paused: bool,
@@ -35,9 +41,13 @@ impl Default for PlayerSnapshot {
         Self {
             path: None,
             title: None,
+            series_key: None,
             series_title: None,
             season: None,
             episode: None,
+            has_prev: false,
+            has_next: false,
+            autoplay: true,
             duration: None,
             position: 0.0,
             paused: false,
@@ -148,9 +158,12 @@ impl PlayerSnapshot {
     pub fn clear_file(&mut self) {
         self.path = None;
         self.title = None;
+        self.series_key = None;
         self.series_title = None;
         self.season = None;
         self.episode = None;
+        self.has_prev = false;
+        self.has_next = false;
         self.duration = None;
         self.position = 0.0;
         self.eof = false;

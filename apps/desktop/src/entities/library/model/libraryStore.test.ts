@@ -10,19 +10,25 @@ const mock = await tauri
 describe('library sync with the core (integration)', () => {
   beforeEach(() => {
     mock.reset()
-    libraryStore.set({ continueWatching: [], history: [], loaded: false })
+    libraryStore.set({ continueWatching: [], history: [], series: [], folders: [], loaded: false, version: 0 })
   })
 
-  it('загружает «Не досмотрено» и историю, обновляется по событию ядра', async () => {
+  it('загружает «Не досмотрено», историю, сериалы и папки, обновляется по событию ядра', async () => {
     const file = libraryFile({ id: 1 })
     mock.respond('library_continue_watching', [file])
     mock.respond('library_history', [historyEntry(1, new Date(), file)])
+    mock.respond('library_series', [])
+    mock.respond('library_folders', [{ id: 1, path: 'D:\\Сериалы', exists: true }])
     const stop = startLibrarySync()
     await vi.waitFor(() => expect(libraryStore.get().loaded).toBe(true))
     expect(libraryStore.get().continueWatching).toHaveLength(1)
+    expect(libraryStore.get().folders).toHaveLength(1)
+    expect(libraryStore.get().version).toBe(1)
     expect(mock.calls()).toEqual([
       ['library_continue_watching', { limit: 24 }],
       ['library_history', { limit: 300 }],
+      ['library_series', undefined],
+      ['library_folders', undefined],
     ])
 
     // the core saved positions several times — one refetch

@@ -17,6 +17,8 @@ pub struct FileInfo {
     pub title: String,
     /// Key and display title of the series; None for a single video (a film)
     pub series: Option<(String, String)>,
+    /// Folder of the whole series (scanned for the other episodes)
+    pub series_dir: Option<String>,
     pub season: Option<u32>,
     pub episode: Option<u32>,
 }
@@ -173,26 +175,37 @@ pub fn describe(path: &Path) -> FileInfo {
     let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
     let title = display_title(&stem);
     let Some(ep) = parse_episode(&stem) else {
-        return FileInfo { title, series: None, season: None, episode: None };
+        return FileInfo { title, series: None, series_dir: None, season: None, episode: None };
     };
+    let dir = series_dir(path);
     let series = match &ep.show {
         Some(show) => Some((format!("show:{}", normalize_name(show)), show.clone())),
-        None => series_dir(path).map(|dir| {
+        None => dir.map(|dir| {
             let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
             (format!("dir:{}", dir.to_string_lossy().to_lowercase()), name)
         }),
     };
-    FileInfo { title, series, season: ep.season, episode: Some(ep.episode) }
+    let series_dir = series.as_ref().and(dir).map(|d| d.to_string_lossy().into_owned());
+    FileInfo { title, series, series_dir, season: ep.season, episode: Some(ep.episode) }
 }
 
-fn series_dir(path: &Path) -> Option<&Path> {
-    let parent = path.parent()?;
-    let name = parent.file_name()?.to_string_lossy();
-    if is_season_dir(&name) {
-        parent.parent().filter(|p| p.file_name().is_some())
-    } else {
-        Some(parent)
+fn is_season(dir: &Path) -> bool {
+    dir.file_name().is_some_and(|n| is_season_dir(&n.to_string_lossy()))
+}
+
+/// Folder of the whole series: above «1 Сезон\», also above «1 Сезон\<release folder>\»
+pub fn series_dir(path: &Path) -> Option<&Path> {
+    fn up(dir: &Path) -> Option<&Path> {
+        dir.parent().filter(|p| p.file_name().is_some())
     }
+    let parent = path.parent()?;
+    if is_season(parent) {
+        return up(parent).or(Some(parent));
+    }
+    if let Some(grand) = up(parent).filter(|g| is_season(g)) {
+        return up(grand).or(Some(parent));
+    }
+    Some(parent)
 }
 
 #[cfg(test)]
@@ -248,6 +261,16 @@ mod tests {
         assert_eq!(info.series, Some((r"dir:d:\сериалы\чернобыль".into(), "Чернобыль".into())));
         let flat = describe(Path::new(r"D:\Сериалы\Чернобыль\Серия 3.mkv"));
         assert_eq!(flat.series.map(|s| s.1), Some("Чернобыль".into()));
+    }
+
+    #[test]
+    fn series_folder_is_above_season_and_release_folders() {
+        let sopranos = describe(Path::new(r"E:\Сериалы\Soprano\1  Сезон\The.Sopranos.S01.720p.BluRay\The.Sopranos.S01E01.mkv"));
+        assert_eq!(sopranos.series_dir.as_deref(), Some(r"E:\Сериалы\Soprano"));
+        let flat = describe(Path::new(r"F:\Video\Walking Dead s4\The.Walking.Dead.s04e01.mkv"));
+        assert_eq!(flat.series_dir.as_deref(), Some(r"F:\Video\Walking Dead s4"));
+        let film = describe(Path::new(r"D:\Films\Interstellar.2014.mkv"));
+        assert_eq!(film.series_dir, None);
     }
 
     #[test]

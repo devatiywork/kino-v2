@@ -5,7 +5,7 @@ mod player;
 
 use std::sync::Arc;
 
-use tauri::{Manager, RunEvent, WindowEvent};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
 
 use library::{commands as lc, Library};
 use player::{commands as pc, Player};
@@ -27,6 +27,17 @@ pub fn run() {
             let library = Arc::new(Library::open(&data.join("kino.db"), thumbs)?);
             app.manage(library.clone());
 
+            // New episodes in the library folders since the last run
+            let (handle, rescan) = (app.handle().clone(), library.clone());
+            std::thread::Builder::new().name("library-rescan".into()).spawn(move || match rescan.rescan_folders() {
+                Ok(()) => {
+                    if let Err(e) = handle.emit(lc::CHANGED_EVENT, ()) {
+                        eprintln!("[library] emit: {e}");
+                    }
+                }
+                Err(e) => eprintln!("[library] rescan: {e}"),
+            })?;
+
             let window = app.get_webview_window("main").expect("main window");
             let size = window.inner_size()?;
             let player = Player::new(app.handle(), library, window.hwnd()?.0 as isize, size.width, size.height)?;
@@ -44,6 +55,8 @@ pub fn run() {
             app_launch_files,
             pc::player_snapshot,
             pc::player_open,
+            pc::player_open_neighbor,
+            pc::player_set_autoplay,
             pc::player_stop,
             pc::player_set_paused,
             pc::player_seek,
@@ -54,9 +67,16 @@ pub fn run() {
             pc::player_set_subtitle,
             pc::player_set_subtitles_visible,
             pc::player_set_subtitle_margin,
+            pc::player_set_right_margin,
             pc::player_set_video_visible,
             lc::library_continue_watching,
             lc::library_history,
+            lc::library_series,
+            lc::library_series_detail,
+            lc::library_folders,
+            lc::library_add_folder,
+            lc::library_remove_folder,
+            lc::app_reveal_folder,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kino");

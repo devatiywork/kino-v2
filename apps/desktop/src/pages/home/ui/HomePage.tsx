@@ -6,6 +6,7 @@ import { navigate } from '../../../shared/lib/router'
 import { ContinueGrid } from '../../../widgets/continue-grid'
 import { ContinueHero } from '../../../widgets/continue-hero'
 import { HistoryList } from '../../../widgets/history-list'
+import { SeriesGrid } from '../../../widgets/series-grid'
 import { Welcome } from './Welcome'
 
 /** Rows of history shown next to the hero; the rest is on the History screen */
@@ -20,9 +21,10 @@ export function HomePage() {
   const loaded = useLibrary((s) => s.loaded)
   const unfinished = useLibrary((s) => s.continueWatching)
   const history = useLibrary((s) => s.history)
+  const series = useLibrary((s) => s.series)
 
   if (!loaded) return null
-  if (!unfinished.length && !history.length) return <Welcome />
+  if (!unfinished.length && !history.length && !series.length) return <Welcome />
   const [hero, ...rest] = unfinished
 
   return (
@@ -50,6 +52,7 @@ export function HomePage() {
           </aside>
         </div>
         <ContinueGrid files={rest} />
+        <SeriesGrid series={series} title={t('seriesSection')} />
         <div className="flex items-center gap-3 rounded-lg border border-dashed border-line-2 px-5 py-4 text-sm text-fg-3">
           <IconUpload size={20} />
           {t('dropHint')}

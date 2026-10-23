@@ -14,6 +14,7 @@ export {
   toggleSubtitles,
   VOLUME_STEP,
 } from './model/actions'
+export { onAutoplayed, openNeighborEpisode, toggleAutoplay } from './model/episodes'
 export { showOsd } from './model/osd'
 export { resumeStore, setResumed, useResume } from './model/resume'
 export { Osd } from './ui/Osd'

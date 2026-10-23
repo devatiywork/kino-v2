@@ -1,6 +1,15 @@
 import { useEffect } from 'react'
 import { setFullscreen, toggleFullscreen, windowStore } from '../../../entities/app-window'
-import { changeVolume, SEEK_STEP, seekBy, toggleMute, togglePause, toggleSubtitles, VOLUME_STEP } from '../../../entities/playback'
+import {
+  changeVolume,
+  openNeighborEpisode,
+  SEEK_STEP,
+  seekBy,
+  toggleMute,
+  togglePause,
+  toggleSubtitles,
+  VOLUME_STEP,
+} from '../../../entities/playback'
 import { resolvePlayerKey, type PlayerAction } from './playerKeymap'
 
 const RUN: Record<PlayerAction, () => void> = {
@@ -13,6 +22,8 @@ const RUN: Record<PlayerAction, () => void> = {
   exitFullscreen: () => setFullscreen(false),
   toggleMute,
   toggleSubtitles,
+  nextEpisode: () => void openNeighborEpisode(1),
+  prevEpisode: () => void openNeighborEpisode(-1),
 }
 
 /** Toggles do not repeat while the key is held; seeking and volume do */

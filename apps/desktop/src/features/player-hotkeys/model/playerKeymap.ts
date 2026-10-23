@@ -9,6 +9,8 @@ export type PlayerAction =
   | 'exitFullscreen'
   | 'toggleMute'
   | 'toggleSubtitles'
+  | 'nextEpisode'
+  | 'prevEpisode'
 
 /** By KeyboardEvent.code — works the same in the Russian layout */
 export const DEFAULT_KEYMAP: Readonly<Record<string, PlayerAction>> = {
@@ -21,6 +23,8 @@ export const DEFAULT_KEYMAP: Readonly<Record<string, PlayerAction>> = {
   Escape: 'exitFullscreen',
   KeyM: 'toggleMute',
   KeyS: 'toggleSubtitles',
+  KeyN: 'nextEpisode',
+  KeyP: 'prevEpisode',
 }
 
 /** Inside these the keys belong to the focused widget (lists, menus, text fields) */

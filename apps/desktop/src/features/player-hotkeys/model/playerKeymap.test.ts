@@ -26,6 +26,8 @@ describe('resolvePlayerKey', () => {
     expect(resolvePlayerKey(key('KeyS'))).toBe('toggleSubtitles')
     expect(resolvePlayerKey(key('KeyM'))).toBe('toggleMute')
     expect(resolvePlayerKey(key('Escape'))).toBe('exitFullscreen')
+    expect(resolvePlayerKey(key('KeyN'))).toBe('nextEpisode')
+    expect(resolvePlayerKey(key('KeyP'))).toBe('prevEpisode')
   })
 
   it('с модификаторами и чужие клавиши — не плеера', () => {

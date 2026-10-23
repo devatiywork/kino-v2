@@ -12,6 +12,12 @@
   "fullscreen": "Во весь экран",
   "exitFullscreen": "Выйти из полноэкранного режима",
   "speed": "Скорость",
+  "episodes": "Серии",
+  "closeEpisodes": "Закрыть список серий",
+  "prevEpisode": "Предыдущая серия",
+  "nextEpisode": "Следующая серия",
+  "autoplay": "Автовоспроизведение",
+  "autoplayHint": "Следующая серия сезона начнётся сама",
   "tracks": {
     "button": "Озвучка и субтитры",
     "audio": "Озвучка",
@@ -28,7 +34,13 @@
     "subtitlesOn": "Субтитры включены",
     "subtitlesOff": "Субтитры выключены",
     "audio": "Озвучка: {{name}}",
-    "subtitle": "Субтитры: {{name}}"
+    "subtitle": "Субтитры: {{name}}",
+    "episode": "Серия {{episode}}",
+    "seasonEpisode": "Сезон {{season}} · Серия {{episode}}",
+    "noNext": "Это последняя серия",
+    "noPrev": "Это первая серия",
+    "autoplayOn": "Автовоспроизведение включено",
+    "autoplayOff": "Автовоспроизведение выключено"
   },
   "loading": "Загрузка…"
 }

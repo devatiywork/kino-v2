@@ -4,7 +4,8 @@ import { toggleFullscreen } from '../../../entities/app-window'
 import { changeVolume, Osd, usePlayback, VOLUME_STEP } from '../../../entities/playback'
 import { usePlayerHotkeys } from '../../../features/player-hotkeys'
 import { useIdle } from '../../../shared/lib/useIdle'
-import { PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
+import { EpisodesPanel, PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
+import { usePanelMargin } from '../model/usePanelMargin'
 import { useSubtitleLift } from '../model/useSubtitleLift'
 import { useVideoLayer } from '../model/useVideoLayer'
 import { ResumeBanner } from './ResumeBanner'
@@ -19,11 +20,14 @@ const IDLE_MS = 2500
 export function PlayerPage() {
   const { leave } = useVideoLayer()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [episodesOpen, setEpisodesOpen] = useState(false)
   const paused = usePlayback((s) => s.paused)
   const buffering = usePlayback((s) => s.buffering)
-  const { idle } = useIdle(IDLE_MS, menuOpen || paused)
+  const isEpisode = usePlayback((s) => s.seriesKey != null)
+  const { idle } = useIdle(IDLE_MS, menuOpen || paused || episodesOpen)
   usePlayerHotkeys()
   useSubtitleLift(!idle)
+  usePanelMargin(episodesOpen && isEpisode)
 
   const onWheel = (e: WheelEvent<HTMLDivElement>) => {
     if (e.deltaY !== 0) changeVolume(e.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP)
@@ -41,7 +45,13 @@ export function PlayerPage() {
       <PlayerTopBar hidden={idle} onBack={leave} />
       <ResumeBanner />
       <Osd />
-      <PlayerBottomBar hidden={idle} onMenuOpenChange={setMenuOpen} />
+      <PlayerBottomBar
+        hidden={idle}
+        onMenuOpenChange={setMenuOpen}
+        episodesOpen={episodesOpen && isEpisode}
+        onToggleEpisodes={() => setEpisodesOpen((v) => !v)}
+      />
+      {isEpisode ? <EpisodesPanel open={episodesOpen} onClose={() => setEpisodesOpen(false)} /> : null}
     </div>
   )
 }

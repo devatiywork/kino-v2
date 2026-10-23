@@ -1,6 +1,7 @@
 import { IconButton, IconSettings, Logo, TitleBar, TitleBarNav, TitleBarSpacer, WindowControls } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { useWindowState } from '../../../entities/app-window'
+import { AddFolderButton } from '../../../features/library-folders'
 import { OpenFileButton } from '../../../features/open-video'
 import { windowIpc } from '../../../shared/ipc/window'
 import { navigate, useScreen, type Screen } from '../../../shared/lib/router'
@@ -31,9 +32,16 @@ export function AppTitleBar() {
       }
     >
       <Logo />
-      <TitleBarNav label={t('nav.label')} items={items} current={isSection(screen) ? screen : null} onNavigate={navigate} />
+      <TitleBarNav
+        label={t('nav.label')}
+        items={items}
+        // a series page belongs to «Сериалы»
+        current={screen === 'show' ? 'series' : isSection(screen) ? screen : null}
+        onNavigate={navigate}
+      />
       <TitleBarSpacer />
       <OpenFileButton />
+      <AddFolderButton icon />
       <IconButton label={t('nav.settings')} tooltipPlacement="bottom" isSelected={screen === 'settings'} onPress={() => navigate('settings')}>
         <IconSettings size={19} />
       </IconButton>

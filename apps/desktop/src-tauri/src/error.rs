@@ -11,6 +11,10 @@ pub enum AppError {
     Db(#[from] rusqlite::Error),
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
+    #[error("not a folder: {0}")]
+    NotAFolder(String),
+    #[error("background task: {0}")]
+    Task(String),
     #[error("{0}")]
     Tauri(#[from] tauri::Error),
 }

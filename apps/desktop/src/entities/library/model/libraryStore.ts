@@ -1,21 +1,37 @@
-import { libraryIpc, type HistoryEntry, type LibraryFile } from '../../../shared/ipc/library'
+import { libraryIpc, type Folder, type HistoryEntry, type LibraryFile, type SeriesSummary } from '../../../shared/ipc/library'
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
 interface LibraryState {
   continueWatching: LibraryFile[]
   history: HistoryEntry[]
+  series: SeriesSummary[]
+  folders: Folder[]
   /** The first answer from the core arrived — until then the home screen does not guess */
   loaded: boolean
+  /** Grows with every refresh: views with their own data (a series page) refetch on it */
+  version: number
 }
 
-export const libraryStore = createStore<LibraryState>({ continueWatching: [], history: [], loaded: false })
+export const libraryStore = createStore<LibraryState>({
+  continueWatching: [],
+  history: [],
+  series: [],
+  folders: [],
+  loaded: false,
+  version: 0,
+})
 
 /** The core saves every few seconds while playing: one refetch per burst */
 const REFRESH_DEBOUNCE_MS = 400
 
 export async function refreshLibrary(): Promise<void> {
-  const [continueWatching, history] = await Promise.all([libraryIpc.continueWatching(), libraryIpc.history()])
-  libraryStore.set({ continueWatching, history, loaded: true })
+  const [continueWatching, history, series, folders] = await Promise.all([
+    libraryIpc.continueWatching(),
+    libraryIpc.history(),
+    libraryIpc.series(),
+    libraryIpc.folders(),
+  ])
+  libraryStore.set((s) => ({ continueWatching, history, series, folders, loaded: true, version: s.version + 1 }))
 }
 
 /** Fetch now and again whenever the core reports a change. Returns the unsubscribe */

@@ -8,7 +8,7 @@ mod state;
 pub(crate) mod tracks;
 mod video_host;
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use libmpv2::Mpv;
@@ -25,6 +25,21 @@ use tracks::TrackKind;
 use video_host::VideoHost;
 
 pub const VOLUME_MAX: f64 = 130.0;
+const AUTOPLAY_SETTING: &str = "player.autoplay";
+
+/// loadfile from the saved position (SPEC 3.2) — for the open command and for autoplay
+pub(crate) fn load(mpv: &Mpv, library: &Library, path: &str) -> AppResult<OpenResult> {
+    let resumed_from = library.resume_position(path).unwrap_or_else(|e| {
+        eprintln!("[library] resume: {e}");
+        None
+    });
+    match resumed_from {
+        Some(start) => mpv.command("loadfile", &[path, "replace", "-1", &format!("start={start}")])?,
+        None => mpv.command("loadfile", &[path, "replace"])?,
+    }
+    mpv.set_property("pause", false)?;
+    Ok(OpenResult { resumed_from })
+}
 
 pub struct Player {
     mpv: Mpv,
@@ -33,6 +48,7 @@ pub struct Player {
     library: Arc<Library>,
     snapshot: Arc<Mutex<PlayerSnapshot>>,
     session: Arc<Mutex<Option<Session>>>,
+    autoplay: Arc<AtomicBool>,
     /// Last applied show/hide request: IPC calls may arrive out of order
     video_seq: AtomicU64,
 }
@@ -85,7 +101,9 @@ impl Player {
             }
             Ok(())
         })?;
-        let snapshot = Arc::new(Mutex::new(PlayerSnapshot::default()));
+        let autoplay_on = library.setting(AUTOPLAY_SETTING).ok().flatten().is_none_or(|v| v == "1");
+        let autoplay = Arc::new(AtomicBool::new(autoplay_on));
+        let snapshot = Arc::new(Mutex::new(PlayerSnapshot { autoplay: autoplay_on, ..PlayerSnapshot::default() }));
         let session = Arc::new(Mutex::new(None));
         events::spawn(events::Context {
             app: app.clone(),
@@ -95,8 +113,9 @@ impl Player {
             snapshot: snapshot.clone(),
             session: session.clone(),
             library: library.clone(),
+            autoplay: autoplay.clone(),
         })?;
-        Ok(Self { mpv, host, app: app.clone(), library, snapshot, session, video_seq: AtomicU64::new(0) })
+        Ok(Self { mpv, host, app: app.clone(), library, snapshot, session, autoplay, video_seq: AtomicU64::new(0) })
     }
 
     pub fn snapshot(&self) -> PlayerSnapshot {
@@ -105,16 +124,31 @@ impl Player {
 
     /// Opens the file, continuing from the saved position when there is one
     pub fn open(&self, path: &str) -> AppResult<OpenResult> {
-        let resumed_from = self.library.resume_position(path).unwrap_or_else(|e| {
-            eprintln!("[library] resume: {e}");
-            None
-        });
-        match resumed_from {
-            Some(start) => self.mpv.command("loadfile", &[path, "replace", "-1", &format!("start={start}")])?,
-            None => self.mpv.command("loadfile", &[path, "replace"])?,
+        load(&self.mpv, &self.library, path)
+    }
+
+    /// The previous (`step` −1) or next (+1) episode of the open one, across seasons (N / P)
+    pub fn open_neighbor(&self, step: i32) -> AppResult<Option<OpenResult>> {
+        let Some(file_id) = session::lock(&self.session).as_ref().map(|s| s.file_id) else { return Ok(None) };
+        match self.library.neighbor(file_id, step, false)? {
+            Some(file) => Ok(Some(self.open(&file.path)?)),
+            None => Ok(None),
         }
-        self.mpv.set_property("pause", false)?;
-        Ok(OpenResult { resumed_from })
+    }
+
+    /// Autoplay of the next episode, remembered between runs
+    pub fn set_autoplay(&self, enabled: bool) -> AppResult<()> {
+        self.library.set_setting(AUTOPLAY_SETTING, if enabled { "1" } else { "0" })?;
+        self.autoplay.store(enabled, Ordering::Relaxed);
+        let state = {
+            let mut s = events::lock(&self.snapshot);
+            s.autoplay = enabled;
+            s.clone()
+        };
+        if let Err(e) = self.app.emit(events::STATE_EVENT, state) {
+            eprintln!("[player] emit: {e}");
+        }
+        Ok(())
     }
 
     pub fn stop(&self) -> AppResult<()> {
@@ -184,6 +218,11 @@ impl Player {
 
     pub fn set_subtitles_visible(&self, visible: bool) -> AppResult<()> {
         Ok(self.mpv.set_property("sub-visibility", visible)?)
+    }
+
+    /// Share of the window on the right that the video leaves free (the episode panel)
+    pub fn set_right_margin(&self, ratio: f64) -> AppResult<()> {
+        Ok(self.mpv.set_property("video-margin-ratio-right", ratio.clamp(0.0, 0.5))?)
     }
 
     /// Bottom margin of text subtitles in mpv's scaled pixels (720p): lifted above the controls
