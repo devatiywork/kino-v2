@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type UIEvent } from 'react'
 import { applyTheme, Button, Logo, ScrollArea, SegmentedControl, type ThemeMode } from '../src'
 import { ButtonsSection } from './sections/ButtonsSection'
 import { IconsSection } from './sections/IconsSection'
@@ -26,6 +26,23 @@ export function App() {
 
   useEffect(() => applyTheme(theme), [theme])
 
+  // Подсветка раздела в меню следует за прокруткой: текущий — последний, чей заголовок выше трети экрана
+  const onScroll = (event: UIEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget
+    const last = SECTIONS.at(-1)
+    if (last && viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 2) {
+      setActive(last.id)
+      return
+    }
+    const line = viewport.getBoundingClientRect().top + viewport.clientHeight / 3
+    let current: string = SECTIONS[0].id
+    for (const section of SECTIONS) {
+      const top = document.getElementById(section.id)?.getBoundingClientRect().top
+      if (top !== undefined && top <= line) current = section.id
+    }
+    setActive(current)
+  }
+
   const go = (id: string) => {
     setActive(id)
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -52,7 +69,7 @@ export function App() {
             </Button>
           ))}
         </nav>
-        <ScrollArea className="flex-1" viewportClassName="px-10 py-8" aria-label="Компоненты">
+        <ScrollArea className="flex-1" viewportClassName="px-10 py-8" onScroll={onScroll} aria-label="Компоненты">
           <div className="mx-auto flex max-w-5xl flex-col gap-14 pb-24">
             {SECTIONS.map((section) => (
               <section key={section.id} id={section.id} className="flex scroll-mt-8 flex-col gap-6">

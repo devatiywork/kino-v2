@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+  type UIEvent,
+} from 'react'
 import { cn } from '../../lib/cn'
 
 const TRACK_INSET = 4
@@ -16,6 +25,8 @@ export interface ScrollAreaProps {
   viewportClassName?: string
   /** Стили прокручиваемой области, например maxHeight у списков */
   viewportStyle?: CSSProperties
+  /** Прокрутка области: например, чтобы подсвечивать текущий раздел */
+  onScroll?: (event: UIEvent<HTMLDivElement>) => void
   'aria-label'?: string
 }
 
@@ -23,7 +34,14 @@ export interface ScrollAreaProps {
  * Прокрутка со своей полосой поверх контента: тонкая, появляется при наведении и прокрутке,
  * ползунок можно тянуть. Системная полоса скрыта глобально в base.css.
  */
-export function ScrollArea({ children, className, viewportClassName, viewportStyle, 'aria-label': ariaLabel }: ScrollAreaProps) {
+export function ScrollArea({
+  children,
+  className,
+  viewportClassName,
+  viewportStyle,
+  onScroll: onScrollProp,
+  'aria-label': ariaLabel,
+}: ScrollAreaProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startScroll: number } | null>(null)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -57,7 +75,8 @@ export function ScrollArea({ children, className, viewportClassName, viewportSty
 
   useEffect(() => () => clearTimeout(idleTimer.current), [])
 
-  const onScroll = () => {
+  const onScroll = (event: UIEvent<HTMLDivElement>) => {
+    onScrollProp?.(event)
     update()
     setScrolling(true)
     clearTimeout(idleTimer.current)
