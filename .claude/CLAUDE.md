@@ -50,7 +50,9 @@ apps/desktop/          — Tauri app (not created yet)
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, Kbd, ScrollArea, Logo…
+  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, Kbd, ScrollArea, Logo,
+                         TitleBar, WindowControls, SearchField, Tabs, Tooltip (useTooltipFor), MenuButton, ContextMenu,
+                         Dialog/Modal, ConfirmDialog, ToastProvider/useToast
   src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence
   playground/          — showcase of every component in every state
 design/prototype.html  — interactive HTML prototype, the design reference

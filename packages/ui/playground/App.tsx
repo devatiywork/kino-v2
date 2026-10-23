@@ -3,14 +3,18 @@ import { applyTheme, Button, Logo, ScrollArea, SegmentedControl, type ThemeMode 
 import { ButtonsSection } from './sections/ButtonsSection'
 import { IconsSection } from './sections/IconsSection'
 import { InputsSection } from './sections/InputsSection'
+import { OverlaysSection } from './sections/OverlaysSection'
 import { SelectsSection } from './sections/SelectsSection'
+import { ShellSection } from './sections/ShellSection'
 import { TokensSection } from './sections/TokensSection'
 
 const SECTIONS = [
   { id: 'tokens', title: 'Токены', render: () => <TokensSection /> },
   { id: 'icons', title: 'Иконки', render: () => <IconsSection /> },
   { id: 'buttons', title: 'Кнопки', render: () => <ButtonsSection /> },
+  { id: 'shell', title: 'Оболочка', render: () => <ShellSection /> },
   { id: 'selects', title: 'Списки', render: () => <SelectsSection /> },
+  { id: 'overlays', title: 'Оверлеи', render: () => <OverlaysSection /> },
   { id: 'inputs', title: 'Управление', render: () => <InputsSection /> },
 ] as const
 

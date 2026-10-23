@@ -7,7 +7,7 @@ export const twMergeConfig = {
       color: [
         'bg', 'panel', 'raise', 'raise-2', 'line', 'line-2',
         'fg', 'fg-2', 'fg-3', 'fg-4',
-        'accent', 'accent-hover', 'accent-soft', 'accent-fg', 'on-accent', 'danger',
+        'accent', 'accent-hover', 'accent-soft', 'accent-fg', 'on-accent', 'danger', 'on-danger',
         'hover', 'hover-2', 'glass', 'glass-line', 'track', 'track-buffer', 'scrim', 'video',
         'win-close', 'win-close-fg', 'transparent', 'current',
       ],

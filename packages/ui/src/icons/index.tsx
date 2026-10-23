@@ -100,6 +100,24 @@ export const IconPin = createIcon(
 export const IconArrowLeft = createIcon('ArrowLeft', <path d="M19 12H5M11 6l-6 6 6 6" />)
 export const IconArrowRight = createIcon('ArrowRight', <path d="M5 12h14M13 6l6 6-6 6" />)
 export const IconChevronDown = createIcon('ChevronDown', <path d="M6 9.5l6 6 6-6" />)
+export const IconMore = createIcon(
+  'More',
+  <path d="M5.5 12h.01M12 12h.01M18.5 12h.01" strokeWidth="2.8" />,
+)
+export const IconInfo = createIcon(
+  'Info',
+  <>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 11v5M12 8h.01" />
+  </>,
+)
+export const IconWarning = createIcon(
+  'Warning',
+  <>
+    <path d="M10.3 4.6L2.9 17.5A2 2 0 0 0 4.6 20.5h14.8a2 2 0 0 0 1.7-3L13.7 4.6a2 2 0 0 0-3.4 0z" />
+    <path d="M12 9.5v4M12 17h.01" />
+  </>,
+)
 export const IconSearch = createIcon(
   'Search',
   <>

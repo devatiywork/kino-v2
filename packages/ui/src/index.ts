@@ -14,6 +14,17 @@ export { Popover, popoverStyles, type PopoverProps } from './components/popover/
 export { ListBox, ListBoxBase, type ListBoxProps } from './components/list-box/ListBox'
 export type { ListItem } from './components/list-box/listItem'
 export { Select, type SelectProps } from './components/select/Select'
+export { TitleBar, TitleBarSpacer, type TitleBarProps } from './components/title-bar/TitleBar'
+export { WindowControls, type WindowControlsProps } from './components/title-bar/WindowControls'
+export { SearchField, type SearchFieldProps } from './components/search-field/SearchField'
+export { Tabs, type TabItem, type TabsProps } from './components/tabs/Tabs'
+export { useTooltipFor, type TooltipOptions } from './components/tooltip/Tooltip'
+export { MenuList, type MenuItemData, type MenuListProps } from './components/menu/MenuList'
+export { MenuButton, type MenuButtonProps } from './components/menu/MenuButton'
+export { ContextMenu, type ContextMenuProps } from './components/menu/ContextMenu'
+export { Dialog, Modal, type DialogProps, type ModalProps } from './components/dialog/Dialog'
+export { ConfirmDialog, type ConfirmDialogProps } from './components/dialog/ConfirmDialog'
+export { ToastProvider, useToast, type ToastOptions } from './components/toast/ToastProvider'
 
 export * from './icons'
 

@@ -1,0 +1,45 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { TitleBar, TitleBarSpacer } from './TitleBar'
+import { WindowControls } from './WindowControls'
+
+describe('TitleBar', () => {
+  it('пустые места заголовка тянут окно (data-tauri-drag-region)', () => {
+    const { container } = render(
+      <TitleBar controls={<WindowControls />}>
+        <span>Kino</span>
+        <TitleBarSpacer />
+      </TitleBar>,
+    )
+    const header = container.querySelector('header')
+    expect(header).toHaveAttribute('data-tauri-drag-region')
+    expect(container.querySelectorAll('[data-tauri-drag-region]')).toHaveLength(2)
+  })
+})
+
+describe('WindowControls', () => {
+  it('кнопки вызывают действия окна', async () => {
+    const user = userEvent.setup()
+    const onMinimize = vi.fn()
+    const onToggleMaximize = vi.fn()
+    const onClose = vi.fn()
+    render(<WindowControls onMinimize={onMinimize} onToggleMaximize={onToggleMaximize} onClose={onClose} />)
+    await user.click(screen.getByRole('button', { name: 'Свернуть' }))
+    await user.click(screen.getByRole('button', { name: 'Развернуть' }))
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(onMinimize).toHaveBeenCalledTimes(1)
+    expect(onToggleMaximize).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('у развёрнутого окна кнопка называется «Восстановить»', () => {
+    render(<WindowControls isMaximized />)
+    expect(screen.getByRole('button', { name: 'Восстановить' })).toBeInTheDocument()
+  })
+
+  it('кнопки окна не попадают в обход по Tab, как в Windows', () => {
+    render(<WindowControls />)
+    for (const button of screen.getAllByRole('button')) expect(button).toHaveAttribute('tabindex', '-1')
+  })
+})

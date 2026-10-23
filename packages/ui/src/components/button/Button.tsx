@@ -17,6 +17,8 @@ export const buttonStyles = tv({
       outline: 'border border-line-2 text-fg data-[hovered]:bg-hover',
       ghost: 'text-fg-2 data-[hovered]:bg-hover data-[hovered]:text-fg',
       danger: 'border border-danger/45 text-danger data-[hovered]:bg-danger/12',
+      /** Необратимое действие в диалоге подтверждения */
+      destructive: 'bg-danger font-semibold text-on-danger data-[hovered]:bg-danger/88',
     },
     size: {
       sm: 'h-8 rounded-sm px-3 text-sm',

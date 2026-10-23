@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from 'react'
-import { mergeProps, useButton, useFocusRing, useHover, type AriaButtonProps } from 'react-aria'
+import { mergeProps, useButton, useFocusRing, useHover, type AriaButtonProps, type Placement } from 'react-aria'
 import { dataFlags, focusRing } from '../../lib/focusRing'
 import { tv, type VariantProps } from '../../lib/tv'
+import { useTooltipFor } from '../tooltip/Tooltip'
 
 export const iconButtonStyles = tv({
   base: [
@@ -32,36 +33,60 @@ export const iconButtonStyles = tv({
 export interface IconButtonProps
   extends Omit<AriaButtonProps<'button'>, 'elementType' | 'children' | 'aria-label'>,
     VariantProps<typeof iconButtonStyles> {
-  /** Обязательная подпись: у кнопки без текста её читает скринридер и показывает подсказка */
+  /** Обязательная подпись: её читает скринридер и показывает подсказка */
   label: string
   /** Иконка */
   children: ReactNode
   /** Включённое состояние (например, «поверх окон»): иконка становится акцентной */
   isSelected?: boolean
+  /** Своя подсказка вместо подписи; false — без подсказки */
+  tooltip?: ReactNode | false
+  /** Сочетание клавиш в подсказке */
+  shortcut?: string
+  tooltipPlacement?: Placement
   className?: string
 }
 
-export function IconButton({ label, variant, size, isSelected, className, children, ...props }: IconButtonProps) {
+export function IconButton({
+  label,
+  variant,
+  size,
+  isSelected,
+  tooltip,
+  shortcut,
+  tooltipPlacement,
+  className,
+  children,
+  ...props
+}: IconButtonProps) {
   const ref = useRef<HTMLButtonElement>(null)
   const { buttonProps, isPressed } = useButton({ ...props, 'aria-label': label }, ref)
   const { hoverProps, isHovered } = useHover({ isDisabled: props.isDisabled })
   const { focusProps, isFocusVisible } = useFocusRing()
+  const { triggerProps, tooltip: tooltipNode } = useTooltipFor(
+    { content: tooltip ?? label, shortcut, placement: tooltipPlacement, isDisabled: props.isDisabled },
+    ref,
+    label,
+  )
 
   return (
-    <button
-      ref={ref}
-      {...mergeProps(buttonProps, hoverProps, focusProps)}
-      aria-pressed={isSelected}
-      {...dataFlags({
-        pressed: isPressed,
-        hovered: isHovered,
-        'focus-visible': isFocusVisible,
-        disabled: props.isDisabled,
-        selected: isSelected,
-      })}
-      className={iconButtonStyles({ variant, size, className })}
-    >
-      {children}
-    </button>
+    <>
+      <button
+        ref={ref}
+        {...mergeProps(buttonProps, hoverProps, focusProps, triggerProps)}
+        aria-pressed={isSelected}
+        {...dataFlags({
+          pressed: isPressed,
+          hovered: isHovered,
+          'focus-visible': isFocusVisible,
+          disabled: props.isDisabled,
+          selected: isSelected,
+        })}
+        className={iconButtonStyles({ variant, size, className })}
+      >
+        {children}
+      </button>
+      {tooltipNode}
+    </>
   )
 }

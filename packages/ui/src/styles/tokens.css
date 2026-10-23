@@ -32,6 +32,7 @@
   --color-accent-fg: var(--kino-accent-fg);
   --color-on-accent: var(--kino-on-accent);
   --color-danger: var(--kino-danger);
+  --color-on-danger: var(--kino-on-danger);
 
   /* Слои поверх контента и видео */
   --color-hover: var(--kino-hover);
@@ -99,6 +100,9 @@
 
   --animate-pop-in: pop-in var(--duration-popover-in) var(--ease-out) both;
   --animate-pop-out: pop-out var(--duration-popover-out) var(--ease-in) both;
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-out) both;
+  --animate-fade-out: pop-out var(--duration-popover-out) var(--ease-in) both;
+  --animate-toast-in: toast-in var(--duration-base) var(--ease-out) both;
 
   --spacing: 4px;
 
@@ -111,6 +115,17 @@
   @keyframes pop-out {
     to {
       opacity: 0;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      translate: 0 -12px;
     }
   }
 }
@@ -145,6 +160,7 @@
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 22%);
   --kino-on-accent: #170b03;
   --kino-danger: #f2555a;
+  --kino-on-danger: #1a0506;
   --kino-hover: rgb(242 237 230 / 0.07);
   --kino-hover-2: rgb(242 237 230 / 0.13);
   --kino-glass: rgb(18 17 16 / 0.88);
@@ -182,6 +198,7 @@
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 18%);
   --kino-on-accent: #ffffff;
   --kino-danger: #cf3238;
+  --kino-on-danger: #ffffff;
   --kino-hover: rgb(29 26 23 / 0.05);
   --kino-hover-2: rgb(29 26 23 / 0.09);
   --kino-glass: rgb(255 255 255 / 0.9);
