@@ -5,9 +5,12 @@ import { startWindowSync } from '../../entities/app-window'
 import { startLibrarySync } from '../../entities/library'
 import { startPlaybackSync } from '../../entities/playback'
 import { startSettingsSync } from '../../entities/settings'
+import { startTorrentsSync } from '../../entities/torrent'
+import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
 import { useAddFolder } from '../../features/library-folders'
 import { useOpenVideo } from '../../features/open-video'
 import { appIpc } from '../../shared/ipc/app'
+import { findMagnet, isTorrentPath } from '../../shared/ipc/torrents'
 import { fileName, isVideoPath } from '../../shared/lib/media'
 
 const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, e)
@@ -36,12 +39,21 @@ export function useAppStartup(): { dropping: boolean } {
     const stopWindow = startWindowSync()
     const stopLibrary = startLibrarySync()
     const stopSettings = startSettingsSync()
+    const stopTorrents = startTorrentsSync()
     if (!launchHandled) {
       // Once per process: StrictMode runs this effect twice in development
       launchHandled = true
       appIpc
         .launchFiles()
         .then((files) => {
+          // SPEC 4.1: a .torrent or a magnet link opens the add dialog
+          const torrent = files.find(isTorrentPath)
+          if (torrent) return openTorrentFile(torrent)
+          const magnet = files.map(findMagnet).find((m) => m != null)
+          if (magnet) {
+            openMagnetDialog()
+            return submitMagnet(magnet, t('magnet.invalid', { ns: 'torrents' }))
+          }
           const video = files.find(isVideoPath)
           if (video) return open.current(video)
         })
@@ -52,6 +64,7 @@ export function useAppStartup(): { dropping: boolean } {
       stopWindow()
       stopLibrary()
       stopSettings()
+      stopTorrents()
     }
   }, [])
 
@@ -60,6 +73,13 @@ export function useAppStartup(): { dropping: boolean } {
     const unlisten = appIpc.onDragDrop((phase, paths) => {
       setDropping(phase === 'over')
       if (phase !== 'drop') return
+      const torrent = paths.find(isTorrentPath)
+      if (torrent) {
+        openTorrentFile(torrent).catch((e: unknown) =>
+          toast.show({ title: t('toast.notTorrent', { ns: 'torrents', message: String(e) }), tone: 'danger', duration: 6000 }),
+        )
+        return
+      }
       const video = paths.find(isVideoPath)
       if (video) return void open.current(video)
       const [first] = paths

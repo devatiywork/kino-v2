@@ -154,6 +154,48 @@ export const IconUpload = createIcon(
     <path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14" />
   </>,
 )
+export const IconDownload = createIcon(
+  'Download',
+  <>
+    <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5" />
+    <path d="M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14" />
+  </>,
+)
+/** Скорость: ↓ загрузка, ↑ отдача */
+export const IconArrowDown = createIcon('ArrowDown', <path d="M12 5v14M6.5 13.5L12 19l5.5-5.5" />)
+export const IconArrowUp = createIcon('ArrowUp', <path d="M12 19V5M6.5 10.5L12 5l5.5 5.5" />)
+export const IconMagnet = createIcon(
+  'Magnet',
+  <path d="M6 4h4v8a2 2 0 0 0 4 0V4h4v8a6 6 0 0 1-12 0zM6 8.5h4M14 8.5h4" />,
+)
+export const IconArchive = createIcon(
+  'Archive',
+  <>
+    <rect x="3.5" y="4.5" width="17" height="4" rx="1" />
+    <path d="M5 8.5v10A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-10M10 12.5h4" />
+  </>,
+)
+export const IconTag = createIcon(
+  'Tag',
+  <>
+    <path d="M4 4.5v6.4a1.5 1.5 0 0 0 .44 1.06l8.6 8.6a1.5 1.5 0 0 0 2.12 0l5.3-5.3a1.5 1.5 0 0 0 0-2.12l-8.6-8.6A1.5 1.5 0 0 0 10.8 4H4.5" />
+    <circle cx="8.3" cy="8.3" r="1.4" />
+  </>,
+)
+export const IconCopy = createIcon(
+  'Copy',
+  <>
+    <rect x="8.5" y="8.5" width="11.5" height="11.5" rx="1.5" />
+    <path d="M15.5 8.5V5.5A1.5 1.5 0 0 0 14 4H5.5A1.5 1.5 0 0 0 4 5.5V14a1.5 1.5 0 0 0 1.5 1.5h3" />
+  </>,
+)
+export const IconExternal = createIcon(
+  'External',
+  <>
+    <path d="M14 4h6v6M20 4l-9 9" />
+    <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />
+  </>,
+)
 export const IconClock = createIcon(
   'Clock',
   <>

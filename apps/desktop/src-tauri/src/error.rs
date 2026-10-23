@@ -13,12 +13,16 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("not a folder: {0}")]
     NotAFolder(String),
+    #[error("not a web link: {0}")]
+    NotAWebLink(String),
     #[error("background task: {0}")]
     Task(String),
     #[error("settings: {0}")]
     Settings(#[from] crate::settings::SettingsError),
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("{0}")]
+    Torrent(String),
     #[error("{0}")]
     Tauri(#[from] tauri::Error),
 }

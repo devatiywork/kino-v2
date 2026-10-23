@@ -37,4 +37,14 @@ describe('Tabs', () => {
     await user.keyboard('{ArrowRight}')
     expect(onSelectionChange).toHaveBeenLastCalledWith('s1')
   })
+
+  it('кнопки раздела — в строке вкладок, панель получает свои классы', () => {
+    render(
+      <Tabs aria-label="Загрузки" items={SEASONS} toolbar={<button type="button">Добавить торрент</button>} panelClassName="min-h-0 flex-1">
+        {(season) => <p>{season.label}</p>}
+      </Tabs>,
+    )
+    expect(screen.getByRole('button', { name: 'Добавить торрент' })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel')).toHaveClass('min-h-0', 'flex-1')
+  })
 })

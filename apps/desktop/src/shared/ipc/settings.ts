@@ -33,6 +33,15 @@ export interface Settings {
   hotkeys: Record<string, string>
   /** No sleep while a video plays */
   keepAwake: boolean
+  /** «Папка по умолчанию» of the downloads; empty — the system Downloads folder */
+  downloadsFolder: string
+  /** «Не начинать загрузку сразу» */
+  startPaused: boolean
+  /** «Не раздавать после загрузки — сразу в архив» */
+  noSeeding: boolean
+  /** KB/s; 0 — no limit */
+  downloadLimit: number
+  uploadLimit: number
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -52,6 +61,11 @@ export const DEFAULT_SETTINGS: Settings = {
   watchedPercent: 90,
   hotkeys: {},
   keepAwake: true,
+  downloadsFolder: '',
+  startPaused: false,
+  noSeeding: false,
+  downloadLimit: 0,
+  uploadLimit: 0,
 }
 
 /** Typed wrappers over the settings commands; every change applies and is stored at once */

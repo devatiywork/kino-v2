@@ -3,6 +3,7 @@ mod error;
 mod library;
 mod player;
 mod settings;
+mod torrent;
 
 use std::sync::Arc;
 
@@ -12,11 +13,35 @@ use error::AppResult;
 use library::{commands as lc, Library};
 use player::{commands as pc, Player};
 use settings::{commands as sc, SettingsStore};
+use torrent::{commands as tc, Torrents, TorrentsOptions};
 
 /// Files passed on the command line (Explorer "Open with", file associations)
 #[tauri::command]
 fn app_launch_files() -> Vec<String> {
     std::env::args().skip(1).filter(|a| !a.starts_with('-')).collect()
+}
+
+/// A release page in the default browser; only web links, never a program or a file
+#[tauri::command]
+fn app_open_url(url: String) -> AppResult<()> {
+    let url = url.trim();
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err(error::AppError::NotAWebLink(url.to_string()));
+    }
+    // explorer gets the link as one argument: no shell parses it
+    std::process::Command::new("explorer").arg(url).spawn()?;
+    Ok(())
+}
+
+/// Shows a file or a folder selected in its folder in Explorer (a torrent's content)
+#[tauri::command]
+fn app_reveal_path(path: String) -> AppResult<()> {
+    let target = std::path::Path::new(&path);
+    if !target.exists() {
+        return Err(error::AppError::NotAFolder(path));
+    }
+    std::process::Command::new("explorer").arg(format!("/select,{}", target.display())).spawn()?;
+    Ok(())
 }
 
 /// SPEC 6 «Очистить историю» (the player and the library meet here)
@@ -68,6 +93,21 @@ pub fn run() {
             library.set_policy(settings.read(sc::library_policy));
             app.manage(settings.clone());
 
+            // Torrents (SPEC 4): their own connection to the same database, the engine on the
+            // async runtime. KINO_TEST_OFFLINE (debug builds): no DHT, trackers or UPnP, loopback only
+            let offline = cfg!(debug_assertions) && std::env::var_os("KINO_TEST_OFFLINE").is_some();
+            let system_downloads = app.path().download_dir().unwrap_or_else(|_| data.join("downloads"));
+            let torrents = tauri::async_runtime::block_on(Torrents::start(TorrentsOptions {
+                db_path: data.join("kino.db"),
+                dir: data.join("torrents"),
+                system_downloads,
+                settings: settings.clone(),
+                offline,
+            }))
+            .map_err(|e| format!("torrents: {e:#}"))?;
+            tc::spawn_updates(app.handle().clone(), torrents.clone());
+            app.manage(torrents);
+
             // New episodes in the library folders since the last run
             let (handle, rescan) = (app.handle().clone(), library.clone());
             std::thread::Builder::new().name("library-rescan".into()).spawn(move || match rescan.rescan_folders() {
@@ -99,6 +139,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_launch_files,
             app_clear_history,
+            app_open_url,
+            app_reveal_path,
             pc::player_snapshot,
             pc::player_open,
             pc::player_open_neighbor,
@@ -125,6 +167,28 @@ pub fn run() {
             sc::settings_get,
             sc::settings_update,
             sc::settings_reset,
+            tc::torrent_list,
+            tc::torrent_categories,
+            tc::torrent_category_create,
+            tc::torrent_category_update,
+            tc::torrent_category_delete,
+            tc::torrent_preview,
+            tc::torrent_add,
+            tc::torrent_pause,
+            tc::torrent_resume,
+            tc::torrent_pause_all,
+            tc::torrent_remove,
+            tc::torrent_archive_seeding,
+            tc::torrent_set_category,
+            tc::torrent_set_source,
+            tc::torrent_set_files,
+            tc::torrent_details,
+            tc::torrent_archive,
+            tc::torrent_download_again,
+            tc::torrent_seed_again,
+            tc::torrent_delete_record,
+            tc::torrent_magnet,
+            tc::torrent_downloads_folder,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kino");
@@ -133,6 +197,9 @@ pub fn run() {
         if let RunEvent::Exit = event {
             if let Some(player) = app.try_state::<Player>() {
                 player.shutdown();
+            }
+            if let Some(torrents) = app.try_state::<Arc<Torrents>>() {
+                tauri::async_runtime::block_on(torrents.shutdown());
             }
         }
     });

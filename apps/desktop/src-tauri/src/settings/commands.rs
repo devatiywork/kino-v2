@@ -9,6 +9,7 @@ use super::{Settings, SettingsStore};
 use crate::error::AppResult;
 use crate::library::{Library, Policy};
 use crate::player::Player;
+use crate::torrent::Torrents;
 
 /// The settings changed (from any window or command): the full settings
 pub const CHANGED_EVENT: &str = "settings://changed";
@@ -30,10 +31,11 @@ pub fn settings_update(
     settings: State<'_, Arc<SettingsStore>>,
     library: State<'_, Arc<Library>>,
     player: State<'_, Player>,
+    torrents: State<'_, Arc<Torrents>>,
     patch: Map<String, Value>,
 ) -> AppResult<Settings> {
     let (old, new) = settings.update(&patch)?;
-    apply(&app, &library, &player, &old, &new);
+    apply(&app, &library, &player, &torrents, &old, &new);
     Ok(new)
 }
 
@@ -44,16 +46,20 @@ pub fn settings_reset(
     settings: State<'_, Arc<SettingsStore>>,
     library: State<'_, Arc<Library>>,
     player: State<'_, Player>,
+    torrents: State<'_, Arc<Torrents>>,
 ) -> AppResult<Settings> {
     let (old, new) = settings.reset()?;
-    apply(&app, &library, &player, &old, &new);
+    apply(&app, &library, &player, &torrents, &old, &new);
     Ok(new)
 }
 
 /// SPEC 6: changes apply at once, without a «Save» button
-fn apply(app: &AppHandle, library: &Library, player: &Player, old: &Settings, new: &Settings) {
+fn apply(app: &AppHandle, library: &Library, player: &Player, torrents: &Torrents, old: &Settings, new: &Settings) {
     library.set_policy(library_policy(new));
     player.apply_settings(old, new);
+    if (old.download_limit, old.upload_limit) != (new.download_limit, new.upload_limit) {
+        torrents.apply_limits(new.download_limit, new.upload_limit);
+    }
     if let Err(e) = app.emit(CHANGED_EVENT, new) {
         eprintln!("[settings] emit: {e}");
     }

@@ -1,15 +1,16 @@
-import { cn, IconClock, IconKeyboard, IconLayers, IconPlay, IconSettings, IconSubtitles, Pressable, ScrollArea } from '@kino/ui'
+import { cn, IconClock, IconDownload, IconKeyboard, IconLayers, IconPlay, IconSettings, IconSubtitles, Pressable, ScrollArea } from '@kino/ui'
 import type { ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useScrollSpy } from '../model/useScrollSpy'
 import { AppearanceSection } from './sections/AppearanceSection'
+import { DownloadsSection } from './sections/DownloadsSection'
 import { HotkeysSection } from './sections/HotkeysSection'
 import { LibrarySection } from './sections/LibrarySection'
 import { PlaybackSection } from './sections/PlaybackSection'
 import { SystemSection } from './sections/SystemSection'
 import { TracksSection } from './sections/TracksSection'
 
-const SECTIONS = ['appearance', 'playback', 'tracks', 'library', 'hotkeys', 'system'] as const
+const SECTIONS = ['appearance', 'playback', 'tracks', 'library', 'downloads', 'hotkeys', 'system'] as const
 type SectionId = (typeof SECTIONS)[number]
 
 const ICONS: Record<SectionId, ComponentType<{ size?: number }>> = {
@@ -17,14 +18,12 @@ const ICONS: Record<SectionId, ComponentType<{ size?: number }>> = {
   playback: IconPlay,
   tracks: IconSubtitles,
   library: IconClock,
+  downloads: IconDownload,
   hotkeys: IconKeyboard,
   system: IconLayers,
 }
 
-/**
- * SPEC 6: settings in one scroll with a menu of sections on the left. Every change applies at
- * once, there is no «Save». Downloads come with the torrents
- */
+/** SPEC 6: settings in one scroll with a menu of sections on the left. Every change applies at once, there is no «Save» */
 export function SettingsPage() {
   const { t } = useTranslation('settings')
   const { active, onScroll, go } = useScrollSpy(SECTIONS)
@@ -58,6 +57,7 @@ export function SettingsPage() {
           <PlaybackSection />
           <TracksSection />
           <LibrarySection />
+          <DownloadsSection />
           <HotkeysSection />
           <SystemSection />
         </div>

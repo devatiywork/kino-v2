@@ -20,11 +20,15 @@ export interface TabsProps<T extends TabItem>
   selectedKey?: Key
   defaultSelectedKey?: Key
   onSelectionChange?: (key: Key) => void
+  /** Справа в одной строке с вкладками: кнопки раздела */
+  toolbar?: ReactNode
+  /** Классы панели: например, растянуть её на оставшуюся высоту */
+  panelClassName?: string
   className?: string
 }
 
 /** Вкладки: стрелки ←/→ переключают, Home/End — к краям. Например, сезоны сериала */
-export function Tabs<T extends TabItem>({ items, children, className, onSelectionChange, ...props }: TabsProps<T>) {
+export function Tabs<T extends TabItem>({ items, children, toolbar, panelClassName, className, onSelectionChange, ...props }: TabsProps<T>) {
   const collection = {
     ...props,
     items,
@@ -44,12 +48,15 @@ export function Tabs<T extends TabItem>({ items, children, className, onSelectio
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      <div {...tabListProps} ref={ref} className="inline-flex gap-1 self-start rounded-md border border-line bg-panel p-[3px]">
-        {[...state.collection].map((node) => (
-          <Tab key={node.key} node={node} state={state} />
-        ))}
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div {...tabListProps} ref={ref} className="inline-flex gap-1 rounded-md border border-line bg-panel p-[3px]">
+          {[...state.collection].map((node) => (
+            <Tab key={node.key} node={node} state={state} />
+          ))}
+        </div>
+        {toolbar}
       </div>
-      <TabPanel state={state} />
+      <TabPanel state={state} className={panelClassName} />
     </div>
   )
 }
@@ -78,11 +85,11 @@ function Tab<T extends TabItem>({ node, state }: { node: Node<T>; state: TabList
   )
 }
 
-function TabPanel<T extends TabItem>({ state }: { state: TabListState<T> }) {
+function TabPanel<T extends TabItem>({ state, className }: { state: TabListState<T>; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const { tabPanelProps } = useTabPanel({}, state, ref)
   return (
-    <div {...tabPanelProps} ref={ref} className="outline-none">
+    <div {...tabPanelProps} ref={ref} className={cn('outline-none', className)}>
       {state.selectedItem?.props.children}
     </div>
   )

@@ -2,6 +2,8 @@ export { Logo, type LogoProps } from './components/logo/Logo'
 export { Button, buttonStyles, type ButtonProps } from './components/button/Button'
 export { IconButton, iconButtonStyles, type IconButtonProps } from './components/icon-button/IconButton'
 export { Switch, type SwitchProps } from './components/switch/Switch'
+export { Checkbox, type CheckboxProps } from './components/checkbox/Checkbox'
+export { TextField, type TextFieldProps } from './components/text-field/TextField'
 export {
   SegmentedControl,
   type SegmentedControlProps,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Kbd, KeyRecorder, Logo, SegmentedControl, Slider, Switch, SwatchPicker } from '../../src'
+import { Button, Checkbox, Kbd, KeyRecorder, Logo, SegmentedControl, Slider, Switch, SwatchPicker, TextField } from '../../src'
 import { Demo } from './Demo'
 
 const INTRO = [
@@ -21,6 +21,31 @@ export function InputsSection() {
 
   return (
     <>
+      <Demo title="Флажки">
+        <Checkbox defaultSelected>Peacemaker.S02E01.mkv</Checkbox>
+        <Checkbox>Peacemaker.S02E02.mkv</Checkbox>
+        <Checkbox isIndeterminate aria-label="Все файлы">
+          Файлы
+        </Checkbox>
+        <Checkbox isDisabled>Недоступно</Checkbox>
+      </Demo>
+      <Demo title="Текстовые поля">
+        <div className="grid w-full grid-cols-2 gap-4">
+          <TextField label="Название" defaultValue="Peacemaker.S02.2160p" />
+          <TextField label="Страница раздачи" placeholder="https://…" description="Необязательно, но через год пригодится" mono />
+          <TextField
+            label="Папка"
+            defaultValue={'D:\\Сериалы'}
+            mono
+            addon={
+              <Button variant="ghost" size="sm">
+                Обзор…
+              </Button>
+            }
+          />
+          <TextField label="Magnet-ссылка" defaultValue="magnet:?xt=urn:btih:abc" mono isInvalid errorMessage="В ссылке нет хеша раздачи" />
+        </div>
+      </Demo>
       <Demo title="Переключатели">
         <Switch defaultSelected>Автовоспроизведение</Switch>
         <Switch>Ночной режим звука</Switch>

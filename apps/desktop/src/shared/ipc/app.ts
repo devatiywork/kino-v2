@@ -24,6 +24,21 @@ export const appIpc = {
     return typeof path === 'string' ? path : null
   },
 
+  /** System file picker for .torrent files; null if cancelled */
+  pickTorrentFile: async (title: string, filterName: string): Promise<string | null> => {
+    const path = await open({ title, multiple: false, directory: false, filters: [{ name: filterName, extensions: ['torrent'] }] })
+    return typeof path === 'string' ? path : null
+  },
+
+  /** A web page (a release page) in the default browser; only http(s) */
+  openUrl: (url: string) => invoke<void>('app_open_url', { url }),
+
+  /** A file or folder shown selected in Explorer */
+  revealPath: (path: string) => invoke<void>('app_reveal_path', { path }),
+
+  /** Text into the clipboard: a magnet link, a hash */
+  copyText: (text: string) => navigator.clipboard.writeText(text),
+
   /** System file picker filtered to video; null if cancelled */
   pickVideoFile: async (title: string, filterName: string): Promise<string | null> => {
     const path = await open({ title, multiple: false, directory: false, filters: [{ name: filterName, extensions: [...VIDEO_EXTENSIONS] }] })

@@ -76,6 +76,8 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
       // KINO_E2E_MONITOR picks another monitor by resolution; with no match the window stays on the main one
       KINO_TEST_VOLUME: process.env.KINO_E2E_VOLUME ?? '1',
       KINO_TEST_MONITOR: process.env.KINO_E2E_MONITOR ?? '1920x1080',
+      // Torrents without the network: no DHT, trackers or UPnP, loopback only — no firewall prompt
+      KINO_TEST_OFFLINE: '1',
       // Its own WebView2 browser: never joins another Kino, the CDP port is ours
       WEBVIEW2_USER_DATA_FOLDER: join(dataDir, 'webview2'),
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
@@ -110,10 +112,19 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
   }
 }
 
-/** `launch` starts Kino; everything started in a test is closed and its data removed after it */
-export const test = base.extend<{ launch: (options?: LaunchOptions) => Promise<Kino> }>({
+/**
+ * `launch` starts Kino; everything started in a test is closed and its data removed after it.
+ * `workdir` — a temp folder for the test's own files (downloads, .torrent), removed after Kino closes
+ */
+export const test = base.extend<{ launch: (options?: LaunchOptions) => Promise<Kino>; workdir: string }>({
   // Playwright fixtures take an object pattern as the first argument
-  launch: async ({}, use) => {
+  workdir: async ({}, use) => {
+    const dir = mkdtempSync(join(tmpdir(), 'kino-e2e-work-'))
+    await use(dir)
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 })
+  },
+  // Depends on workdir: Kino is closed before the test's files go
+  launch: async ({ workdir: _workdir }, use) => {
     const running: Kino[] = []
     const owned: string[] = []
     await use(async (options = {}) => {

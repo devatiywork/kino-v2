@@ -83,6 +83,28 @@
     "clearText": "All viewings, stop positions, frames and remembered series audio will be removed. This cannot be undone.",
     "cleared": "History cleared"
   },
+  "downloads": {
+    "title": "Downloads",
+    "folder": "Default folder",
+    "folderHint": "For torrents without a category and categories without their own folder",
+    "change": "Change…",
+    "systemFolder": "Windows Downloads folder",
+    "reset": "Reset",
+    "categories": "Categories and their folders",
+    "categoriesHint": "A new download of a category goes to its folder",
+    "startPaused": "Do not start downloads at once",
+    "startPausedHint": "A torrent is added paused",
+    "noSeeding": "Do not seed after downloading — straight to the archive",
+    "noSeedingHint": "Once downloaded, seeding stops and the torrent leaves the downloads. Files stay, the archive keeps the record",
+    "noSeedingTitle": "Move what seeds now to the archive too?",
+    "noSeedingText_one": "{{count}} torrent is seeding now. It leaves the downloads, its files stay.",
+    "noSeedingText_other": "{{count}} torrents are seeding now. They leave the downloads, their files stay.",
+    "noSeedingConfirm": "Move to archive",
+    "noSeedingKeep": "Let them seed",
+    "downloadLimit": "Download limit",
+    "uploadLimit": "Upload limit",
+    "limitHint": "kB/s; 0 — no limit"
+  },
   "hotkeys": {
     "title": "Hotkeys",
     "hint": "Click a key in the table, then press the new one. Escape cancels",

@@ -2,8 +2,14 @@
 //! torrent tables will be `torrent_`; the two sections never reference each other.
 
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::Connection;
+
+/// Unix time in milliseconds: how both sections store dates
+pub fn now_ms() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or_default()
+}
 
 /// Each entry moves the schema one version up; PRAGMA user_version is the current version
 const MIGRATIONS: &[&str] = &[
@@ -72,6 +78,49 @@ const MIGRATIONS: &[&str] = &[
         FROM app_settings WHERE key = 'player.autoplay';
     DELETE FROM app_settings WHERE key = 'player.autoplay';
     "#,
+    // 4 — torrents (SPEC 4): categories, the archive of every torrent ever added, its files.
+    // A record never goes away implicitly: removing from downloads or deleting the files keeps it
+    r#"
+    CREATE TABLE torrent_categories (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+        -- NULL: <downloads folder>\<name>
+        folder     TEXT,
+        position   INTEGER NOT NULL
+    );
+    INSERT INTO torrent_categories (name, position) VALUES ('Сериалы', 1), ('Игры', 2), ('Программы', 3);
+
+    CREATE TABLE torrent_items (
+        id            INTEGER PRIMARY KEY,
+        info_hash     TEXT    NOT NULL UNIQUE,
+        name          TEXT    NOT NULL,
+        total_size    INTEGER NOT NULL,
+        category_id   INTEGER REFERENCES torrent_categories (id) ON DELETE SET NULL,
+        -- the folder the user chose; a multi-file torrent gets its own sub-folder in it
+        save_dir      TEXT    NOT NULL,
+        source_url    TEXT,
+        added_at      INTEGER NOT NULL,
+        completed_at  INTEGER,
+        in_downloads  INTEGER NOT NULL DEFAULT 1,
+        paused        INTEGER NOT NULL DEFAULT 0,
+        files_deleted INTEGER NOT NULL DEFAULT 0,
+        -- JSON array of file indices; NULL — all files
+        only_files    TEXT,
+        -- uploaded in earlier runs: the ratio survives restarts
+        uploaded      INTEGER NOT NULL DEFAULT 0,
+        -- name and file paths in lower case: SQLite's LIKE ignores case only for ASCII
+        search_text   TEXT    NOT NULL
+    );
+    CREATE INDEX torrent_items_added ON torrent_items (added_at);
+
+    CREATE TABLE torrent_files (
+        item_id INTEGER NOT NULL REFERENCES torrent_items (id) ON DELETE CASCADE,
+        idx     INTEGER NOT NULL,
+        path    TEXT    NOT NULL,
+        size    INTEGER NOT NULL,
+        PRIMARY KEY (item_id, idx)
+    );
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
@@ -117,6 +166,8 @@ mod tests {
             .query_row("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'player_%'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(tables, 4);
+        let categories: i64 = conn.query_row("SELECT count(*) FROM torrent_categories", [], |r| r.get(0)).unwrap();
+        assert_eq!(categories, 3, "Сериалы, Игры, Программы");
     }
 
     #[test]

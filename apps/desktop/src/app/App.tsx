@@ -1,5 +1,7 @@
 import { IconUpload } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
+import { AddTorrentDialog, MagnetDialog } from '../features/add-torrent'
+import { DownloadsPage } from '../pages/downloads'
 import { HistoryPage } from '../pages/history'
 import { HomePage } from '../pages/home'
 import { PlaceholderPage } from '../pages/placeholder'
@@ -36,6 +38,8 @@ function Page({ screen }: { screen: Exclude<Screen, 'player'> }) {
       return <ShowPage />
     case 'settings':
       return <SettingsPage />
+    case 'downloads':
+      return <DownloadsPage />
     default:
       return <PlaceholderPage screen={screen} />
   }
@@ -59,6 +63,8 @@ export function App() {
         </div>
       )}
       {dropping ? <DropOverlay /> : null}
+      <AddTorrentDialog />
+      <MagnetDialog />
     </>
   )
 }

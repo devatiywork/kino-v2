@@ -9,7 +9,6 @@ pub mod track_pref;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use serde::Serialize;
@@ -25,9 +24,7 @@ const RESUME_MIN: f64 = 10.0;
 /// Close to the end — start over instead of resuming the credits
 const RESUME_TAIL: f64 = 30.0;
 
-pub fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or_default()
-}
+pub use crate::db::now_ms;
 
 /// `ratio` — «Считать просмотренной после» (SPEC 3.2: 90% by default)
 pub fn is_watched(position: f64, duration: Option<f64>, ratio: f64) -> bool {

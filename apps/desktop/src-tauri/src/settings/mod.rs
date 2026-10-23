@@ -104,6 +104,8 @@ pub const SPEEDS: [f64; 6] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 pub const WATCHED_PERCENTS: [u8; 3] = [85, 90, 95];
 /// More than the player has actions: a bound for a hand-edited database
 const HOTKEYS_MAX: usize = 32;
+/// 10 GB/s in KB/s: more is a typo
+const LIMIT_MAX: u32 = 10_000_000;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -135,6 +137,16 @@ pub struct Settings {
     // System
     /// No sleep and no screen saver while a video plays
     pub keep_awake: bool,
+    // Downloads (torrents)
+    /// «Папка по умолчанию»; empty — the system Downloads folder
+    pub downloads_folder: String,
+    /// «Не начинать загрузку сразу»
+    pub start_paused: bool,
+    /// «Не раздавать после загрузки — сразу в архив» (SPEC 4.3)
+    pub no_seeding: bool,
+    /// KB/s; 0 — no limit
+    pub download_limit: u32,
+    pub upload_limit: u32,
 }
 
 impl Default for Settings {
@@ -156,6 +168,11 @@ impl Default for Settings {
             watched_percent: 90,
             hotkeys: BTreeMap::new(),
             keep_awake: true,
+            downloads_folder: String::new(),
+            start_paused: false,
+            no_seeding: false,
+            download_limit: 0,
+            upload_limit: 0,
         }
     }
 }
@@ -173,6 +190,9 @@ impl Settings {
         while self.hotkeys.len() > HOTKEYS_MAX {
             self.hotkeys.pop_last();
         }
+        self.downloads_folder = self.downloads_folder.trim().to_string();
+        self.download_limit = self.download_limit.min(LIMIT_MAX);
+        self.upload_limit = self.upload_limit.min(LIMIT_MAX);
         self
     }
 

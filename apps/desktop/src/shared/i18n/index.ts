@@ -4,14 +4,16 @@ import enCommon from './en/common.json'
 import enLibrary from './en/library.json'
 import enPlayer from './en/player.json'
 import enSettings from './en/settings.json'
+import enTorrents from './en/torrents.json'
 import ruCommon from './ru/common.json'
 import ruLibrary from './ru/library.json'
 import ruPlayer from './ru/player.json'
 import ruSettings from './ru/settings.json'
+import ruTorrents from './ru/torrents.json'
 
 export const resources = {
-  ru: { common: ruCommon, player: ruPlayer, library: ruLibrary, settings: ruSettings },
-  en: { common: enCommon, player: enPlayer, library: enLibrary, settings: enSettings },
+  ru: { common: ruCommon, player: ruPlayer, library: ruLibrary, settings: ruSettings, torrents: ruTorrents },
+  en: { common: enCommon, player: enPlayer, library: enLibrary, settings: enSettings, torrents: enTorrents },
 } as const
 
 export type Language = keyof typeof resources
@@ -22,7 +24,7 @@ export async function initI18n(language: Language = 'ru'): Promise<typeof i18n> 
     resources,
     lng: language,
     fallbackLng: 'ru',
-    ns: ['common', 'player', 'library', 'settings'],
+    ns: ['common', 'player', 'library', 'settings', 'torrents'],
     defaultNS: 'common',
     interpolation: { escapeValue: false },
     returnNull: false,

@@ -1,0 +1,154 @@
+import type { Page } from '@playwright/test'
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { makeTorrent } from './fixtures/torrent'
+import { expect, FILM, test, type Kino } from './kino'
+
+/** The test film already downloaded into `<workdir>\downloads` and its .torrent next to it */
+function filmTorrent(workdir: string): { torrent: string; film: string; folder: string } {
+  const folder = join(workdir, 'downloads')
+  mkdirSync(folder, { recursive: true })
+  const film = join(folder, 'Film.2014.mkv')
+  copyFileSync(FILM, film)
+  const torrent = join(workdir, 'Film.2014.torrent')
+  writeFileSync(torrent, makeTorrent(film))
+  return { torrent, film, folder }
+}
+
+/** The add dialog opened by the .torrent on the command line: into that folder, with a release page */
+async function addFromDialog(page: Page, folder: string): Promise<void> {
+  const dialog = page.getByRole('dialog', { name: 'Добавить торрент' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('textbox', { name: 'Папка' }).fill(folder)
+  await dialog.getByRole('textbox', { name: 'Страница раздачи' }).fill('https://rutor.info/torrent/1001')
+  await dialog.getByRole('button', { name: 'Добавить' }).click()
+}
+
+const row = (page: Page, name: string) => page.getByRole('list', { name: 'Загрузки' }).getByRole('listitem').filter({ hasText: name })
+const record = (page: Page, name: string) => page.getByRole('list', { name: 'Архив' }).getByRole('listitem').filter({ hasText: name })
+
+async function menu(page: Page, of: ReturnType<typeof row>, button: string, item: string): Promise<void> {
+  await of.getByRole('button', { name: button }).click()
+  await page.getByRole('menuitem', { name: item }).click()
+}
+
+const tab = (kino: Kino, name: 'Загрузки' | 'Архив') => kino.page.getByRole('tab', { name: new RegExp(`^${name}`) }).click()
+
+test.describe('торренты', () => {
+  test('.torrent из Проводника: окно добавления, раздача уже скачанного, «Смотреть»', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await expect(page.getByRole('dialog').getByText('Film.2014.mkv').first()).toBeVisible()
+    await addFromDialog(page, folder)
+
+    await expect(page.getByText('Добавлено в «Сериалы» и сохранено в архиве вместе со ссылкой на раздачу')).toBeVisible()
+    // The file is already in place: checked, not downloaded — and seeded
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    const details = page.getByRole('region', { name: 'Подробности торрента' })
+    await expect(details).toBeVisible()
+    await details.getByRole('tab', { name: /Файлы/ }).click()
+    await expect(details.getByText('100%')).toBeVisible()
+
+    await row(page, 'Film.2014.mkv').getByRole('button', { name: 'Смотреть' }).click()
+    await expect.poll(kino.playing).toBe('Film.2014.mkv')
+  })
+
+  test('убрать из загрузок, снова раздавать, удалить с файлами, скачать снова — запись одна', async ({ launch, workdir }) => {
+    const { torrent, film, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+
+    await menu(page, row(page, 'Film.2014.mkv'), 'Действия с торрентом', 'Убрать из загрузок')
+    await expect(page.getByText('Убрано из загрузок. Файлы на месте, запись осталась в архиве')).toBeVisible()
+    await tab(kino, 'Архив')
+    await expect(record(page, 'Film.2014.mkv').getByText('Файлы на диске')).toBeVisible()
+    await expect(record(page, 'Film.2014.mkv').getByRole('button', { name: /rutor\.info/ })).toBeVisible()
+
+    await menu(page, record(page, 'Film.2014.mkv'), 'Действия с записью', 'Снова раздавать')
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+
+    await menu(page, row(page, 'Film.2014.mkv'), 'Действия с торрентом', 'Удалить с файлами')
+    await page.getByRole('alertdialog', { name: 'Удалить файлы?' }).getByRole('button', { name: 'Удалить файлы' }).click()
+    await expect.poll(() => existsSync(film)).toBe(false)
+    await tab(kino, 'Архив')
+    await expect(record(page, 'Film.2014.mkv').getByText('Файлы удалены')).toBeVisible()
+
+    await record(page, 'Film.2014.mkv').getByRole('button', { name: 'Скачать снова' }).click()
+    // No peers offline: back in the downloads, waiting to download
+    await expect(row(page, 'Film.2014.mkv').getByText('Загрузка')).toBeVisible()
+    expect(await kino.invoke<unknown[]>('torrent_archive', { query: '' })).toHaveLength(1)
+  })
+
+  test('тот же торрент ещё раз — «Уже в архиве»; после перезапуска он раздаётся дальше', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const first = await launch({ file: torrent })
+    await addFromDialog(first.page, folder)
+    await expect(row(first.page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    await first.close()
+
+    const again = await launch({ file: torrent, dataDir: first.dataDir })
+    const dialog = again.page.getByRole('dialog', { name: 'Этот торрент уже в архиве' })
+    await expect(dialog.getByRole('status')).toContainText('Уже в архиве · Сериалы')
+    await dialog.getByRole('button', { name: 'Открыть в загрузках' }).click()
+    await expect(row(again.page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    expect(await again.invoke<unknown[]>('torrent_archive', { query: '' })).toHaveLength(1)
+  })
+
+  test('magnet-ссылка торрента из архива узнаётся без сети', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    const [entry] = await kino.invoke<{ id: number }[]>('torrent_archive', { query: '' })
+    const magnet = await kino.invoke<string>('torrent_magnet', { id: entry?.id })
+
+    await page.getByRole('button', { name: 'Magnet-ссылка' }).click()
+    await page.getByRole('textbox', { name: 'Magnet-ссылка' }).fill(magnet)
+    await page.getByRole('button', { name: 'Продолжить' }).click()
+    await expect(page.getByRole('dialog', { name: 'Этот торрент уже в архиве' })).toBeVisible()
+  })
+
+  test('«Не раздавать после загрузки» — скачанный торрент сразу уходит в архив', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const setup = await launch()
+    await setup.invoke('settings_update', { patch: { noSeeding: true } })
+    await setup.close()
+
+    const kino = await launch({ file: torrent, dataDir: setup.dataDir })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(page.getByText('«Film.2014.mkv» скачан и убран в архив — файлы на месте')).toBeVisible()
+    await expect(page.getByText('Сейчас ничего не качается.')).toBeVisible()
+    await tab(kino, 'Архив')
+    await expect(record(page, 'Film.2014.mkv').getByText('Файлы на диске')).toBeVisible()
+  })
+
+  test('категории: создать, переименовать, удалить — торренты не теряются', async ({ launch }) => {
+    const kino = await launch()
+    const { page } = kino
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Загрузки' }).click()
+    const bar = page.getByRole('group', { name: 'Категории' })
+    await bar.getByRole('button', { name: /Новая категория/ }).click()
+    const create = page.getByRole('dialog', { name: 'Новая категория' })
+    await create.getByRole('textbox', { name: 'Название' }).fill('Фильмы')
+    await create.getByRole('button', { name: 'Создать' }).click()
+    await expect(bar.getByRole('button', { name: /^Фильмы/ })).toBeVisible()
+
+    await bar.getByRole('button', { name: /^Фильмы/ }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Изменить' }).click()
+    const edit = page.getByRole('dialog', { name: 'Категория «Фильмы»' })
+    await edit.getByRole('textbox', { name: 'Название' }).fill('Кино')
+    await edit.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(bar.getByRole('button', { name: /^Кино/ })).toBeVisible()
+
+    await bar.getByRole('button', { name: /^Кино/ }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Удалить категорию' }).click()
+    await page.getByRole('alertdialog', { name: 'Удалить «Кино»?' }).getByRole('button', { name: 'Удалить категорию' }).click()
+    await expect(bar.getByRole('button', { name: /^Кино/ })).toHaveCount(0)
+    expect(await kino.invoke<{ name: string }[]>('torrent_categories')).toHaveLength(3)
+  })
+})

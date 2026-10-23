@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { onAutoplayed } from '../../entities/playback'
 import { playerIpc } from '../../shared/ipc/player'
+import { torrentsIpc } from '../../shared/ipc/torrents'
 
 const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, e)
 
@@ -26,6 +27,17 @@ export function useCoreNotices(): void {
     })
     return () => {
       unlisten.then((u) => u()).catch(report('notices'))
+    }
+  }, [t, toast])
+
+  // SPEC 4.6: a torrent finished (and with «Не раздавать после загрузки» went to the archive)
+  useEffect(() => {
+    const unlisten = torrentsIpc.onNotice((notice) => {
+      const key = notice.archived ? 'toast.finishedArchived' : 'toast.finished'
+      toast.show({ title: t(key, { ns: 'torrents', name: notice.name }), tone: 'success', duration: 6000 })
+    })
+    return () => {
+      unlisten.then((u) => u()).catch(report('torrent notices'))
     }
   }, [t, toast])
 
