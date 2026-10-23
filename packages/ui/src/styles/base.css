@@ -3,10 +3,6 @@
  * а не как веб-страница. Поверх preflight из Tailwind.
  */
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
-
   html,
   body {
     height: 100%;

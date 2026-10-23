@@ -24,7 +24,7 @@ export function TokensSection() {
             <div key={name} className="flex flex-col gap-2">
               <div
                 className="h-14 rounded-md border border-line-2"
-                style={{ background: `var(--color-${name})` }}
+                style={{ background: `var(--kino-${name})` }}
               />
               <span className="font-mono text-xs text-fg">{name}</span>
               <span className="text-xs text-fg-3">{description}</span>

@@ -1,47 +1,58 @@
 /*
  * Токены оформления «Проектор».
  * Единственный источник цветов, шрифтов, размеров текста, радиусов, теней и кривых анимации.
+ *
+ * Цвета зависят от темы: утилиты Tailwind (`bg-panel`, `text-fg-2`…) ссылаются на переменные
+ * `--kino-*`, которые задаются для `data-theme="dark"` и `data-theme="light"`. Тему можно
+ * переключить у всего окна (на <html>) или у отдельного участка — например, плеер поверх видео
+ * всегда тёмный: `<div data-theme="dark">`.
  * Палитра Tailwind по умолчанию отключена (`--color-*: initial`), в коде — только эти имена.
  */
-@theme {
+@theme inline {
   --color-*: initial;
 
   /* Поверхности: от фона к приподнятым слоям */
-  --color-bg: #0e0d0c;
-  --color-panel: #161514;
-  --color-raise: #1f1d1b;
-  --color-raise-2: #2a2724;
-  --color-line: #221f1c;
-  --color-line-2: #2f2b27;
+  --color-bg: var(--kino-bg);
+  --color-panel: var(--kino-panel);
+  --color-raise: var(--kino-raise);
+  --color-raise-2: var(--kino-raise-2);
+  --color-line: var(--kino-line);
+  --color-line-2: var(--kino-line-2);
 
   /* Текст: fg — основной, fg-2..fg-4 — по убыванию важности */
-  --color-fg: #f2ede6;
-  --color-fg-2: #b8afa4;
-  --color-fg-3: #8c847a;
-  --color-fg-4: #a39a90;
+  --color-fg: var(--kino-fg);
+  --color-fg-2: var(--kino-fg-2);
+  --color-fg-3: var(--kino-fg-3);
+  --color-fg-4: var(--kino-fg-4);
 
-  /* Акцент — лампа проектора. Производные цвета считаются от него */
-  --color-accent: #ff7a2e;
-  --color-accent-hover: color-mix(in oklab, var(--color-accent), white 16%);
-  --color-accent-soft: color-mix(in oklab, var(--color-accent) 16%, transparent);
-  --color-accent-fg: color-mix(in oklab, var(--color-accent), white 22%);
-  --color-on-accent: #170b03;
-  --color-danger: #f2555a;
+  /* Акцент — лампа проектора */
+  --color-accent: var(--kino-accent);
+  --color-accent-hover: var(--kino-accent-hover);
+  --color-accent-soft: var(--kino-accent-soft);
+  --color-accent-fg: var(--kino-accent-fg);
+  --color-on-accent: var(--kino-on-accent);
+  --color-danger: var(--kino-danger);
 
   /* Слои поверх контента и видео */
-  --color-hover: rgb(242 237 230 / 0.07);
-  --color-hover-2: rgb(242 237 230 / 0.13);
-  --color-glass: rgb(18 17 16 / 0.86);
-  --color-glass-line: rgb(242 237 230 / 0.1);
-  --color-track: rgb(242 237 230 / 0.22);
-  --color-track-buffer: rgb(242 237 230 / 0.34);
-  --color-scrim: rgb(0 0 0 / 0.78);
-  --color-video: #000000;
-  --color-win-close: #c42b1c;
-  --color-win-close-fg: #ffffff;
+  --color-hover: var(--kino-hover);
+  --color-hover-2: var(--kino-hover-2);
+  --color-glass: var(--kino-glass);
+  --color-glass-line: var(--kino-glass-line);
+  --color-track: var(--kino-track);
+  --color-track-buffer: var(--kino-track-buffer);
+  --color-scrim: var(--kino-scrim);
+  --color-video: var(--kino-video);
+  --color-win-close: var(--kino-win-close);
+  --color-win-close-fg: var(--kino-win-close-fg);
   --color-transparent: transparent;
   --color-current: currentColor;
 
+  --shadow-*: initial;
+  --shadow-pop: var(--kino-shadow-pop);
+  --shadow-thumb: var(--kino-shadow-thumb);
+}
+
+@theme {
   /* Шрифты лежат внутри приложения (fontsource), сеть не нужна */
   --font-*: initial;
   --font-display: 'Unbounded Variable', system-ui, sans-serif;
@@ -81,16 +92,27 @@
   --radius-xl: 18px;
   --radius-full: 9999px;
 
-  --shadow-*: initial;
-  --shadow-pop: 0 18px 50px rgb(0 0 0 / 0.55);
-  --shadow-thumb: 0 0 0 3px rgb(0 0 0 / 0.35);
-
   --ease-*: initial;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
+  --animate-pop-in: pop-in var(--duration-popover-in) var(--ease-out) both;
+  --animate-pop-out: pop-out var(--duration-popover-out) var(--ease-in) both;
+
   --spacing: 4px;
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      translate: 0 var(--pop-shift, 6px);
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+    }
+  }
 }
 
 /* Длительности анимаций: всё быстро, 100–300 мс */
@@ -99,4 +121,76 @@
   --duration-fast: 150ms;
   --duration-base: 200ms;
   --duration-slow: 300ms;
+  --duration-popover-in: 180ms;
+  --duration-popover-out: 150ms;
+}
+
+/* ---------- Тёмная тема (по умолчанию) ---------- */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --kino-bg: #0e0d0c;
+  --kino-panel: #161514;
+  --kino-raise: #1f1d1b;
+  --kino-raise-2: #2a2724;
+  --kino-line: #221f1c;
+  --kino-line-2: #2f2b27;
+  --kino-fg: #f2ede6;
+  --kino-fg-2: #b8afa4;
+  --kino-fg-3: #8c847a;
+  --kino-fg-4: #a39a90;
+  --kino-accent: var(--kino-accent-custom, #ff7a2e);
+  --kino-accent-hover: color-mix(in oklab, var(--kino-accent), white 16%);
+  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 16%, transparent);
+  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 22%);
+  --kino-on-accent: #170b03;
+  --kino-danger: #f2555a;
+  --kino-hover: rgb(242 237 230 / 0.07);
+  --kino-hover-2: rgb(242 237 230 / 0.13);
+  --kino-glass: rgb(18 17 16 / 0.88);
+  --kino-glass-line: rgb(242 237 230 / 0.1);
+  --kino-track: rgb(242 237 230 / 0.22);
+  --kino-track-buffer: rgb(242 237 230 / 0.34);
+  --kino-scrim: rgb(0 0 0 / 0.78);
+  --kino-video: #000000;
+  --kino-win-close: #c42b1c;
+  --kino-win-close-fg: #ffffff;
+  --kino-shadow-pop: 0 18px 50px rgb(0 0 0 / 0.55);
+  --kino-shadow-thumb: 0 0 0 3px rgb(0 0 0 / 0.35);
+}
+
+/* ---------- Светлая тема ----------
+ * Фон — тёплый светло-серый (не чисто белый), панели белые с мягкой тенью,
+ * акцент темнее, чтобы держать контраст на светлом. Видео всегда на чёрном.
+ */
+[data-theme='light'] {
+  color-scheme: light;
+  --kino-bg: #f3f0eb;
+  --kino-panel: #ffffff;
+  --kino-raise: #ebe7e1;
+  --kino-raise-2: #e0dbd3;
+  --kino-line: #e4dfd8;
+  --kino-line-2: #d2ccc3;
+  --kino-fg: #1d1a17;
+  --kino-fg-2: #4f4840;
+  --kino-fg-3: #6b635a;
+  --kino-fg-4: #5c544c;
+  --kino-accent: var(--kino-accent-custom, #e8620f);
+  --kino-accent-hover: color-mix(in oklab, var(--kino-accent), black 10%);
+  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 14%, transparent);
+  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 24%);
+  --kino-on-accent: #170b03;
+  --kino-danger: #cf3238;
+  --kino-hover: rgb(29 26 23 / 0.05);
+  --kino-hover-2: rgb(29 26 23 / 0.09);
+  --kino-glass: rgb(255 255 255 / 0.9);
+  --kino-glass-line: rgb(29 26 23 / 0.1);
+  --kino-track: rgb(29 26 23 / 0.16);
+  --kino-track-buffer: rgb(29 26 23 / 0.26);
+  --kino-scrim: rgb(0 0 0 / 0.78);
+  --kino-video: #000000;
+  --kino-win-close: #c42b1c;
+  --kino-win-close-fg: #ffffff;
+  --kino-shadow-pop: 0 12px 36px rgb(60 45 30 / 0.16), 0 2px 6px rgb(60 45 30 / 0.08);
+  --kino-shadow-thumb: 0 0 0 3px rgb(255 255 255 / 0.9);
 }

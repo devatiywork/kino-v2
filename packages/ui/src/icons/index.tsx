@@ -99,6 +99,7 @@ export const IconPin = createIcon(
 /* Навигация и действия */
 export const IconArrowLeft = createIcon('ArrowLeft', <path d="M19 12H5M11 6l-6 6 6 6" />)
 export const IconArrowRight = createIcon('ArrowRight', <path d="M5 12h14M13 6l6 6-6 6" />)
+export const IconChevronDown = createIcon('ChevronDown', <path d="M6 9.5l6 6 6-6" />)
 export const IconSearch = createIcon(
   'Search',
   <>

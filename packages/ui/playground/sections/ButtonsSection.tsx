@@ -54,7 +54,8 @@ export function ButtonsSection() {
         <IconButton label="Поверх всех окон" isSelected={pinned} onPress={() => setPinned((v) => !v)}>
           <IconPin size={18} />
         </IconButton>
-        <div className="flex items-center gap-1 rounded-lg bg-video p-2">
+        {/* Поверх видео всегда тёмная тема — даже когда окно в светлой */}
+        <div data-theme="dark" className="flex items-center gap-1 rounded-lg bg-video p-2">
           <IconButton
             label={playing ? 'Пауза' : 'Воспроизвести'}
             variant="solid"

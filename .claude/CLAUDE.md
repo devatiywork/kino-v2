@@ -18,6 +18,7 @@ All responses visible to the user — including reasoning, explanations, comment
 Same functionality as Kino 1 (any format, instant audio/subtitle switching, playlist, autoplay, track memory) plus a home screen with watch history: which series, which episode, which second.
 
 Visual direction: **«Проектор»** — warm near-black, amber accent, Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
+Themes: dark (default), light, system. The video area and controls over video are always dark (`data-theme="dark"` scope).
 
 ## Tech Stack
 
@@ -47,10 +48,10 @@ apps/desktop/          — Tauri app (not created yet)
   src/                 — React renderer, Feature-Sliced Design (app, pages, widgets, features, entities, shared)
   src-tauri/           — Rust core: player (libmpv), library (SQLite), scanner, commands, window
 packages/ui/           — @kino/ui, our UI library
-  src/styles/          — tokens.css (single source of design tokens), base.css (no browser legacy), index.css
+  src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Kbd, ScrollArea, Logo…
-  src/lib/             — cn, tv, focusRing, desktopGuards
+  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, Kbd, ScrollArea, Logo…
+  src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence
   playground/          — showcase of every component in every state
 design/prototype.html  — interactive HTML prototype, the design reference
 ```
@@ -69,6 +70,8 @@ design/prototype.html  — interactive HTML prototype, the design reference
   - no browser shortcuts (F5, Ctrl+R/P/F/U/S/N, zoom) — `installDesktopGuards()` in the app entry
   - fonts are bundled (fontsource), no network requests
 - Colors, fonts, text sizes, radii, shadows, easings — only tokens from `tokens.css`. Never hardcode colors.
+- Every color token exists in both themes (`--kino-*` under `[data-theme='dark']` and `[data-theme='light']`); check contrast ≥ 4.5:1 in both.
+- Every overlay (Select, menus, popovers) has its open state shown in the showcase and animates in (180 ms) and out (150 ms).
 - Interaction via `onPress` (react-aria), state via `data-*` attributes (`data-hovered`, `data-pressed`, `data-selected`, `data-focus-visible`, `data-disabled`).
 - Every component: variants via `tv`, accepts `className`, has tests and a showcase entry.
 

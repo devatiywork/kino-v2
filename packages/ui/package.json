@@ -1,6 +1,6 @@
 {
   "name": "@kino/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "UI-библиотека Kino: токены «Проектор», иконки, компоненты без браузерного легаси",

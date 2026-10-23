@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 const TRACK_INSET = 4
@@ -14,6 +14,8 @@ export interface ScrollAreaProps {
   className?: string
   /** Классы для прокручиваемой области (отступы контента и т. п.) */
   viewportClassName?: string
+  /** Стили прокручиваемой области, например maxHeight у списков */
+  viewportStyle?: CSSProperties
   'aria-label'?: string
 }
 
@@ -21,7 +23,7 @@ export interface ScrollAreaProps {
  * Прокрутка со своей полосой поверх контента: тонкая, появляется при наведении и прокрутке,
  * ползунок можно тянуть. Системная полоса скрыта глобально в base.css.
  */
-export function ScrollArea({ children, className, viewportClassName, 'aria-label': ariaLabel }: ScrollAreaProps) {
+export function ScrollArea({ children, className, viewportClassName, viewportStyle, 'aria-label': ariaLabel }: ScrollAreaProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startScroll: number } | null>(null)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -97,6 +99,7 @@ export function ScrollArea({ children, className, viewportClassName, 'aria-label
         ref={viewportRef}
         onScroll={onScroll}
         aria-label={ariaLabel}
+        style={viewportStyle}
         className={cn('h-full overflow-x-hidden overflow-y-auto', viewportClassName)}
       >
         {children}
