@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "kino-desktop"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "libmpv2",
  "rusqlite",

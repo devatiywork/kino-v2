@@ -52,6 +52,8 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run ui` — UI library showcase on http://127.0.0.1:5180
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
+- `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`)
+- `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
 - `powershell -ExecutionPolicy Bypass -File scripts/fetch-libmpv.ps1` — download libmpv into `vendor/libmpv` and generate `mpv.lib` (needs 7-Zip and VS Build Tools)
 - `cargo run --manifest-path spikes/tauri-mpv/src-tauri/Cargo.toml -- <video>` — the libmpv + WebView2 spike
 
@@ -72,6 +74,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
                          window, app), lib/ (store, router, media, time), i18n/ (ru, en: common, player, library)
     test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge), track and library fixtures
+  e2e/                 — Playwright: kino.ts (launches kino-desktop.exe, connects over CDP, `launch` fixture), player/history/
+                         series scenarios, global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
+                         templates, media/ — tiny generated clips: a series of 2 seasons and a film)
   src-tauri/           — Rust core:
     src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
     src/library/       — Library (folders, positions, viewings, continue watching, history, series, settings, track memory),
@@ -141,6 +146,14 @@ Every feature must be covered before it is considered complete:
 - **Unit** — business logic in isolation (TS: Vitest; Rust: `cargo test`)
 - **Integration** — IPC bridge, player service, module interactions with mocks
 - **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles; add torrent with category, remove from downloads keeps archive, download again)
+
+E2E runs the real debug build: Playwright connects to WebView2 over CDP (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port`).
+Each launch gets its own temp folder; the core reads these variables:
+
+- `KINO_DATA_DIR` — kino.db and thumbs instead of %APPDATA% (all builds), so tests never touch the real history
+- `KINO_TEST_VOLUME`, `KINO_TEST_MONITOR` (debug builds only) — start volume and the monitor (`1920x1080`) the window opens on, without focus.
+  The harness sets 1% and Full HD; override with `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`
+- Test media is generated, never the user's own files
 
 ## Out of Scope
 

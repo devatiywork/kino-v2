@@ -98,6 +98,10 @@ impl Player {
             if cfg!(debug_assertions) {
                 let log = std::env::temp_dir().join("kino-mpv.log");
                 init.set_option("log-file", log.to_string_lossy().as_ref())?;
+                // KINO_TEST_VOLUME — the E2E tests are quiet from the very first frame
+                if let Some(volume) = std::env::var("KINO_TEST_VOLUME").ok().and_then(|v| v.parse::<f64>().ok()) {
+                    init.set_option("volume", volume.clamp(0.0, VOLUME_MAX))?;
+                }
             }
             Ok(())
         })?;

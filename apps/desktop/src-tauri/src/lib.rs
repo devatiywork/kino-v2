@@ -16,14 +16,39 @@ fn app_launch_files() -> Vec<String> {
     std::env::args().skip(1).filter(|a| !a.starts_with('-')).collect()
 }
 
+/// KINO_TEST_MONITOR=1920x1080 (debug builds): the E2E tests open the window on that monitor
+/// and never take the focus from whatever the user is doing
+#[cfg(debug_assertions)]
+fn place_for_tests(app: &tauri::AppHandle, config: &mut tauri::utils::config::WindowConfig) -> tauri::Result<()> {
+    let Ok(wanted) = std::env::var("KINO_TEST_MONITOR") else { return Ok(()) };
+    config.focus = false;
+    let monitors = app.available_monitors()?;
+    let Some(monitor) = monitors.iter().find(|m| format!("{}x{}", m.size().width, m.size().height) == wanted) else {
+        eprintln!("[window] no {wanted} monitor, the window stays on the main one");
+        return Ok(());
+    };
+    // Any point of that monitor will do: `center` then centers the window on it
+    let (at, size) = (monitor.position(), monitor.size());
+    let middle = tauri::PhysicalPosition::new(at.x + size.width as i32 / 2, at.y + size.height as i32 / 2)
+        .to_logical::<f64>(monitor.scale_factor());
+    (config.x, config.y) = (Some(middle.x), Some(middle.y));
+    Ok(())
+}
+
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // %APPDATA%\local.kino.app: kino.db and thumbs\ (SPEC 7)
-            let data = app.path().app_data_dir()?;
+            // %APPDATA%\local.kino.app: kino.db and thumbs\ (SPEC 7). KINO_DATA_DIR — a separate
+            // folder, so the E2E tests never touch the real history
+            let data = match std::env::var_os("KINO_DATA_DIR") {
+                Some(dir) => std::path::PathBuf::from(dir),
+                None => app.path().app_data_dir()?,
+            };
             let thumbs = data.join("thumbs");
             std::fs::create_dir_all(&thumbs)?;
+            // The page shows the frames through the asset protocol: only this folder
+            app.asset_protocol_scope().allow_directory(&thumbs, false)?;
             let library = Arc::new(Library::open(&data.join("kino.db"), thumbs)?);
             app.manage(library.clone());
 
@@ -38,7 +63,11 @@ pub fn run() {
                 Err(e) => eprintln!("[library] rescan: {e}"),
             })?;
 
-            let window = app.get_webview_window("main").expect("main window");
+            // The main window is made here and not by Tauri itself, so the E2E tests can place it
+            let mut config = app.config().app.windows.first().cloned().expect("main window config");
+            #[cfg(debug_assertions)]
+            place_for_tests(app.handle(), &mut config)?;
+            let window = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
             let size = window.inner_size()?;
             let player = Player::new(app.handle(), library, window.hwnd()?.0 as isize, size.width, size.height)?;
             app.manage(player);
