@@ -160,8 +160,9 @@
 }
 
 /* ---------- Светлая тема ----------
- * Фон — тёплый светло-серый (не чисто белый), панели белые с мягкой тенью,
- * акцент темнее, чтобы держать контраст на светлом. Видео всегда на чёрном.
+ * Фон — тёплый светло-серый (не чисто белый), панели белые с мягкой тенью.
+ * Акцент — жжёный оранжевый с белым текстом (4.7:1); чёрный текст на оранжевом
+ * в светлой теме смотрится грубо. Видео всегда на чёрном.
  */
 [data-theme='light'] {
   color-scheme: light;
@@ -175,11 +176,11 @@
   --kino-fg-2: #4f4840;
   --kino-fg-3: #6b635a;
   --kino-fg-4: #5c544c;
-  --kino-accent: var(--kino-accent-custom, #e8620f);
-  --kino-accent-hover: color-mix(in oklab, var(--kino-accent), black 10%);
-  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 14%, transparent);
-  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 24%);
-  --kino-on-accent: #170b03;
+  --kino-accent: var(--kino-accent-custom, #c94a0c);
+  --kino-accent-hover: color-mix(in oklab, var(--kino-accent), black 12%);
+  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 12%, transparent);
+  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 18%);
+  --kino-on-accent: #ffffff;
   --kino-danger: #cf3238;
   --kino-hover: rgb(29 26 23 / 0.05);
   --kino-hover-2: rgb(29 26 23 / 0.09);
