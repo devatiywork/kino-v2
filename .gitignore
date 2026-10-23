@@ -7,8 +7,8 @@ target/
 release/
 .vite/
 
-# libmpv binaries (bundled at build time, not committed)
-apps/desktop/src-tauri/libmpv/*.dll
+# libmpv (dll, import library and headers — scripts/fetch-libmpv.ps1)
+vendor/
 
 # Tests
 coverage/
@@ -27,3 +27,7 @@ desktop.ini
 *.log
 .env
 .env.*
+
+# Tauri generated schemas
+spikes/*/src-tauri/gen/
+apps/*/src-tauri/gen/

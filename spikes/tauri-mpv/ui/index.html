@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Kino spike</title>
+<style>
+  :root { --bg-ui: rgba(14, 12, 10, .72); --line: rgba(255, 255, 255, .12); --text: #f3ede6; --muted: #b3a89c; --accent: #ff7a2e; }
+  html, body { margin: 0; height: 100%; background: transparent; color: var(--text); font: 14px/1.4 "Segoe UI", sans-serif; overflow: hidden; user-select: none; cursor: default; }
+  .bar { position: fixed; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--bg-ui); }
+  .top { top: 0; height: 40px; background: linear-gradient(rgba(0,0,0,.7), rgba(0,0,0,0)); }
+  .top .title { flex: 1; font-weight: 600; letter-spacing: .02em; }
+  .top .title b { color: var(--accent); }
+  .bottom { bottom: 0; height: 64px; border-top: 1px solid var(--line); }
+  button { font: inherit; color: var(--text); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 8px; height: 32px; padding: 0 12px; cursor: default; }
+  button:hover { background: rgba(255,255,255,.16); }
+  button.win { width: 40px; padding: 0; border: 0; background: transparent; }
+  button.win:hover { background: rgba(255,255,255,.12); }
+  button.win.close:hover { background: #c42b1c; }
+  .seek { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.2); position: relative; }
+  .seek span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 3px; }
+  .time { font: 13px "Cascadia Mono", Consolas, monospace; color: var(--muted); min-width: 120px; text-align: right; }
+  /* Overlay tests */
+  .panel { position: fixed; right: 16px; top: 56px; width: 300px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-ui); }
+  .panel.blur { background: rgba(14,12,10,.35); backdrop-filter: blur(16px); }
+  .panel h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .panel dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font: 12px "Cascadia Mono", Consolas, monospace; }
+  .panel dt { color: var(--muted); }
+  .sub { position: fixed; left: 0; right: 0; bottom: 92px; text-align: center; font-size: 28px; font-weight: 600; text-shadow: 0 0 4px #000, 0 2px 6px #000; pointer-events: none; }
+  .spinner { position: fixed; left: 24px; top: 64px; width: 44px; height: 44px; border-radius: 50%; border: 4px solid rgba(255,255,255,.2); border-top-color: var(--accent); animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .frame { position: fixed; border: 2px dashed var(--accent); pointer-events: none; display: none; }
+  .note { position: fixed; left: 24px; top: 124px; max-width: 360px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="bar top" data-tauri-drag-region>
+    <div class="title" data-tauri-drag-region>kin<b>●</b> spike — mpv под прозрачным WebView2</div>
+    <button class="win" id="min" aria-label="Свернуть">—</button>
+    <button class="win" id="max" aria-label="Развернуть">☐</button>
+    <button class="win close" id="close" aria-label="Закрыть">✕</button>
+  </div>
+
+  <div class="spinner" aria-hidden="true"></div>
+  <div class="note">Перетащите видеофайл в окно. Крутилка — проверка, что анимация интерфейса не дёргается поверх видео.</div>
+
+  <div class="panel" id="panel">
+    <h3>Состояние mpv</h3>
+    <dl id="state"></dl>
+    <h3 style="margin-top:12px">Интерфейс</h3>
+    <dl><dt>rAF</dt><dd id="raf">—</dd><dt>DPR</dt><dd id="dpr">—</dd></dl>
+  </div>
+
+  <div class="sub" id="sub">Субтитры интерфейсом — текст поверх видео</div>
+  <div class="frame" id="frame"></div>
+
+  <div class="bar bottom">
+    <button id="play">Пауза</button>
+    <div class="seek" id="seek"><span id="seekFill"></span></div>
+    <div class="time" id="time">0:00 / 0:00</div>
+    <button id="test">Тестовый сигнал</button>
+    <button id="blur">Размытие панели</button>
+    <button id="rect">Видео в рамке</button>
+    <button id="hide">Скрыть видео</button>
+    <button id="fs">Полный экран</button>
+  </div>
+
+<script>
+  const { invoke } = window.__TAURI__.core;
+  const win = window.__TAURI__.window.getCurrentWindow();
+  const $ = (id) => document.getElementById(id);
+  const fmt = (s) => { if (s == null || !isFinite(s)) return '—'; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  let state = {};
+
+  $('min').onclick = () => win.minimize();
+  $('max').onclick = () => win.toggleMaximize();
+  $('close').onclick = () => win.close();
+  $('play').onclick = () => invoke('mpv_set', { name: 'pause', value: !state.pause });
+  $('test').onclick = () => invoke('mpv_command', { args: ['loadfile', 'av://lavfi:testsrc2=size=1920x1080:rate=60'] });
+  $('blur').onclick = () => $('panel').classList.toggle('blur');
+  $('fs').onclick = async () => win.setFullscreen(!(await win.isFullscreen()));
+  $('seek').onclick = (e) => {
+    if (!state.duration) return;
+    const r = $('seek').getBoundingClientRect();
+    invoke('mpv_command', { args: ['seek', String((e.clientX - r.left) / r.width * 100), 'absolute-percent'] });
+  };
+  let hidden = false;
+  $('hide').onclick = () => { hidden = !hidden; invoke('video_visible', { visible: !hidden }); $('hide').textContent = hidden ? 'Показать видео' : 'Скрыть видео'; };
+  let framed = false;
+  $('rect').onclick = () => {
+    framed = !framed;
+    const f = $('frame');
+    if (!framed) { f.style.display = 'none'; invoke('video_rect', { rect: null }); $('rect').textContent = 'Видео в рамке'; return; }
+    const css = { x: 80, y: 120, w: Math.round(innerWidth * 0.45), h: Math.round(innerWidth * 0.45 * 9 / 16) };
+    Object.assign(f.style, { display: 'block', left: css.x - 2 + 'px', top: css.y - 2 + 'px', width: css.w + 'px', height: css.h + 'px' });
+    const d = devicePixelRatio;
+    invoke('video_rect', { rect: [Math.round(css.x * d), Math.round(css.y * d), Math.round(css.w * d), Math.round(css.h * d)] });
+    $('rect').textContent = 'Видео на всё окно';
+  };
+
+  async function poll() {
+    try { state = await invoke('mpv_state'); } catch (e) { console.error(e); }
+    $('play').textContent = state.pause ? 'Играть' : 'Пауза';
+    $('time').textContent = fmt(state.time) + ' / ' + fmt(state.duration);
+    $('seekFill').style.width = state.duration ? (state.time / state.duration * 100) + '%' : '0';
+    const rows = [['файл', (state.path || '—').split(/[\\/]/).pop()], ['vo', state.vo], ['hwdec', state.hwdec], ['кадр', state.width ? state.width + '×' + state.height : '—'], ['fps', state.fps ? state.fps.toFixed(2) : '—'], ['потеряно', state.dropped]];
+    $('state').innerHTML = rows.map(([k, v]) => '<dt>' + k + '</dt><dd>' + (v ?? '—') + '</dd>').join('');
+  }
+  setInterval(poll, 250); poll();
+
+  let frames = 0, last = performance.now();
+  (function loop(t) { frames++; if (t - last >= 1000) { $('raf').textContent = frames + ' fps'; frames = 0; last = t; } requestAnimationFrame(loop); })(last);
+  $('dpr').textContent = devicePixelRatio;
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# crates.io drops TLS handshakes on this network now and then: retry more, no HTTP/2 multiplexing
+[net]
+retry = 10
+
+[http]
+multiplexing = false

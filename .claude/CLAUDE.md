@@ -31,7 +31,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ## Tech Stack
 
 - Tauri 2 (Rust ≥ 1.90) — app shell, file system, single instance, file associations
-- libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2 (spike first, fallback: external mpv.exe + JSON IPC)
+- libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2. Confirmed by `spikes/tauri-mpv` (see its README for the recipe: opaque window + `backgroundColor: #00000000`, video host at `HWND_BOTTOM` without `WS_CLIPSIBLINGS`). libmpv comes from shinchiro/mpv-winbuild-cmake via `scripts/fetch-libmpv.ps1` into `vendor/libmpv` (not committed)
 - `librqbit` — BitTorrent engine in the Rust core (torrent module)
 - Trackers window — a separate, isolated WebView (no IPC capabilities) with a persistent profile; `.torrent` downloads and `magnet:` navigations are intercepted on the Rust side and turned into the "add torrent" flow
 - SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive with `.torrent` blobs, files, download state)
@@ -51,6 +51,8 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run ui` — UI library showcase on http://127.0.0.1:5180
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
+- `powershell -ExecutionPolicy Bypass -File scripts/fetch-libmpv.ps1` — download libmpv into `vendor/libmpv` and generate `mpv.lib` (needs 7-Zip and VS Build Tools)
+- `cargo run --manifest-path spikes/tauri-mpv/src-tauri/Cargo.toml -- <video>` — the libmpv + WebView2 spike
 
 ## Architecture
 
@@ -69,6 +71,10 @@ packages/ui/           — @kino/ui, our UI library
   src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence
   playground/          — showcase of every component in every state
 design/prototype.html  — interactive HTML prototype, the design reference
+spikes/tauri-mpv/      — throwaway spike: libmpv in a child HWND under a transparent WebView2 (README = findings)
+scripts/               — fetch-libmpv.ps1
+vendor/libmpv/         — libmpv-2.dll, mpv.lib, headers (gitignored, produced by the script)
+.cargo/config.toml     — network retries for crates.io
 ```
 
 ## UI Library Rules (@kino/ui)
