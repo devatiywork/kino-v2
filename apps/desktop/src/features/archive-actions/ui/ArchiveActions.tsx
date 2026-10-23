@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '../../../entities/settings'
 import { categoryItems, categoryOfItem, copyMagnet, downloadsView, refreshTorrents, revealContent, SourceDialog, useTorrents } from '../../../entities/torrent'
-import { routeSourcePage } from '../../../entities/tracker'
+import { openInTrackers } from '../../../entities/tracker'
 import { appIpc } from '../../../shared/ipc/app'
 import { torrentsIpc, type ArchiveEntry } from '../../../shared/ipc/torrents'
 
@@ -35,10 +35,10 @@ export function ArchiveActions({ entry }: { entry: ArchiveEntry }) {
       toDownloads()
     }, t('toast.downloadAgain', { name: entry.name }))
 
-  // A bookmarked tracker's page opens in the trackers tab, another site — in the browser
+  // The release page opens inside Kino, in the trackers tab
   const openSource = (url: string) => {
-    if (routeSourcePage(url)) downloadsView.set({ tab: 'trackers' })
-    else void run('source', () => appIpc.openUrl(url))
+    openInTrackers(url)
+    downloadsView.set({ tab: 'trackers' })
   }
 
   const items: MenuItemData[] = [

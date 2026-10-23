@@ -25,6 +25,12 @@ vi.stubGlobal(
 )
 
 const commands = (name: string) => mock.calls().filter(([command]) => command === name)
+const page = (url: string, history: { canGoBack?: boolean; canGoForward?: boolean } = {}) => ({
+  url,
+  loading: false,
+  canGoBack: history.canGoBack ?? false,
+  canGoForward: history.canGoForward ?? false,
+})
 
 function renderPane() {
   const view = render(<TrackersPane />)
@@ -35,7 +41,7 @@ describe('TrackersPane (integration)', () => {
   beforeEach(() => {
     mock.reset()
     localStorage.clear()
-    act(() => trackersStore.set({ bookmarks, current: null, opened: false, page: { url: null, loading: false }, status: null, pending: null }))
+    act(() => trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false }, status: null, pending: null }))
     mock.respond('tracker_bookmarks', bookmarks)
   })
 
@@ -48,7 +54,7 @@ describe('TrackersPane (integration)', () => {
 
     await user.click(screen.getByRole('button', { name: /^RuTor/ }))
     expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutor.info/', bounds }]])
-    expect(trackersStore.get()).toMatchObject({ opened: true, current: 2 })
+    expect(trackersStore.get().opened).toBe(true)
     expect(rememberedBookmark()).toBe(2)
     await vi.waitFor(() => expect(commands('tracker_layout').at(-1)).toEqual(['tracker_layout', { bounds }]))
     expect(screen.queryByText(/Выберите трекер слева/)).not.toBeInTheDocument()
@@ -58,27 +64,37 @@ describe('TrackersPane (integration)', () => {
     rememberBookmark(1)
     renderPane()
     await vi.waitFor(() => expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutracker.org/forum/index.php', bounds }]]))
-    expect(trackersStore.get().current).toBe(1)
   })
 
-  it('страница раздачи из загрузок открывается сразу, с закладкой её сайта', async () => {
+  it('страница раздачи из загрузок открывается сразу, вместо трекера прошлого раза; закладка её сайта отмечена', async () => {
     rememberBookmark(2)
     act(() => trackersStore.set({ pending: 'https://bt.rutracker.org/forum/viewtopic.php?t=6593218' }))
     renderPane()
     await vi.waitFor(() =>
       expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://bt.rutracker.org/forum/viewtopic.php?t=6593218', bounds }]]),
     )
-    expect(trackersStore.get()).toMatchObject({ pending: null, current: 1 })
+    expect(trackersStore.get().pending).toBeNull()
+    act(() => trackersStore.set({ page: page('https://bt.rutracker.org/forum/viewtopic.php?t=6593218') }))
+    expect(screen.getByRole('button', { name: /^Рутрекер/ })).toHaveAttribute('aria-current', 'true')
   })
 
-  it('кнопки браузера и адресная строка', async () => {
+  it('«Назад» и «Вперёд» — по истории страницы; обновить; адресная строка', async () => {
     const { user } = renderPane()
     await user.click(screen.getByRole('button', { name: /^RuTor/ }))
-    act(() => trackersStore.set({ page: { url: 'https://rutor.info/torrent/1', loading: false } }))
+    act(() => trackersStore.set({ page: page('https://rutor.info/') }))
+    expect(screen.getByRole('button', { name: 'Назад' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Вперёд' })).toBeDisabled()
+
+    act(() => trackersStore.set({ page: page('https://rutor.info/torrent/1', { canGoBack: true }) }))
     await user.click(screen.getByRole('button', { name: 'Назад' }))
+    act(() => trackersStore.set({ page: page('https://rutor.info/', { canGoForward: true }) }))
+    expect(screen.getByRole('button', { name: 'Назад' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Вперёд' }))
+    act(() => trackersStore.set({ page: page('https://rutor.info/torrent/1', { canGoBack: true }) }))
     await user.click(screen.getByRole('button', { name: 'Обновить страницу' }))
     expect(commands('tracker_go')).toEqual([
       ['tracker_go', { action: 'back' }],
+      ['tracker_go', { action: 'forward' }],
       ['tracker_go', { action: 'reload' }],
     ])
 
@@ -87,7 +103,6 @@ describe('TrackersPane (integration)', () => {
     await user.clear(address)
     await user.type(address, 'rutor.info/search/shogun{Enter}')
     expect(commands('tracker_open').at(-1)).toEqual(['tracker_open', { url: 'rutor.info/search/shogun', bounds }])
-    expect(trackersStore.get().current).toBe(2)
   })
 
   it('диалог над вкладкой прячет страницу сайта, после — она снова на месте', async () => {

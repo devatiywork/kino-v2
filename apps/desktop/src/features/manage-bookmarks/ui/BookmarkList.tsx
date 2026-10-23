@@ -1,7 +1,7 @@
 import { cn, ConfirmDialog, IconLock, IconMore, IconPlus, MenuButton, Pressable } from '@kino/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { refreshBookmarks, useTrackers } from '../../../entities/tracker'
+import { bookmarkOf, refreshBookmarks, useTrackers } from '../../../entities/tracker'
 import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { trackersIpc, type Bookmark } from '../../../shared/ipc/trackers'
 import { BookmarkDialog } from './BookmarkDialog'
@@ -16,13 +16,13 @@ const hostOf = (url: string) => {
 }
 
 /**
- * SPEC 4.5: the trackers' bookmarks — a click opens the site; the «…» menu edits, moves and
- * deletes (it opens to the left, away from the site's page)
+ * SPEC 4.5: the trackers' bookmarks — a click opens the site, the open page's site is marked;
+ * the «…» menu edits, moves and deletes (it opens to the left, away from the site's page)
  */
 export function BookmarkList({ onOpen }: { onOpen: (bookmark: Bookmark) => void }) {
   const { t, i18n } = useTranslation('torrents')
   const bookmarks = useTrackers((s) => s.bookmarks)
-  const current = useTrackers((s) => s.current)
+  const current = useTrackers((s) => bookmarkOf(s.page.url, s.bookmarks)?.id ?? null)
   const [editing, setEditing] = useState<Bookmark | null | undefined>(undefined)
   const [removing, setRemoving] = useState<Bookmark | null>(null)
   useCoverNativeLayer(removing != null)

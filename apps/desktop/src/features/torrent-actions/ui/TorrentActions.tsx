@@ -2,7 +2,7 @@ import { ConfirmDialog, IconButton, IconMore, IconPause, IconPlay, MenuButton, u
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { categoryItems, categoryOfItem, copyMagnet, downloadsView, revealContent, SourceDialog, useTorrents } from '../../../entities/torrent'
-import { routeSourcePage } from '../../../entities/tracker'
+import { openInTrackers } from '../../../entities/tracker'
 import { appIpc } from '../../../shared/ipc/app'
 import { torrentsIpc, type ActiveTorrent } from '../../../shared/ipc/torrents'
 import { formatSize } from '../../../shared/lib/formatBytes'
@@ -29,10 +29,10 @@ export function TorrentActions({ torrent }: { torrent: ActiveTorrent }) {
     void run('remove', () => torrentsIpc.remove(torrent.id, deleteFiles), t(deleteFiles ? 'toast.deleted' : 'toast.removed'))
   }
 
-  // A bookmarked tracker's page opens in the trackers tab, another site — in the browser
+  // The release page opens inside Kino, in the trackers tab
   const openSource = (url: string) => {
-    if (routeSourcePage(url)) downloadsView.set({ tab: 'trackers' })
-    else void run('source', () => appIpc.openUrl(url))
+    openInTrackers(url)
+    downloadsView.set({ tab: 'trackers' })
   }
 
   const items: MenuItemData[] = [

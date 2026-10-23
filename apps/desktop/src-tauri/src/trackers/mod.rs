@@ -1,10 +1,12 @@
-//! The trackers browser (SPEC 4.5): a tracker's site inside Kino, in a webview of its own laid
-//! over the «Трекеры» tab. The page is remote: Tauri gives a remote origin no command unless a
-//! capability names its URL, and none does. What the page tries to do is decided here:
-//! downloads of .torrent files and magnet links become the add dialog, other sites open in the
-//! default browser, Kino's own pages are out of reach (rules.rs).
+//! The trackers browser (SPEC 4.5): web pages inside Kino, in a webview of its own laid over the
+//! «Трекеры» tab. The page is remote: Tauri gives a remote origin no command unless a capability
+//! names its URL, and none does. What the page tries to do is decided here: downloads of .torrent
+//! files and magnet links become the add dialog, any other page — of whatever site — stays
+//! inside (nothing goes to the default browser by itself), Kino's own pages are out of reach
+//! (rules.rs). Back and forward go through WebView2's own history (history.rs).
 
 pub mod commands;
+mod history;
 pub mod rules;
 pub mod store;
 
@@ -28,14 +30,15 @@ pub const STATE_EVENT: &str = "trackers://state";
 pub const TORRENT_EVENT: &str = "trackers://torrent";
 /// A magnet link was clicked
 pub const MAGNET_EVENT: &str = "trackers://magnet";
-/// A link to another site went to the default browser
-pub const EXTERNAL_EVENT: &str = "trackers://external";
 
 #[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageState {
     pub url: Option<String>,
     pub loading: bool,
+    /// There is a page to go back / forward to
+    pub can_go_back: bool,
+    pub can_go_forward: bool,
 }
 
 /// What the tracker gave: a .torrent file or a magnet link, and the page it came from
@@ -46,12 +49,6 @@ pub struct Intercepted {
     pub target: String,
     /// The release page: it goes into the archive
     pub source_url: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct External {
-    pub url: String,
 }
 
 /// Where the page lies in the main window, in CSS pixels
@@ -66,13 +63,9 @@ pub struct Bounds {
 /// What the webview's handlers share with the commands
 struct Shared {
     app: AppHandle,
-    /// The site that was opened: its own pages stay inside
-    home: Mutex<Option<Url>>,
     page: Mutex<PageState>,
     downloads_dir: PathBuf,
     app_origins: Vec<Url>,
-    /// Tests: a link to another site is announced, the browser is not started
-    offline: bool,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -90,26 +83,22 @@ impl Shared {
         lock(&self.page).url.clone()
     }
 
-    fn open_external(&self, url: &Url) {
-        if !self.offline {
-            if let Err(e) = std::process::Command::new("explorer").arg(url.as_str()).spawn() {
-                eprintln!("[trackers] browser: {e}");
-            }
-        }
-        self.emit(EXTERNAL_EVENT, External { url: url.to_string() });
+    /// Changes the page's state and tells the toolbar
+    fn update_page(&self, change: impl FnOnce(&mut PageState)) {
+        let state = {
+            let mut page = lock(&self.page);
+            change(&mut page);
+            page.clone()
+        };
+        self.emit(STATE_EVENT, state);
     }
 
     /// A navigation or a new window: true — it opens in the trackers browser
     fn decide(&self, url: &Url) -> bool {
-        let home = lock(&self.home).clone();
-        match rules::classify(home.as_ref(), url, &self.app_origins) {
+        match rules::classify(url, &self.app_origins) {
             Navigation::Allow => true,
             Navigation::Magnet => {
                 self.emit(MAGNET_EVENT, Intercepted { target: url.to_string(), source_url: self.source() });
-                false
-            }
-            Navigation::External => {
-                self.open_external(url);
                 false
             }
             Navigation::Block => false,
@@ -147,7 +136,7 @@ pub struct Trackers {
 
 impl Trackers {
     /// `dir` — `<data>\trackers`: intercepted .torrent files wait there for the add dialog
-    pub fn new(app: &AppHandle, db_path: &Path, dir: &Path, offline: bool) -> AppResult<Self> {
+    pub fn new(app: &AppHandle, db_path: &Path, dir: &Path) -> AppResult<Self> {
         let downloads_dir = dir.join("downloads");
         // What the last run left: the archive keeps its own copies
         if downloads_dir.exists() {
@@ -160,11 +149,9 @@ impl Trackers {
             store: BookmarkStore::open(db_path)?,
             shared: Arc::new(Shared {
                 app: app.clone(),
-                home: Mutex::default(),
                 page: Mutex::default(),
                 downloads_dir,
                 app_origins,
-                offline,
             }),
             webview: Mutex::default(),
         })
@@ -180,7 +167,6 @@ impl Trackers {
 
     /// A bookmark or a typed address; the first time the webview is made
     pub fn open(&self, url: Url, bounds: Bounds) -> AppResult<()> {
-        *lock(&self.shared.home) = Some(url.clone());
         let mut webview = lock(&self.webview);
         if let Some(existing) = webview.as_ref() {
             existing.navigate(url)?;
@@ -188,11 +174,12 @@ impl Trackers {
             return self.layout(Some(bounds));
         }
         let window = self.shared.app.get_window("main").ok_or(tauri::Error::WindowNotFound)?;
-        let (on_nav, on_new, on_download, on_load) = (self.shared.clone(), self.shared.clone(), self.shared.clone(), self.shared.clone());
+        let (on_nav, on_new, on_download, on_load, on_history) =
+            (self.shared.clone(), self.shared.clone(), self.shared.clone(), self.shared.clone(), self.shared.clone());
         let builder = WebviewBuilder::new(LABEL, WebviewUrl::External(url))
             .on_navigation(move |url| on_nav.decide(url))
             .on_new_window(move |url, _features| {
-                // target=_blank on the same site opens in place
+                // target=_blank and window.open: in place, there is one page
                 if on_new.decide(&url) {
                     if let Some(webview) = on_new.app.get_webview(LABEL) {
                         tauri::async_runtime::spawn(async move {
@@ -206,15 +193,18 @@ impl Trackers {
             })
             .on_download(move |_webview, event| on_download.download(event))
             .on_page_load(move |_webview, payload| {
-                let state = {
-                    let mut page = lock(&on_load.page);
+                on_load.update_page(|page| {
                     page.url = Some(payload.url().to_string());
                     page.loading = matches!(payload.event(), PageLoadEvent::Started);
-                    page.clone()
-                };
-                on_load.emit(STATE_EVENT, state);
+                });
             });
         let created = window.add_child(builder, LogicalPosition::new(bounds.x, bounds.y), LogicalSize::new(bounds.width, bounds.height))?;
+        history::watch(&created, move |back, forward| {
+            on_history.update_page(|page| {
+                page.can_go_back = back;
+                page.can_go_forward = forward;
+            });
+        })?;
         *webview = Some(created);
         Ok(())
     }
@@ -239,8 +229,8 @@ impl Trackers {
         let webview = lock(&self.webview);
         let Some(webview) = webview.as_ref() else { return Ok(()) };
         match action {
-            "back" => webview.eval("history.back()")?,
-            "forward" => webview.eval("history.forward()")?,
+            "back" => history::step(webview, true)?,
+            "forward" => history::step(webview, false)?,
             _ => webview.reload()?,
         }
         Ok(())

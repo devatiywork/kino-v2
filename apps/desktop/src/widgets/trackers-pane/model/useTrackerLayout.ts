@@ -37,7 +37,7 @@ export function useTrackerLayout(host: RefObject<HTMLDivElement | null>, visible
       const el = host.current
       if (!el) return
       await trackersIpc.open(url, boundsOf(el))
-      trackersStore.set({ opened: true, current: bookmark?.id ?? trackersStore.get().current })
+      trackersStore.set({ opened: true })
       if (bookmark) rememberBookmark(bookmark.id)
     },
     [host],

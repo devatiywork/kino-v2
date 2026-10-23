@@ -1,12 +1,10 @@
 import { siteKey, trackersIpc, type Bookmark, type PageState } from '../../../shared/ipc/trackers'
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
-export type TrackerStatus = { kind: 'torrent' | 'magnet' | 'external'; text: string } | null
+export type TrackerStatus = { kind: 'torrent' | 'magnet'; text: string } | null
 
 interface TrackersState {
   bookmarks: Bookmark[]
-  /** The bookmark whose site is open */
-  current: number | null
   /** The webview exists: a site was opened in this run */
   opened: boolean
   page: PageState
@@ -18,9 +16,8 @@ interface TrackersState {
 
 export const trackersStore = createStore<TrackersState>({
   bookmarks: [],
-  current: null,
   opened: false,
-  page: { url: null, loading: false },
+  page: { url: null, loading: false, canGoBack: false, canGoForward: false },
   status: null,
   pending: null,
 })
@@ -55,20 +52,18 @@ export async function refreshBookmarks(): Promise<void> {
   trackersStore.set({ bookmarks: await trackersIpc.bookmarks() })
 }
 
-/** The bookmark of a link's site — its release page opens inside Kino */
-export function bookmarkOf(url: string): Bookmark | null {
-  const key = siteKey(url)
-  return key ? (trackersStore.get().bookmarks.find((b) => siteKey(b.url) === key) ?? null) : null
+/** The bookmark of a page's site: marked in the list while the page is open */
+export function bookmarkOf(url: string | null, bookmarks: Bookmark[] = trackersStore.get().bookmarks): Bookmark | null {
+  const key = url ? siteKey(url) : null
+  return key ? (bookmarks.find((b) => siteKey(b.url) === key) ?? null) : null
 }
 
 /**
- * A release page from the downloads or the archive: a bookmarked site opens in the trackers tab
- * (true), any other — not here (false: the caller opens the default browser)
+ * A release page from the downloads or the archive, of whatever site: it opens inside Kino as
+ * soon as the trackers tab shows (the caller switches to it)
  */
-export function routeSourcePage(url: string): boolean {
-  if (!bookmarkOf(url)) return false
+export function openInTrackers(url: string): void {
   trackersStore.set({ pending: url })
-  return true
 }
 
 let statusTimer = 0

@@ -17,10 +17,10 @@ export function BrowserBar({ onNavigate }: { onNavigate: (url: string) => void }
 
   return (
     <div className="flex items-center gap-1 border-b border-line px-3 py-2">
-      <IconButton label={t('trackers.back')} isDisabled={!opened} onPress={() => go('back')}>
+      <IconButton label={t('trackers.back')} isDisabled={!opened || !page.canGoBack} onPress={() => go('back')}>
         <IconArrowLeft size={17} />
       </IconButton>
-      <IconButton label={t('trackers.forward')} isDisabled={!opened} onPress={() => go('forward')}>
+      <IconButton label={t('trackers.forward')} isDisabled={!opened || !page.canGoForward} onPress={() => go('forward')}>
         <IconArrowRight size={17} />
       </IconButton>
       <IconButton label={t('trackers.reload')} isDisabled={!opened} onPress={() => go('reload')}>

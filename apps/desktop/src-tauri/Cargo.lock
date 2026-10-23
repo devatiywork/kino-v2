@@ -2275,7 +2275,7 @@ dependencies = [
 
 [[package]]
 name = "kino-desktop"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2289,7 +2289,9 @@ dependencies = [
  "tauri-plugin-dialog",
  "thiserror 2.0.21",
  "tokio",
+ "webview2-com",
  "windows 0.61.3",
+ "windows-core 0.62.2",
 ]
 
 [[package]]

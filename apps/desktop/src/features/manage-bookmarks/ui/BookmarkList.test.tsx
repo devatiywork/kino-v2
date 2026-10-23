@@ -36,11 +36,11 @@ const menuOf = (title: string) => screen.getByRole('button', { name: `Дейст
 describe('BookmarkList (integration)', () => {
   beforeEach(() => {
     mock.reset()
-    act(() => trackersStore.set({ bookmarks, current: 2 }))
+    act(() => trackersStore.set({ bookmarks, page: { url: 'https://rutor.info/torrent/1', loading: false, canGoBack: true, canGoForward: false } }))
     mock.respond('tracker_bookmarks', bookmarks)
   })
 
-  it('закладки с адресом сайта; текущая отмечена; клик открывает сайт', async () => {
+  it('закладки с адресом сайта; сайт открытой страницы отмечен; клик открывает сайт', async () => {
     const { user, onOpen } = renderList()
     const nav = screen.getByRole('navigation', { name: 'Закладки трекеров' })
     expect(within(nav).getAllByRole('listitem')).toHaveLength(2)
@@ -48,6 +48,10 @@ describe('BookmarkList (integration)', () => {
     expect(within(nav).getByRole('button', { name: /^RuTor/ })).toHaveAttribute('aria-current', 'true')
     await user.click(within(nav).getByRole('button', { name: /^Рутрекер/ }))
     expect(onOpen).toHaveBeenCalledWith(bookmarks[0])
+
+    // A page of a site without a bookmark: nothing is marked
+    act(() => trackersStore.set({ page: { url: 'https://www.imdb.com/title/tt1', loading: false, canGoBack: true, canGoForward: false } }))
+    expect(within(nav).getByRole('button', { name: /^RuTor/ })).not.toHaveAttribute('aria-current')
   })
 
   it('новый трекер: хватит адреса, сохранённый сразу открывается; диалог прячет страницу сайта', async () => {

@@ -1,9 +1,9 @@
 export {
   bookmarkOf,
+  openInTrackers,
   refreshBookmarks,
   rememberBookmark,
   rememberedBookmark,
-  routeSourcePage,
   showStatus,
   startTrackersSync,
   trackersStore,

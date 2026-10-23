@@ -38,12 +38,13 @@ async function addBookmark(page: Page, url: string, title: string): Promise<void
 }
 
 /**
- * A link whose navigation Kino cancels (magnet:, another site): Playwright would wait for that
- * navigation to end — click it the way the page itself would, over a bare CDP session
+ * Kino cancels a magnet link's navigation, and Playwright waits for it to end before every next
+ * action on the page: such a link, and the first click after it, go over a bare CDP session
  */
 async function follow(tracker: Page, selector: string): Promise<void> {
   const cdp = await tracker.context().newCDPSession(tracker)
-  await cdp.send('Runtime.evaluate', { expression: `document.querySelector(${JSON.stringify(selector)}).click()` })
+  // As a person's click: Chromium skips pages left without a user gesture when going back
+  await cdp.send('Runtime.evaluate', { expression: `document.querySelector(${JSON.stringify(selector)}).click()`, userGesture: true })
   await cdp.detach()
 }
 
@@ -80,7 +81,7 @@ test.describe('трекеры', () => {
     expect(existsSync(join(homedir(), 'Downloads', DOWNLOADED))).toBe(false)
   })
 
-  test('страница раздачи из архива — во вкладке; magnet того же торрента — «Уже в архиве»; чужой сайт и новое окно', async ({ launch, site, workdir }) => {
+  test('страница раздачи из архива — во вкладке; magnet того же торрента — «Уже в архиве»; другой сайт — внутри, назад и вперёд между сайтами', async ({ launch, site, workdir }) => {
     // The film already in place and its .torrent from the tracker, opened as if from Explorer
     const folder = join(workdir, 'downloads')
     mkdirSync(folder, { recursive: true })
@@ -115,12 +116,28 @@ test.describe('трекеры', () => {
     await page.keyboard.press('Escape')
     await expect(known).toBeHidden()
 
-    // Another site goes to the default browser (offline: nowhere); the page stays
+    // Another site opens right here: nothing goes to the default browser by itself
     await follow(tracker, '#away')
-    await expect(page.getByText('Другой сайт открыт в браузере: 127.0.0.2:9')).toBeVisible()
-    expect(tracker.url()).toBe(`${site.url}/topic/1`)
+    await expect.poll(() => tracker.url()).toBe(`${site.otherUrl}/elsewhere`)
+    await expect(tracker.locator('#where')).toHaveText('Описание фильма на другом сайте')
+    await expect(address(page)).toHaveValue(`${site.otherUrl}/elsewhere`)
+    // The bookmark is marked only while a page of its site is open
+    await expect(page.getByRole('button', { name: /^Тестовый трекер/ })).not.toHaveAttribute('aria-current', 'true')
 
-    // target=_blank on the same site opens right here, not in a window of its own
+    // Back and forward go through the page's history, across the sites
+    const back = page.getByRole('button', { name: 'Назад' })
+    const forward = page.getByRole('button', { name: 'Вперёд' })
+    await expect(forward).toBeDisabled()
+    await back.click()
+    await expect.poll(() => tracker.url()).toBe(`${site.url}/topic/1`)
+    await expect(forward).toBeEnabled()
+    await forward.click()
+    await expect.poll(() => tracker.url()).toBe(`${site.otherUrl}/elsewhere`)
+    await expect(forward).toBeDisabled()
+    await back.click()
+    await expect.poll(() => tracker.url()).toBe(`${site.url}/topic/1`)
+
+    // target=_blank opens right here, not in a window of its own
     await tracker.locator('#blank').click()
     await expect.poll(() => tracker.url()).toBe(`${site.url}/topic/1?tab=new`)
     expect(tracker.context().pages().filter((p) => p.url().startsWith(site.url))).toHaveLength(1)

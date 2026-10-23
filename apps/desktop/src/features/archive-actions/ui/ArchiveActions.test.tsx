@@ -62,7 +62,7 @@ describe('ArchiveActions (integration)', () => {
     expect(screen.getByRole('menuitem', { name: 'Удалить из архива' })).toHaveAttribute('aria-disabled', 'true')
   })
 
-  it('страница раздачи трекера из закладок — во вкладке «Трекеры», другого сайта — в браузере', async () => {
+  it('страница раздачи любого сайта — во вкладке «Трекеры», не в браузере', async () => {
     act(() => trackersStore.set({ bookmarks: [{ id: 1, title: 'Рутрекер', url: 'https://rutracker.org/forum/index.php' }], pending: null }))
     const user = renderActions({ status: 'onDisk' })
     await user.click(screen.getByRole('button', { name: 'Действия с записью' }))
@@ -75,7 +75,8 @@ describe('ArchiveActions (integration)', () => {
     const other = renderActions({ id: 12, status: 'onDisk', sourceUrl: 'https://kinozal.tv/details.php?id=1' })
     await other.click(screen.getAllByRole('button', { name: 'Действия с записью' })[1] as HTMLElement)
     await other.click(screen.getByRole('menuitem', { name: 'Открыть страницу раздачи' }))
-    expect(mock.calls()).toEqual([['app_open_url', { url: 'https://kinozal.tv/details.php?id=1' }]])
-    expect(downloadsView.get().tab).toBe('archive')
+    expect(mock.calls()).toEqual([])
+    expect(downloadsView.get().tab).toBe('trackers')
+    expect(trackersStore.get().pending).toBe('https://kinozal.tv/details.php?id=1')
   })
 })

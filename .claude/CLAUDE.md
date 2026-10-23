@@ -33,7 +33,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - Tauri 2 (Rust ≥ 1.90) — app shell, file system, single instance, file associations
 - libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2. Confirmed by `spikes/tauri-mpv` (see its README for the recipe: opaque window + `backgroundColor: #00000000`, video host at `HWND_BOTTOM` without `WS_CLIPSIBLINGS`). libmpv comes from shinchiro/mpv-winbuild-cmake via `scripts/fetch-libmpv.ps1` into `vendor/libmpv` (not committed)
 - `librqbit` 9 — BitTorrent engine in the Rust core (torrent module), with fast resume; TLS through Windows' schannel
-- Trackers browser — a child webview of the main window (`window.add_child`, Tauri feature `unstable`), laid over the «Трекеры» tab by bounds the renderer reports; a remote origin gets no Tauri IPC (no `remote.urls` in the capabilities). It shares the main WebView2 profile, so logins persist. `.torrent` downloads (`on_download`), `magnet:` and other-site navigations (`on_navigation`) and new windows (`on_new_window`) are handled on the Rust side and turned into the "add torrent" flow
+- Trackers browser — a child webview of the main window (`window.add_child`, Tauri feature `unstable`), laid over the «Трекеры» tab by bounds the renderer reports; a remote origin gets no Tauri IPC (no `remote.urls` in the capabilities). It shares the main WebView2 profile, so logins persist. `.torrent` downloads (`on_download`) and `magnet:` navigations (`on_navigation`) are turned into the "add torrent" flow on the Rust side; any other web page, of any site, stays inside (new windows open in place), nothing goes to the default browser by itself. Back / forward use WebView2's own history (`webview2-com`, the version wry is built on, through `with_webview`)
 - SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive records, files, download state); the archive's `.torrent` files lie in `<data>\torrents\files`
 - Tauri plugins: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video), tray, notifications
 - React 19 + TypeScript 7 + Vite 8
@@ -87,8 +87,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window,
                          torrent (store mirrored from the core: downloads every second, categories, archive; downloadsView;
                          labels; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog; categories and record helpers),
-                         tracker (bookmarks, the page's address, the interception status line, a release page routed to the
-                         trackers tab when its site is bookmarked, the last bookmark remembered)
+                         tracker (bookmarks, the page's address and history, the interception status line, a release page
+                         waiting for the trackers tab, the bookmark of the open page's site, the last bookmark remembered)
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
                          settings, torrents, trackers, window, app), lib/ (store, router, media, time, sizes and rates,
                          nativeLayer — dialogs hide the native trackers page while open), i18n/ (ru, en:
@@ -121,10 +121,11 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          .torrent / magnet reading), store (TorrentStore: own connection to the same db; categories, items,
                          files, case-insensitive search), commands (torrents://update every second, torrents://changed,
                          torrents://notice). Knows nothing about the player
-    src/trackers/      — Trackers (the browser webview: open, layout, back / forward / reload; interception: magnet →
-                         trackers://magnet, .torrent download → <data>\trackers\downloads + trackers://torrent, another site →
-                         the default browser + trackers://external; trackers://state), rules (same site, app URLs blocked,
-                         address normalization — pure), store (BookmarkStore: bookmarks with positions), commands
+    src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
+                         .torrent download → <data>\trackers\downloads + trackers://torrent; trackers://state with the
+                         address and can-go-back / forward), history (WebView2 HistoryChanged, GoBack / GoForward), rules
+                         (any web page allowed, app URLs and other schemes blocked, address normalization — pure), store
+                         (BookmarkStore: bookmarks with positions), commands
     src/lib.rs         — setup (data dir, library, settings, torrents, trackers, main window from the config, player), app_clear_history,
                          app_open_url (http(s) only), app_reveal_path
     later              — tray

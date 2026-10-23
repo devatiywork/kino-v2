@@ -2,7 +2,6 @@ import { useToast } from '@kino/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { onAutoplayed } from '../../entities/playback'
-import { hostOf } from '../../entities/torrent'
 import { showStatus } from '../../entities/tracker'
 import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
 import { playerIpc } from '../../shared/ipc/player'
@@ -60,7 +59,6 @@ export function useCoreNotices(): void {
         openMagnetDialog(target, sourceUrl)
         void submitMagnet(target, tt('magnet.invalid'))
       }),
-      trackersIpc.onExternal((url) => showStatus({ kind: 'external', text: tt('trackers.external', { host: hostOf(url) }) })),
     ]
     return () => {
       for (const p of unlisteners) p.then((u) => u()).catch(report('trackers'))

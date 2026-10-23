@@ -10,6 +10,9 @@ export interface Bookmark {
 export interface PageState {
   url: string | null
   loading: boolean
+  /** WebView2's own history, across sites */
+  canGoBack: boolean
+  canGoForward: boolean
 }
 
 /** A .torrent (its path) or a magnet link the tracker gave, and the release page it came from */
@@ -48,11 +51,9 @@ export const trackersIpc = {
     listen<Intercepted>('trackers://torrent', (e) => handler(e.payload)),
   onMagnet: (handler: (got: Intercepted) => void): Promise<UnlistenFn> =>
     listen<Intercepted>('trackers://magnet', (e) => handler(e.payload)),
-  onExternal: (handler: (url: string) => void): Promise<UnlistenFn> =>
-    listen<{ url: string }>('trackers://external', (e) => handler(e.payload.url)),
 }
 
-/** rutracker.org for bt.rutracker.org — mirrors same_site of src-tauri/src/trackers/rules.rs */
+/** rutracker.org for bt.rutracker.org, three labels for co.uk-like zones: the bookmark of a page */
 export function siteKey(url: string): string | null {
   let host: string
   try {

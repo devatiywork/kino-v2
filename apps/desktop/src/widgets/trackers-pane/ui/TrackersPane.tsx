@@ -1,7 +1,7 @@
-import { IconDownload, IconExternal, IconMagnet } from '@kino/ui'
+import { IconDownload, IconMagnet } from '@kino/ui'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { bookmarkOf, rememberedBookmark, trackersStore, useTrackers } from '../../../entities/tracker'
+import { rememberedBookmark, trackersStore, useTrackers } from '../../../entities/tracker'
 import { BookmarkList } from '../../../features/manage-bookmarks'
 import { useNativeLayerCovered } from '../../../shared/lib/nativeLayer'
 import { useTrackerLayout } from '../model/useTrackerLayout'
@@ -30,7 +30,7 @@ export function TrackersPane() {
     if (pending) {
       started.current = true
       trackersStore.set({ pending: null })
-      void open(pending, bookmarkOf(pending)).catch(report)
+      void open(pending).catch(report)
       return
     }
     if (started.current || opened || !bookmarks.length) return
@@ -40,7 +40,7 @@ export function TrackersPane() {
     void open(last.url, last).catch(report)
   }, [pending, opened, bookmarks, open])
 
-  const StatusIcon = status?.kind === 'magnet' ? IconMagnet : status?.kind === 'external' ? IconExternal : IconDownload
+  const StatusIcon = status?.kind === 'magnet' ? IconMagnet : IconDownload
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">

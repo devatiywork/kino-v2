@@ -48,10 +48,4 @@ describe('useCoreNotices: перехваты браузера трекеров',
     await act(() => submitMagnet(magnet, 'не magnet'))
     expect(addTorrentStore.get()).toMatchObject({ magnetOpen: false, origin: 'tracker', sourceUrl: topic })
   })
-
-  it('ссылка на другой сайт — открыта в браузере, строка говорит куда', () => {
-    renderHook(useCoreNotices, { wrapper })
-    act(() => mock.fire('trackers://external', { url: 'https://kinopoisk.ru/film/1' }))
-    expect(trackersStore.get().status).toEqual({ kind: 'external', text: 'Другой сайт открыт в браузере: kinopoisk.ru' })
-  })
 })

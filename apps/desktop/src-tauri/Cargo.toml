@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -26,6 +26,9 @@ librqbit = { version = "9", default-features = false, features = ["default-tls"]
 anyhow = "1"
 bytes = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+# The trackers browser's history (back / forward): WebView2 itself, the versions wry is built on
+webview2-com = "0.39"
+windows-core = "0.62"
 windows = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",

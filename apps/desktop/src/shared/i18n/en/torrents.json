@@ -213,7 +213,6 @@
     "empty": "Choose a tracker on the left — its site opens here. Sign in, find a release and press “download”: Kino picks up the torrent.",
     "interceptedTorrent": "Kino caught the .torrent — nothing was saved to Windows Downloads",
     "interceptedMagnet": "Kino caught the magnet link",
-    "external": "Another site opened in the browser: {{host}}",
     "bookmarkMenu": "Actions of bookmark {{title}}",
     "edit": "Edit",
     "up": "Move up",
