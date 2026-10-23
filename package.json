@@ -1,9 +1,9 @@
 {
   "name": "kino",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Kino — видеоплеер и торрент-клиент для Windows на Tauri, mpv и librqbit",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "ui": "bun run --filter @kino/ui dev",

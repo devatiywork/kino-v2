@@ -16,6 +16,8 @@ All responses visible to the user — including reasoning, explanations, comment
 # Project Overview
 
 **Kino 2** — rewrite of the Kino desktop video player (Electron → Tauri). Windows-first.
+**Personal project for one user, not distributed.** Third-party license compatibility (GPL/LGPL builds of mpv, GPL tracker definitions, etc.) is not a constraint when choosing libraries.
+
 One window, two independent modules:
 
 - **Player** — same functionality as Kino 1 (any format, instant audio/subtitle switching, playlist, autoplay, track memory) plus a home screen with watch history: which series, which episode, which second.
@@ -31,6 +33,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - Tauri 2 (Rust ≥ 1.90) — app shell, file system, single instance, file associations
 - libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2 (spike first, fallback: external mpv.exe + JSON IPC)
 - `librqbit` — BitTorrent engine in the Rust core (torrent module)
+- Trackers window — a separate, isolated WebView (no IPC capabilities) with a persistent profile; `.torrent` downloads and `magnet:` navigations are intercepted on the Rust side and turned into the "add torrent" flow
 - SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive with `.torrent` blobs, files, download state)
 - Tauri plugins: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video), tray, notifications
 - React 19 + TypeScript 7 + Vite 8
@@ -55,7 +58,8 @@ Themes: dark (default), light, system. The video area and controls over video ar
 apps/desktop/          — Tauri app (not created yet)
   src/                 — React renderer, Feature-Sliced Design (app, pages, widgets, features, entities, shared)
   src-tauri/           — Rust core: player (libmpv), library (SQLite, player schema), scanner,
-                         torrent (librqbit, archive, categories; torrent schema), commands, window, tray
+                         torrent (librqbit, archive, categories; torrent schema), trackers (isolated webview,
+                         download/magnet interception), commands, window, tray
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
@@ -96,6 +100,7 @@ design/prototype.html  — interactive HTML prototype, the design reference
 - IPC calls only through `apps/desktop/src/shared/ipc/` — typed wrappers over Tauri commands
 - Track/subtitle switching via mpv properties — never reload video
 - Never carry a track index between files — match by language and title only
+- Remote pages (trackers) never get Tauri IPC access: capabilities are granted to the main window only
 - Player and torrent modules do not import each other; they meet only in the app layer and through the optional file↔torrent link
 - A torrent record is never lost implicitly: removing from downloads or deleting files keeps the archive entry; only "delete from archive" removes it, with confirmation
 - Keep components under 150 lines — extract logic into hooks
@@ -112,7 +117,7 @@ Every feature must be covered before it is considered complete:
 ## Out of Scope
 
 - No online streaming or YouTube/Twitch playback
-- No searching for torrents on trackers — Kino only keeps what the user added
+- No background scraping of tracker sites and no bypassing their protection (captcha, Cloudflare, bot detection) — trackers are used only through the built-in trackers window, where the user browses and solves any captcha themselves
 - No built-in codec or driver installation
 - No cloud sync or remote libraries
 - No mobile or web builds — desktop only
