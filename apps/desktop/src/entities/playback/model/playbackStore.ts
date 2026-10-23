@@ -4,6 +4,9 @@ import { createStore, useStore } from '../../../shared/lib/createStore'
 export const initialPlayback: PlayerSnapshot = {
   path: null,
   title: null,
+  seriesTitle: null,
+  season: null,
+  episode: null,
   duration: null,
   position: 0,
   paused: false,

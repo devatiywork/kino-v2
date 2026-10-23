@@ -2,8 +2,8 @@ import { Button } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { navigate, type Screen } from '../../../shared/lib/router'
 
-/** Sections that come in later stages: series, history, downloads, settings */
-export function PlaceholderPage({ screen }: { screen: Exclude<Screen, 'home' | 'player'> }) {
+/** Sections that come in later stages: series, downloads, settings */
+export function PlaceholderPage({ screen }: { screen: Exclude<Screen, 'home' | 'history' | 'player'> }) {
   const { t } = useTranslation()
   return (
     <div className="grid h-full place-items-center">

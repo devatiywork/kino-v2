@@ -1,8 +1,13 @@
+mod db;
 mod error;
+mod library;
 mod player;
+
+use std::sync::Arc;
 
 use tauri::{Manager, RunEvent, WindowEvent};
 
+use library::{commands as lc, Library};
 use player::{commands as pc, Player};
 
 /// Files passed on the command line (Explorer "Open with", file associations)
@@ -15,9 +20,16 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // %APPDATA%\local.kino.app: kino.db and thumbs\ (SPEC 7)
+            let data = app.path().app_data_dir()?;
+            let thumbs = data.join("thumbs");
+            std::fs::create_dir_all(&thumbs)?;
+            let library = Arc::new(Library::open(&data.join("kino.db"), thumbs)?);
+            app.manage(library.clone());
+
             let window = app.get_webview_window("main").expect("main window");
             let size = window.inner_size()?;
-            let player = Player::new(app.handle(), window.hwnd()?.0 as isize, size.width, size.height)?;
+            let player = Player::new(app.handle(), library, window.hwnd()?.0 as isize, size.width, size.height)?;
             app.manage(player);
             Ok(())
         })
@@ -43,6 +55,8 @@ pub fn run() {
             pc::player_set_subtitles_visible,
             pc::player_set_subtitle_margin,
             pc::player_set_video_visible,
+            lc::library_continue_watching,
+            lc::library_history,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kino");

@@ -1,12 +1,17 @@
 import { useToast } from '@kino/ui'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { setResumed } from '../../../entities/playback'
 import { appIpc } from '../../../shared/ipc/app'
+import type { LibraryFile } from '../../../shared/ipc/library'
 import { playerIpc } from '../../../shared/ipc/player'
 import { fileName, isVideoPath } from '../../../shared/lib/media'
 import { navigate } from '../../../shared/lib/router'
 
-/** Open a video in the player: from the picker, drag and drop or the command line */
+/**
+ * Open a video in the player: from the picker, drag and drop, the command line or the
+ * history. The core continues from the saved position; the player shows where from.
+ */
 export function useOpenVideo() {
   const { t } = useTranslation()
   const toast = useToast()
@@ -18,7 +23,8 @@ export function useOpenVideo() {
         return
       }
       try {
-        await playerIpc.open(path)
+        const { resumedFrom } = await playerIpc.open(path)
+        setResumed(resumedFrom)
         navigate('player')
       } catch (e: unknown) {
         console.error('[open-video]', e)
@@ -26,6 +32,18 @@ export function useOpenVideo() {
       }
     },
     [t, toast],
+  )
+
+  /** A file from the library: it may have been moved or deleted since */
+  const openFile = useCallback(
+    async (file: LibraryFile) => {
+      if (!file.exists) {
+        toast.show({ title: t('missingToast', { ns: 'library', path: file.path }), tone: 'warning' })
+        return
+      }
+      await openPath(file.path)
+    },
+    [openPath, t, toast],
   )
 
   const pickAndOpen = useCallback(async () => {
@@ -37,5 +55,5 @@ export function useOpenVideo() {
     }
   }, [openPath, t])
 
-  return { openPath, pickAndOpen }
+  return { openPath, openFile, pickAndOpen }
 }

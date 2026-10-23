@@ -60,22 +60,30 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ```
 apps/desktop/          — Tauri app (@kino/desktop)
   src/                 — React renderer, Feature-Sliced Design:
-    app/               — entry (main.tsx), App (screen switch, drop overlay), startup sync, styles
-    pages/             — home, player (+ useVideoLayer, useSubtitleLift), placeholder
-    widgets/           — app-title-bar, player-chrome (top bar, bottom controls)
+    app/               — entry (main.tsx), App (screen switch, drop overlay), startup sync and notices, styles
+    pages/             — home (hero + history + unfinished; Welcome when empty), history, player
+                         (+ useVideoLayer, useSubtitleLift, ResumeBanner), placeholder
+    widgets/           — app-title-bar, player-chrome, continue-hero, continue-grid, history-list
     features/          — open-video, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys
-    entities/          — playback (store mirrored from the core, actions, OSD, track labels), app-window
-    shared/            — ipc/ (typed Tauri wrappers: player, window, app), lib/ (store, router, media, time), i18n/ (ru, en)
-    test/              — Vitest setup, Tauri bridge mock, track fixtures
+    entities/          — playback (store mirrored from the core, actions, OSD, resume, track labels),
+                         library (continue/history store, labels, day grouping, Thumb, ContinueCard, HistoryRow), app-window
+    shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
+                         window, app), lib/ (store, router, media, time), i18n/ (ru, en: common, player, library)
+    test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge), track and library fixtures
   src-tauri/           — Rust core:
+    src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
+    src/library/       — Library (positions, viewings, continue watching, history, track memory per series),
+                         episode (S02E05 / 2x05 / «Серия 5» → series key), track_pref (match by language and title), commands
     src/player/        — Player (libmpv), video_host (child HWND), events (mpv event thread → player://state,
-                         player://position), state (snapshot, pure + tested), tracks (track-list parsing), commands
-    later              — library (SQLite, player schema), scanner, torrent (librqbit, archive, categories),
-                         trackers (isolated webview, download/magnet interception), tray
+                         player://position, player://notice; registers files, applies track memory), session (saves the
+                         position, takes frames), state (snapshot, pure + tested), tracks (track-list parsing), commands
+    later              — scanner, torrent (librqbit, archive, categories), trackers (isolated webview,
+                         download/magnet interception), tray
+  data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol)
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, PopoverButton, Kbd,
+  src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, Slider, Select, ListBox, Popover, PopoverButton, Kbd,
                          ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, Tabs, Tooltip (useTooltipFor),
                          MenuButton, ContextMenu, Dialog/Modal, ConfirmDialog, ToastProvider/useToast
   src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence

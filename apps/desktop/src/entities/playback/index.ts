@@ -15,5 +15,6 @@ export {
   VOLUME_STEP,
 } from './model/actions'
 export { showOsd } from './model/osd'
+export { resumeStore, setResumed, useResume } from './model/resume'
 export { Osd } from './ui/Osd'
 export { languageName, trackDetails, trackTitle } from './lib/trackLabel'

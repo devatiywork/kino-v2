@@ -1,5 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { invoke, listen, type UnlistenFn } from './bridge'
 
 /** Mirrors src-tauri/src/player/tracks.rs */
 export type TrackKind = 'video' | 'audio' | 'sub'
@@ -21,7 +20,12 @@ export interface Track {
 /** Mirrors src-tauri/src/player/state.rs */
 export interface PlayerSnapshot {
   path: string | null
+  /** Readable file title */
   title: string | null
+  /** From the file name: «The Sopranos», season 1, episode 5 */
+  seriesTitle: string | null
+  season: number | null
+  episode: number | null
   duration: number | null
   position: number
   paused: boolean
@@ -40,6 +44,14 @@ export interface PlayerSnapshot {
 
 export type SeekMode = 'absolute' | 'relative'
 
+export interface OpenResult {
+  /** The file continues from here (SPEC 3.2) */
+  resumedFrom: number | null
+}
+
+/** Mirrors Notice in src-tauri/src/player/events.rs */
+export type PlayerNotice = { type: 'trackNotFound'; track: TrackKind; wanted: string; chosen: string | null }
+
 export const VOLUME_MAX = 130
 
 /** Show/hide requests are numbered: the core drops one that arrives after a newer one */
@@ -48,7 +60,8 @@ let videoSeq = 0
 /** Typed wrappers over the player's Tauri commands and events */
 export const playerIpc = {
   snapshot: () => invoke<PlayerSnapshot>('player_snapshot'),
-  open: (path: string) => invoke<void>('player_open', { path }),
+  /** Continues from the saved position when there is one */
+  open: (path: string) => invoke<OpenResult>('player_open', { path }),
   stop: () => invoke<void>('player_stop'),
   setPaused: (paused: boolean) => invoke<void>('player_set_paused', { paused }),
   seek: (seconds: number, mode: SeekMode) => invoke<void>('player_seek', { seconds, mode }),
@@ -64,4 +77,6 @@ export const playerIpc = {
     listen<PlayerSnapshot>('player://state', (e) => handler(e.payload)),
   onPosition: (handler: (position: number) => void): Promise<UnlistenFn> =>
     listen<number>('player://position', (e) => handler(e.payload)),
+  onNotice: (handler: (notice: PlayerNotice) => void): Promise<UnlistenFn> =>
+    listen<PlayerNotice>('player://notice', (e) => handler(e.payload)),
 }

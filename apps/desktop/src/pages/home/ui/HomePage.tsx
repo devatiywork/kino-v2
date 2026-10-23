@@ -1,48 +1,60 @@
-import { IconClock, IconLayers, IconSubtitles, IconUpload, Logo } from '@kino/ui'
-import type { ReactNode } from 'react'
+import { Button, IconUpload, ScrollArea } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
+import { useLibrary } from '../../../entities/library'
 import { OpenFileButton } from '../../../features/open-video'
+import { navigate } from '../../../shared/lib/router'
+import { ContinueGrid } from '../../../widgets/continue-grid'
+import { ContinueHero } from '../../../widgets/continue-hero'
+import { HistoryList } from '../../../widgets/history-list'
+import { Welcome } from './Welcome'
 
-function Tip({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-panel p-4 text-sm text-fg-2">
-      <span className="text-accent">{icon}</span>
-      <b className="text-base font-semibold text-fg">{title}</b>
-      {children}
-    </div>
-  )
-}
+/** Rows of history shown next to the hero; the rest is on the History screen */
+const HOME_HISTORY = 30
 
 /**
- * Home. Until the library and history are stored (next stage) — the first-run screen:
- * open a file or drop it onto the window.
+ * Home (SPEC 3.2): «Продолжить» with the frame of the last stop, history by day next to it,
+ * «Не досмотрено» below. Nothing watched yet — the first-run screen.
  */
 export function HomePage() {
-  const { t } = useTranslation()
+  const { t } = useTranslation('library')
+  const loaded = useLibrary((s) => s.loaded)
+  const unfinished = useLibrary((s) => s.continueWatching)
+  const history = useLibrary((s) => s.history)
+
+  if (!loaded) return null
+  if (!unfinished.length && !history.length) return <Welcome />
+  const [hero, ...rest] = unfinished
+
   return (
-    <div className="grid h-full place-items-center overflow-hidden p-8">
-      <div className="flex w-full max-w-[760px] flex-col items-center gap-8 text-center">
-        <Logo size="lg" />
-        <h1 className="font-display text-2xl leading-tight font-semibold tracking-display text-balance text-fg">
-          {t('welcome.title')} <span className="text-fg-3">{t('welcome.titleMuted')}</span>
-        </h1>
-        <div className="flex w-full flex-col items-center gap-4 rounded-xl border border-dashed border-line-2 px-6 py-9">
-          <IconUpload size={30} className="text-fg-3" />
-          <span className="text-fg-2">{t('welcome.drop')}</span>
-          <OpenFileButton size="lg" label={t('welcome.openFile')} />
+    <ScrollArea className="h-full" aria-label={t('history')}>
+      <div className="mx-auto flex max-w-[1560px] flex-col gap-[38px] px-8 pt-[26px] pb-12">
+        <div className="flex flex-wrap gap-5">
+          {hero ? (
+            <ContinueHero file={hero} />
+          ) : (
+            <section className="flex min-h-[392px] flex-[999_1_600px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-line-2">
+              <IconUpload size={30} className="text-fg-3" />
+              <OpenFileButton size="lg" />
+            </section>
+          )}
+          <aside className="flex max-h-[392px] min-w-0 flex-[1_1_320px] flex-col gap-3 rounded-xl border border-line bg-panel px-3.5 pt-5 pb-3">
+            <div className="flex items-center justify-between px-1.5">
+              <h2 className="font-display text-lg font-semibold tracking-display text-fg">{t('history')}</h2>
+              <Button variant="ghost" size="sm" onPress={() => navigate('history')}>
+                {t('allHistory')}
+              </Button>
+            </div>
+            <ScrollArea className="min-h-0 flex-1">
+              <HistoryList entries={history.slice(0, HOME_HISTORY)} />
+            </ScrollArea>
+          </aside>
         </div>
-        <div className="grid w-full grid-cols-3 gap-3 text-left">
-          <Tip icon={<IconLayers size={20} />} title={t('welcome.tips.seasons.title')}>
-            {t('welcome.tips.seasons.text')}
-          </Tip>
-          <Tip icon={<IconSubtitles size={20} />} title={t('welcome.tips.tracks.title')}>
-            {t('welcome.tips.tracks.text')}
-          </Tip>
-          <Tip icon={<IconClock size={20} />} title={t('welcome.tips.resume.title')}>
-            {t('welcome.tips.resume.text')}
-          </Tip>
+        <ContinueGrid files={rest} />
+        <div className="flex items-center gap-3 rounded-lg border border-dashed border-line-2 px-5 py-4 text-sm text-fg-3">
+          <IconUpload size={20} />
+          {t('dropHint')}
         </div>
       </div>
-    </div>
+    </ScrollArea>
   )
 }

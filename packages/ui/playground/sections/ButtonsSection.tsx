@@ -11,15 +11,28 @@ import {
   IconPlay,
   IconSettings,
   IconTrash,
+  Pressable,
 } from '../../src'
 import { Demo } from './Demo'
 
 export function ButtonsSection() {
   const [playing, setPlaying] = useState(true)
   const [pinned, setPinned] = useState(false)
+  const [pressed, setPressed] = useState(0)
 
   return (
     <>
+      <Demo title={`Нажимаемая поверхность: карточки и строки · нажата ${pressed} раз`}>
+        <Pressable
+          aria-label="Продолжить «Клан Сопрано», серия 5"
+          onPress={() => setPressed((n) => n + 1)}
+          className="flex w-64 flex-col gap-2 rounded-lg"
+        >
+          <div className="aspect-video rounded-lg bg-raise transition-[scale] duration-(--duration-fast) group-data-[hovered]:scale-[1.02]" />
+          <b className="text-md font-semibold text-fg">Клан Сопрано</b>
+          <small className="text-sm text-fg-4">Сезон 1 · Серия 5</small>
+        </Pressable>
+      </Demo>
       <Demo title="Варианты">
         <Button variant="primary" icon={<IconFileAdd size={16} />}>
           Открыть

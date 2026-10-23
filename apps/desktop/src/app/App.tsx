@@ -1,5 +1,6 @@
 import { IconUpload } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
+import { HistoryPage } from '../pages/history'
 import { HomePage } from '../pages/home'
 import { PlaceholderPage } from '../pages/placeholder'
 import { PlayerPage } from '../pages/player'
@@ -30,7 +31,9 @@ export function App() {
       ) : (
         <div className="flex h-full flex-col bg-bg">
           <AppTitleBar />
-          <main className="min-h-0 flex-1">{screen === 'home' ? <HomePage /> : <PlaceholderPage screen={screen} />}</main>
+          <main className="min-h-0 flex-1">
+            {screen === 'home' ? <HomePage /> : screen === 'history' ? <HistoryPage /> : <PlaceholderPage screen={screen} />}
+          </main>
         </div>
       )}
       {dropping ? <DropOverlay /> : null}

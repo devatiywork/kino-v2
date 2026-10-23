@@ -7,6 +7,10 @@ pub enum AppError {
     Mpv(#[from] libmpv2::Error),
     #[error("window: {0}")]
     Window(#[from] windows::core::Error),
+    #[error("database: {0}")]
+    Db(#[from] rusqlite::Error),
+    #[error("io: {0}")]
+    Io(#[from] std::io::Error),
     #[error("{0}")]
     Tauri(#[from] tauri::Error),
 }

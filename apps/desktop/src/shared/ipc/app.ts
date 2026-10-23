@@ -1,8 +1,7 @@
-import { invoke } from '@tauri-apps/api/core'
-import type { UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
 import { VIDEO_EXTENSIONS } from '../lib/media'
+import { invoke, type UnlistenFn } from './bridge'
 
 export type DropPhase = 'over' | 'drop' | 'leave'
 

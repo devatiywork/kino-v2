@@ -4,8 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SOPRANOS_TRACKS } from '../../../test/tracks'
 
 const tauri = vi.hoisted(async () => (await import('../../../test/tauriMock')).createTauriMock())
-vi.mock('@tauri-apps/api/core', async () => ({ invoke: (await tauri).invoke }))
-vi.mock('@tauri-apps/api/event', async () => ({ listen: (await tauri).listen }))
+vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
 const { TracksButton } = await import('./TracksButton')
 const { initialPlayback, playbackStore } = await import('../../../entities/playback')

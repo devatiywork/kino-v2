@@ -9,6 +9,10 @@ use super::tracks::{parse_track_list, Track};
 pub struct PlayerSnapshot {
     pub path: Option<String>,
     pub title: Option<String>,
+    /// From the file name (library/episode.rs): «The Sopranos», season 1, episode 5
+    pub series_title: Option<String>,
+    pub season: Option<u32>,
+    pub episode: Option<u32>,
     pub duration: Option<f64>,
     pub position: f64,
     pub paused: bool,
@@ -31,6 +35,9 @@ impl Default for PlayerSnapshot {
         Self {
             path: None,
             title: None,
+            series_title: None,
+            season: None,
+            episode: None,
             duration: None,
             position: 0.0,
             paused: false,
@@ -69,7 +76,6 @@ pub enum Change {
 /// Observed properties and the format they are read in
 pub const OBSERVED: &[(&str, ObservedFormat)] = &[
     ("path", ObservedFormat::Str),
-    ("media-title", ObservedFormat::Str),
     ("duration", ObservedFormat::Double),
     ("time-pos", ObservedFormat::Double),
     ("pause", ObservedFormat::Flag),
@@ -107,7 +113,6 @@ impl PlayerSnapshot {
                 return Change::Position;
             }
             ("path", Str(v)) => self.path = Some(v.to_owned()),
-            ("media-title", Str(v)) => self.title = Some(v.to_owned()),
             ("duration", Double(v)) => self.duration = Some(v),
             ("pause", Flag(v)) => self.paused = v,
             ("idle-active", Flag(v)) => {
@@ -138,11 +143,14 @@ impl PlayerSnapshot {
         Change::State
     }
 
-    /// File-specific fields; mpv does not report "unavailable" through libmpv2,
-    /// so they are reset on start/end of a file and when the player goes idle
+    /// File-specific fields. libmpv2 does not report "unavailable", so they are reset when
+    /// the player goes idle; on FileLoaded events.rs overwrites them with fresh values
     pub fn clear_file(&mut self) {
         self.path = None;
         self.title = None;
+        self.series_title = None;
+        self.season = None;
+        self.episode = None;
         self.duration = None;
         self.position = 0.0;
         self.eof = false;

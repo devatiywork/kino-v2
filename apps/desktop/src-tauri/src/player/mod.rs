@@ -1,20 +1,27 @@
 //! Player module: libmpv in-process, video in a child window under the WebView2.
-//! Knows nothing about torrents.
+//! Uses the library (positions, history, track memory). Knows nothing about torrents.
 
 pub mod commands;
 mod events;
+mod session;
 mod state;
-mod tracks;
+pub(crate) mod tracks;
 mod video_host;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use libmpv2::Mpv;
-use tauri::AppHandle;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
 
 use crate::error::AppResult;
+use crate::library::commands::CHANGED_EVENT;
+use crate::library::track_pref::TrackPref;
+use crate::library::Library;
+use session::Session;
 pub use state::PlayerSnapshot;
+use tracks::TrackKind;
 use video_host::VideoHost;
 
 pub const VOLUME_MAX: f64 = 130.0;
@@ -22,7 +29,10 @@ pub const VOLUME_MAX: f64 = 130.0;
 pub struct Player {
     mpv: Mpv,
     host: VideoHost,
+    app: AppHandle,
+    library: Arc<Library>,
     snapshot: Arc<Mutex<PlayerSnapshot>>,
+    session: Arc<Mutex<Option<Session>>>,
     /// Last applied show/hide request: IPC calls may arrive out of order
     video_seq: AtomicU64,
 }
@@ -34,9 +44,16 @@ pub enum SeekMode {
     Relative,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenResult {
+    /// The file continues from here (SPEC 3.2: «Продолжено с 23:14 · Начать сначала»)
+    pub resumed_from: Option<f64>,
+}
+
 impl Player {
     /// `parent` — HWND of the main window, `width`/`height` — its client area in physical pixels
-    pub fn new(app: &AppHandle, parent: isize, width: u32, height: u32) -> AppResult<Self> {
+    pub fn new(app: &AppHandle, library: Arc<Library>, parent: isize, width: u32, height: u32) -> AppResult<Self> {
         let host = VideoHost::create(parent, width as i32, height as i32)?;
         let mpv = Mpv::with_initializer(|init| {
             init.set_option("wid", host.wid())?;
@@ -59,6 +76,9 @@ impl Player {
             // External subtitles and dubs next to the video
             init.set_option("sub-auto", "fuzzy")?;
             init.set_option("audio-file-auto", "fuzzy")?;
+            // Frames for the home screen cards
+            init.set_option("screenshot-format", "jpg")?;
+            init.set_option("screenshot-jpeg-quality", 82i64)?;
             if cfg!(debug_assertions) {
                 let log = std::env::temp_dir().join("kino-mpv.log");
                 init.set_option("log-file", log.to_string_lossy().as_ref())?;
@@ -66,20 +86,35 @@ impl Player {
             Ok(())
         })?;
         let snapshot = Arc::new(Mutex::new(PlayerSnapshot::default()));
-        // No name: libmpv2 6.0 drops the name's CString before mpv_create_client reads it
-        // (edition 2024 tail temporaries), mpv returns NULL and the crate unwraps it unchecked
-        events::spawn(app.clone(), mpv.create_client(None)?, snapshot.clone())?;
-        Ok(Self { mpv, host, snapshot, video_seq: AtomicU64::new(0) })
+        let session = Arc::new(Mutex::new(None));
+        events::spawn(events::Context {
+            app: app.clone(),
+            // No name: libmpv2 6.0 drops the name's CString before mpv_create_client reads it
+            // (edition 2024 tail temporaries), mpv returns NULL and the crate unwraps it unchecked
+            client: mpv.create_client(None)?,
+            snapshot: snapshot.clone(),
+            session: session.clone(),
+            library: library.clone(),
+        })?;
+        Ok(Self { mpv, host, app: app.clone(), library, snapshot, session, video_seq: AtomicU64::new(0) })
     }
 
     pub fn snapshot(&self) -> PlayerSnapshot {
         events::lock(&self.snapshot).clone()
     }
 
-    pub fn open(&self, path: &str) -> AppResult<()> {
-        self.mpv.command("loadfile", &[path, "replace"])?;
+    /// Opens the file, continuing from the saved position when there is one
+    pub fn open(&self, path: &str) -> AppResult<OpenResult> {
+        let resumed_from = self.library.resume_position(path).unwrap_or_else(|e| {
+            eprintln!("[library] resume: {e}");
+            None
+        });
+        match resumed_from {
+            Some(start) => self.mpv.command("loadfile", &[path, "replace", "-1", &format!("start={start}")])?,
+            None => self.mpv.command("loadfile", &[path, "replace"])?,
+        }
         self.mpv.set_property("pause", false)?;
-        Ok(())
+        Ok(OpenResult { resumed_from })
     }
 
     pub fn stop(&self) -> AppResult<()> {
@@ -110,19 +145,41 @@ impl Player {
         Ok(self.mpv.set_property("speed", speed.clamp(0.25, 4.0))?)
     }
 
-    /// Track ids belong to the current file only (see tracks.rs)
+    /// Track ids belong to the current file only (see tracks.rs); the choice is remembered
+    /// for the series by language and title
     pub fn set_audio(&self, id: Option<i64>) -> AppResult<()> {
-        Ok(match id {
-            Some(id) => self.mpv.set_property("aid", id),
-            None => self.mpv.set_property("aid", "no"),
-        }?)
+        match id {
+            Some(id) => self.mpv.set_property("aid", id)?,
+            None => self.mpv.set_property("aid", "no")?,
+        }
+        self.remember(TrackKind::Audio, id);
+        Ok(())
     }
 
     pub fn set_subtitle(&self, id: Option<i64>) -> AppResult<()> {
-        Ok(match id {
-            Some(id) => self.mpv.set_property("sid", id),
-            None => self.mpv.set_property("sid", "no"),
-        }?)
+        match id {
+            Some(id) => self.mpv.set_property("sid", id)?,
+            None => self.mpv.set_property("sid", "no")?,
+        }
+        self.remember(TrackKind::Sub, id);
+        Ok(())
+    }
+
+    fn remember(&self, kind: TrackKind, id: Option<i64>) {
+        let Some(series_key) = session::lock(&self.session).as_ref().and_then(|s| s.series_key.clone()) else { return };
+        let pref = match id {
+            None => TrackPref::Off,
+            Some(id) => {
+                let snapshot = events::lock(&self.snapshot);
+                match snapshot.tracks.iter().find(|t| t.kind == kind && t.id == id) {
+                    Some(track) => TrackPref::of(track),
+                    None => return,
+                }
+            }
+        };
+        if let Err(e) = self.library.save_pref(&series_key, kind, &pref) {
+            eprintln!("[library] save track pref: {e}");
+        }
     }
 
     pub fn set_subtitles_visible(&self, visible: bool) -> AppResult<()> {
@@ -146,7 +203,20 @@ impl Player {
         self.host.resize(width as i32, height as i32);
     }
 
+    /// Save the position now (the window is closing)
+    pub fn flush(&self) {
+        let mut guard = session::lock(&self.session);
+        let Some(s) = guard.as_mut() else { return };
+        let state = events::lock(&self.snapshot).clone();
+        if session::save(&self.library, s, &state) {
+            if let Err(e) = self.app.emit(CHANGED_EVENT, ()) {
+                eprintln!("[library] emit: {e}");
+            }
+        }
+    }
+
     pub fn shutdown(&self) {
+        self.flush();
         if let Err(e) = self.mpv.command("quit", &[]) {
             eprintln!("[player] quit: {e}");
         }

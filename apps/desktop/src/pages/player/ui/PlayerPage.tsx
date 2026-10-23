@@ -7,6 +7,7 @@ import { useIdle } from '../../../shared/lib/useIdle'
 import { PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
 import { useSubtitleLift } from '../model/useSubtitleLift'
 import { useVideoLayer } from '../model/useVideoLayer'
+import { ResumeBanner } from './ResumeBanner'
 
 /** Controls hide after 2.5 s without the mouse (SPEC 3.1) */
 const IDLE_MS = 2500
@@ -38,6 +39,7 @@ export function PlayerPage() {
         </div>
       ) : null}
       <PlayerTopBar hidden={idle} onBack={leave} />
+      <ResumeBanner />
       <Osd />
       <PlayerBottomBar hidden={idle} onMenuOpenChange={setMenuOpen} />
     </div>

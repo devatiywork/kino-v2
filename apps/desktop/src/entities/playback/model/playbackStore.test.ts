@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const tauri = vi.hoisted(async () => (await import('../../../test/tauriMock')).createTauriMock())
-vi.mock('@tauri-apps/api/core', async () => ({ invoke: (await tauri).invoke }))
-vi.mock('@tauri-apps/api/event', async () => ({ listen: (await tauri).listen }))
+vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
 const { initialPlayback, playbackStore, startPlaybackSync } = await import('./playbackStore')
 const mock = await tauri

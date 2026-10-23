@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use super::{Player, PlayerSnapshot, SeekMode};
+use super::{OpenResult, Player, PlayerSnapshot, SeekMode};
 use crate::error::AppResult;
 
 #[tauri::command]
@@ -10,8 +10,9 @@ pub fn player_snapshot(player: State<'_, Player>) -> PlayerSnapshot {
     player.snapshot()
 }
 
+/// Opens a file, continuing from the saved position when there is one
 #[tauri::command]
-pub fn player_open(player: State<'_, Player>, path: String) -> AppResult<()> {
+pub fn player_open(player: State<'_, Player>, path: String) -> AppResult<OpenResult> {
     player.open(&path)
 }
 
