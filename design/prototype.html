@@ -403,6 +403,7 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
 .set-row:first-child{border-top:0}
 .set-row .lbl{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .set-row .lbl b{font-weight:500;font-size:14px}
+.prop-chip{font-style:normal;font-size:11px;font-weight:500;color:var(--text-3);border:1px dashed var(--line);border-radius:var(--r-s);padding:1px 6px;margin-left:8px;vertical-align:1px}
 .set-row .lbl span{font-size:12.5px;line-height:1.4;color:var(--text-3)}
 .swatches{display:flex;gap:10px}
 .swatch{width:26px;height:26px;border-radius:var(--r-round);border:0;background:var(--c)}
@@ -497,7 +498,7 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
 .state-badge.down{background:var(--accent-soft);color:var(--accent-text)}
 .state-badge.gone{background:transparent;border:1px dashed var(--line-2);color:var(--text-3);font-weight:500}
 
-.dl-detail{display:none;flex-direction:column;height:250px;flex-shrink:0;border-top:1px solid var(--line);background:var(--panel)}
+.dl-detail{display:none;flex-direction:column;height:310px;flex-shrink:0;border-top:1px solid var(--line);background:var(--panel)}
 .dl-detail.show{display:flex}
 .dd-head{display:flex;align-items:center;gap:12px;padding:10px 20px 0}
 .dd-head b{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2);font-weight:500}
@@ -516,6 +517,77 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
 .cbx[aria-checked="mixed"] .cbx-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .cbx-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-theme="cutroom"] .cbx-box{border-radius:1px}
+
+/* ---------- Подробности торрента: обзор, пиры, трекеры, параметры ---------- */
+.ov{display:flex;flex-direction:column;gap:14px;padding-top:6px}
+.pieces{display:flex;gap:1px;height:16px;padding:2px;border-radius:5px;background:var(--bg);border:1px solid var(--line)}
+.pieces span{flex:1;border-radius:1px;background:var(--track)}
+.pieces span.have{background:var(--accent)}
+.pieces span.dl{background:var(--accent);opacity:.45;animation:piecePulse 1s ease-in-out infinite}
+@keyframes piecePulse{50%{opacity:.15}}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--text-3)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;font-style:normal}
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 28px}
+.stat{display:flex;flex-direction:column;gap:3px;min-width:0}
+.stat span{font-size:11.5px;color:var(--text-3)}
+.stat b{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-tools{display:flex;align-items:center;gap:8px;padding:4px 0 8px}
+.dd-tools .hint{flex:1;font-size:12px;color:var(--text-3)}
+.dd-tools .btn{height:30px;padding:0 10px;font-size:12.5px}
+.ptable{width:100%;border-collapse:collapse;font-size:12.5px}
+.ptable th{position:sticky;top:0;z-index:1;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel);text-align:left;font-size:11.5px;font-weight:500;color:var(--text-3);white-space:nowrap}
+.ptable td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+.ptable tr:hover td{background:var(--hover)}
+.ptable .mono{font-family:var(--f-mono);font-size:12px}
+.ptable .num{text-align:right;font-family:var(--f-mono);font-size:12px}
+.mini-bar{display:inline-block;width:64px;height:4px;margin-right:8px;border-radius:2px;background:var(--track);overflow:hidden;vertical-align:middle}
+.mini-bar>span{display:block;height:100%;background:var(--accent)}
+.flags{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;color:var(--text-2)}
+.st{display:inline-flex;align-items:center;gap:7px}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st.ok{color:var(--accent-text)}
+.st.upd{color:var(--text-2)}
+.st.warn{color:var(--danger)}
+.st.idle{color:var(--text-3)}
+.legend-flags{padding:8px 2px 0;font-size:11.5px;line-height:1.6;color:var(--text-3)}
+.legend-flags b{font-family:var(--f-mono);color:var(--text-2);font-weight:500}
+.params{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 36px;padding-top:6px}
+.param{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;font-size:13.5px}
+.param .lbl2{display:flex;flex-direction:column;gap:2px;min-width:0}
+.param .lbl2 span{font-size:12px;color:var(--text-3)}
+.num-in{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;height:32px;padding:0 10px;border:1px solid var(--line-2);border-radius:var(--r-m);background:var(--bg)}
+.num-in:focus-within{border-color:var(--accent)}
+.num-in input{width:96px;border:0;outline:0;background:transparent;color:var(--text);font-family:var(--f-mono);font-size:12.5px;text-align:right}
+.num-in input.short{width:58px}
+.num-in input::placeholder{color:var(--text-3)}
+.num-in span{font-size:12px;color:var(--text-3);white-space:nowrap}
+.param-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
+.param-actions .btn{height:32px;padding:0 12px;font-size:13px}
+.set-subh{padding:2px 2px 0;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+[data-theme="cutroom"] .set-subh{font-family:var(--f-mono);font-weight:500;letter-spacing:.14em}
+.port-ok{font-size:12.5px;color:var(--accent-text);white-space:nowrap}
+.set-row .path-row{width:min(360px,100%)}
+.dd-resize{height:6px;margin-top:-3px;cursor:ns-resize;flex-shrink:0}
+.dd-resize:hover{background:var(--accent-soft)}
+.gen-bars{display:grid;grid-template-columns:96px minmax(0,1fr) 64px;align-items:center;gap:8px 12px;font-size:12.5px;color:var(--text-2)}
+.gen-bars b{font-family:var(--f-mono);font-size:12.5px;font-weight:500;color:var(--text);text-align:right}
+.pieces.avail span.have{background:var(--text-2)}
+.sec-t{padding-top:2px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+[data-theme="cutroom"] .sec-t{font-family:var(--f-mono);font-weight:500;letter-spacing:.14em}
+.stat-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r-m);scrollbar-color:var(--raise-2) transparent}
+.table-wrap .ptable tr:last-child td{border-bottom:0}
+.cc{display:inline-grid;place-items:center;min-width:26px;height:18px;padding:0 4px;border-radius:4px;background:var(--hover-2);font:600 10.5px var(--f-mono);color:var(--text-2)}
+.prio-btn{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-s);background:transparent;color:var(--text);font-size:12.5px}
+.prio-btn:hover{background:var(--hover)}
+.prio-btn.skip{color:var(--text-3)}
+.prio-btn.high,.prio-btn.max{color:var(--accent-text);border-color:color-mix(in oklab,var(--accent) 40%,transparent)}
+.chart{position:relative;height:170px;padding:8px 8px 8px 74px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--bg)}
+.chart svg{width:100%;height:100%;display:block;overflow:visible}
+.chart-y{position:absolute;left:8px;top:8px;bottom:8px;display:flex;flex-direction:column;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--text-3)}
+.chart-legend{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;color:var(--text-2)}
+.chart-legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-left:8px}
+.web-empty{padding:26px 18px;text-align:center;font-size:13px;line-height:1.5;color:var(--text-3)}
 
 /* ---------- Архив ---------- */
 .arch-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 6px}
@@ -691,6 +763,8 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
     <button data-proto-torrent="add">Добавление торрента</button>
     <button data-proto-torrent="dup">Добавление: уже в архиве</button>
     <button data-proto-torrent="magnet">Добавление magnet-ссылки</button>
+    <button data-proto-torrent="details">Подробности: пиры и трекеры</button>
+    <button data-proto-torrent="settings">Настройки загрузок</button>
     <h4>Направление</h4>
     <button data-proto-theme="projector">А · «Проектор»</button>
     <button data-proto-theme="cutroom">Б · «Монтажная»</button>
@@ -942,6 +1016,7 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
             <button data-sec="s-play"><i data-icon="play" data-size="17"></i>Воспроизведение</button>
             <button data-sec="s-tracks"><i data-icon="cc" data-size="17"></i>Озвучка и субтитры</button>
             <button data-sec="s-lib"><i data-icon="clock" data-size="17"></i>Библиотека и история</button>
+            <button data-sec="s-dl"><i data-icon="down" data-size="17"></i>Загрузки</button>
             <button data-sec="s-keys"><i data-icon="keyboard" data-size="17"></i>Горячие клавиши</button>
             <button data-sec="s-sys"><i data-icon="win" data-size="17"></i>Система</button>
           </nav>
@@ -994,6 +1069,61 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
                   <div class="folders" id="folders"></div>
                   <div><button class="btn btn-line" data-open="folder"><i data-icon="plus" data-size="15"></i>Добавить папку</button></div></div>
                 <div class="set-row"><div class="lbl"><b>Очистить историю</b><span>Позиции и запомненные дорожки тоже удалятся</span></div><button class="btn btn-danger" id="clearHistory"><i data-icon="trash" data-size="15"></i>Очистить</button></div>
+              </div>
+            </section>
+            <section class="set-sec" id="s-dl">
+              <h3>Загрузки</h3>
+              <div class="set-subh">Добавление и папки</div>
+              <div class="set-card">
+                <div class="set-row"><div class="lbl"><b>Окно добавления</b><span>Выбор категории, папки и файлов перед стартом</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Окно добавления</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Не начинать загрузку сразу</b><span>Торрент добавится на паузе</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Не начинать сразу</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Папка по умолчанию</b><span>Для торрентов без категории</span></div><div class="path-row"><i data-icon="folder" data-size="15"></i><span>D:\Загрузки</span><button class="btn btn-ghost" data-setpath>Изменить</button></div></div>
+                <div class="set-row" style="flex-direction:column;align-items:stretch;gap:10px"><div class="lbl"><b>Категории и их папки</b><span>Новая загрузка категории сохраняется в её папку</span></div><div class="folders" id="setCats"></div><div><button class="btn btn-line" id="setCatAdd"><i data-icon="plus" data-size="15"></i>Новая категория</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Недокачанное — в отдельной папке</b><span>D:\Загрузки\.incomplete — в папку категории файлы переезжают, когда скачаются</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Отдельная папка для недокачанного</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Следить за папкой<em class="prop-chip">предложение</em></b><span>Новые .torrent из «Загрузок» браузера добавляются сами — с окном выбора категории</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Следить за папкой</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Удалять исходный .torrent после добавления</b><span>Копия всё равно хранится в архиве Kino</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Удалять исходный .torrent</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Тот же торрент ещё раз — объединить трекеры</b><span>Вместо дубля новые трекеры добавятся к записи в архиве</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Объединять трекеры</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Выделять место на диске заранее</b><span>Меньше фрагментации, но старт загрузки медленнее</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Выделять место заранее</span></button></div>
+              </div>
+              <div class="set-subh">Скорость</div>
+              <div class="set-card">
+                <div class="set-row"><div class="lbl"><b>Лимит загрузки</b><span>Пусто — без ограничений</span></div><label class="num-in"><input placeholder="без лимита" inputmode="numeric" aria-label="Лимит загрузки"><span>КБ/с</span></label></div>
+                <div class="set-row"><div class="lbl"><b>Лимит отдачи</b><span>Пусто — без ограничений</span></div><label class="num-in"><input value="2048" inputmode="numeric" aria-label="Лимит отдачи"><span>КБ/с</span></label></div>
+                <div class="set-row"><div class="lbl"><b>Альтернативные лимиты</b><span>Включаются кнопкой в загрузках или по расписанию</span></div><label class="num-in"><span>↓</span><input class="short" value="1024" inputmode="numeric" aria-label="Альтернативный лимит загрузки"><span>КБ/с</span></label><label class="num-in"><span>↑</span><input class="short" value="256" inputmode="numeric" aria-label="Альтернативный лимит отдачи"><span>КБ/с</span></label></div>
+                <div class="set-row"><div class="lbl"><b>По расписанию</b><span>С 09:00 до 19:00 — альтернативные лимиты, остальное время — обычные</span></div><div class="segc" role="radiogroup" aria-label="Дни расписания"><button role="radio" aria-checked="true">Каждый день</button><button role="radio" aria-checked="false">Будни</button><button role="radio" aria-checked="false">Выходные</button></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Расписание</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Притормаживать отдачу во время просмотра<em class="prop-chip">предложение</em></b><span>Пока идёт видео, отдача не больше 100 КБ/с — чтобы ничего не подтормаживало</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Тормозить отдачу при просмотре</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Лимиты и для µTP</b></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Лимиты для µTP</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Лимиты и для пиров в локальной сети</b></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Лимиты в локальной сети</span></button></div>
+              </div>
+              <div class="set-subh">Соединение</div>
+              <div class="set-card">
+                <div class="set-row"><div class="lbl"><b>Протокол</b></div><div class="segc" role="radiogroup" aria-label="Протокол соединения"><button role="radio" aria-checked="true">TCP и µTP</button><button role="radio" aria-checked="false">TCP</button><button role="radio" aria-checked="false">µTP</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Порт для входящих</b><span class="port-ok" id="portState">Порт открыт — к вам могут подключаться</span></div><label class="num-in"><input class="short" id="portIn" value="51413" inputmode="numeric" aria-label="Порт"></label><button class="btn btn-line" id="portRnd">Случайный</button></div>
+                <div class="set-row"><div class="lbl"><b>UPnP / NAT-PMP</b><span>Сам откроет порт на роутере</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">UPnP</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Соединений</b><span>Всего / на один торрент</span></div><label class="num-in"><input class="short" value="500" inputmode="numeric" aria-label="Соединений всего"></label><label class="num-in"><input class="short" value="100" inputmode="numeric" aria-label="Соединений на торрент"></label></div>
+                <div class="set-row"><div class="lbl"><b>Слотов отдачи</b><span>Всего / на один торрент</span></div><label class="num-in"><input class="short" value="20" inputmode="numeric" aria-label="Слотов отдачи всего"></label><label class="num-in"><input class="short" value="4" inputmode="numeric" aria-label="Слотов отдачи на торрент"></label></div>
+                <div class="set-row"><div class="lbl"><b>Сетевой адаптер</b><span>Если выбрать VPN, загрузки встанут при его отключении — ваш адрес не «утечёт»</span></div><div class="segc" role="radiogroup" aria-label="Сетевой адаптер"><button role="radio" aria-checked="true">Любой</button><button role="radio" aria-checked="false">Ethernet</button><button role="radio" aria-checked="false">VPN</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Прокси</b><span>Для подключений к пирам и трекерам</span></div><div class="segc" role="radiogroup" aria-label="Прокси"><button role="radio" aria-checked="true">Нет</button><button role="radio" aria-checked="false">SOCKS5</button><button role="radio" aria-checked="false">HTTP</button></div></div>
+              </div>
+              <div class="set-subh">BitTorrent</div>
+              <div class="set-card">
+                <div class="set-row"><div class="lbl"><b>DHT</b><span>Поиск пиров без трекера. Для частных торрентов (Рутрекер) отключается сам</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">DHT</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Обмен пирами (PeX)</b></div><button class="switch" role="switch" aria-checked="true"><span class="sr">PeX</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Поиск пиров в локальной сети (LSD)</b></div><button class="switch" role="switch" aria-checked="true"><span class="sr">LSD</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Шифрование</b><span>«Требовать» — меньше пиров, но провайдер не видит трафик торрентов</span></div><div class="segc" role="radiogroup" aria-label="Шифрование"><button role="radio" aria-checked="true">Разрешить</button><button role="radio" aria-checked="false">Требовать</button><button role="radio" aria-checked="false">Отключить</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Анонимный режим</b><span>Не сообщать пирам и трекерам название клиента</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Анонимный режим</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Очередь</b><span>Активных загрузок / раздач / всего — остальные ждут</span></div><label class="num-in"><input class="short" value="3" inputmode="numeric" aria-label="Активных загрузок"></label><label class="num-in"><input class="short" value="5" inputmode="numeric" aria-label="Активных раздач"></label><label class="num-in"><input class="short" value="8" inputmode="numeric" aria-label="Активных всего"></label></div>
+                <div class="set-row"><div class="lbl"><b>Не считать медленные торренты</b><span>Медленнее 2 КБ/с они не занимают место в очереди</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Не считать медленные</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Остановить раздачу</b><span>Когда рейтинг достигнет / когда раздача идёт дольше</span></div><label class="num-in"><span>рейтинг</span><input class="short" value="2.0" inputmode="decimal" aria-label="Рейтинг"></label><label class="num-in"><input class="short" placeholder="—" inputmode="numeric" aria-label="Время раздачи"><span>мин</span></label></div>
+                <div class="set-row"><div class="lbl"><b>Затем</b></div><div class="segc" role="radiogroup" aria-label="Что делать после лимита раздачи"><button role="radio" aria-checked="true">Остановить</button><button role="radio" aria-checked="false">Убрать из загрузок</button><button role="radio" aria-checked="false">Суперсид</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Добавлять свои трекеры к новым загрузкам</b><span>Кроме частных торрентов</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Свои трекеры</span></button></div>
+              </div>
+              <div class="set-subh">Поведение</div>
+              <div class="set-card">
+                <div class="set-row"><div class="lbl"><b>При закрытии окна</b><span>Если идут загрузки или раздачи</span></div><div class="segc" role="radiogroup" aria-label="При закрытии окна"><button role="radio" aria-checked="true">Свернуть в трей</button><button role="radio" aria-checked="false">Выйти</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Уведомлять о завершении загрузки</b></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Уведомления</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Не давать компьютеру засыпать во время загрузок</b></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Не засыпать во время загрузок</span></button></div>
+                <div class="set-row"><div class="lbl"><b>Открывать .torrent и magnet-ссылки через Kino</b></div><button class="btn btn-line" id="assocTorrent"><i data-icon="link" data-size="15"></i>Связать</button></div>
               </div>
             </section>
             <section class="set-sec" id="s-keys">
@@ -1142,7 +1272,8 @@ const ICONS = {
   more:'<path d="M5.5 12h.01M12 12h.01M18.5 12h.01" stroke-width="2.8"/>',
   lock:'<rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
-  edit:'<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
+  edit:'<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  chev:'<path d="M6 9.5l6 6 6-6"/>'
 };
 function icon(name, size){
   size = size || 20;
@@ -1255,6 +1386,7 @@ function go(screen){
   if (screen === 'home') renderHome();
   if (screen === 'series') renderSeries();
   if (screen === 'downloads') renderDownloads();
+  if (screen === 'settings') renderSettingsCats();
   setNav(screen);
   $$('[data-proto-go]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoGo === requested)));
   updateGlobal();
@@ -1788,7 +1920,7 @@ const ACTIVE_STATES = new Set(['down', 'seed', 'paused', 'queued']);
 const isActive = (t) => ACTIVE_STATES.has(t.state);
 const byTid = (id) => TORRENTS.find((t) => t.id === id);
 const DL_TABS = { downloads:'active', archive:'archive', trackers:'trackers' };
-const dlState = { tab:'active', cat:'all', sel:'t1', detailTab:'files', q:'', sort:'date', lastCat:'series' };
+const dlState = { tab:'active', cat:'all', sel:'t1', detailTab:'general', q:'', sort:'date', lastCat:'series' };
 
 function stateInfo(t){
   if (t.state === 'down') return { label:'Загрузка', cls:'down' };
@@ -1811,6 +1943,7 @@ function renderDownloads(){
   if (dlState.tab === 'archive') renderArchive();
   if (dlState.tab === 'trackers') renderTrackers();
   renderDetail();
+  renderSettingsCats();
   updateGlobal();
 }
 function renderCatbar(){
@@ -1855,17 +1988,183 @@ function renderActive(){
 }
 const selTorrent = () => { const t = byTid(dlState.sel); return t && isActive(t) && dlState.tab === 'active' ? t : null; };
 function fileProgress(t, i){ if (!t.files[i].on) return 0; return Math.max(0, Math.min(1, t.progress * t.files.length - i)); }
+/* ---------- Подробности торрента: как панель свойств qBittorrent + вкладка «Параметры» ---------- */
+const DETAIL_TABS = [['general', 'Общее'], ['trackers', 'Трекеры'], ['peers', 'Пиры'], ['web', 'Веб-источники'], ['files', 'Файлы'], ['speed', 'Скорость'], ['params', 'Параметры']];
+const CLIENTS = ['qBittorrent 5.1.2', 'Transmission 4.0.6', 'µTorrent 3.6.0', 'libtorrent 2.0.11', 'Deluge 2.1.1', 'BiglyBT 3.8.0.2', 'Tixati 3.33'];
+const COUNTRIES = ['RU', 'DE', 'NL', 'FR', 'US', 'PL', 'UA', 'KZ', 'FI', 'SE', 'JP', 'BR', 'GB', 'CZ'];
+const PIECES = 140;
+const PRIO = { skip:'Не загружать', normal:'Обычный', high:'Высокий', max:'Максимальный' };
+const FLAG_HELP = [['D', 'качаем у пира'], ['d', 'хотим качать, пир не отдаёт'], ['U', 'отдаём пиру'], ['u', 'пир хочет, мы не отдаём'], ['K', 'пир готов, нам не нужно'], ['E', 'шифрование'], ['e', 'шифрованное рукопожатие'], ['H', 'найден через DHT'], ['X', 'через PeX'], ['L', 'в локальной сети'], ['P', 'µTP'], ['I', 'входящее соединение']];
+const avg = (a) => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
+const mmss = (s) => Math.floor(s / 60) + ':' + pad(Math.floor(s % 60));
+function fmtDuration(sec){ const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60); return d ? d + ' дн ' + h + ' ч' : h ? h + ' ч ' + m + ' мин' : m + ' мин'; }
+const limitText = (v) => v ? v + ' КБ/с' : '∞';
+const running = (t) => t.state === 'down' || t.state === 'seed';
+function seededRnd(t, salt){ let s = (parseInt(t.hash.slice(0, 8), 16) ^ salt) >>> 0; return () => { s = (Math.imul(s, 1103515245) + 12345) >>> 0; return s / 4294967296; }; }
+function detailOf(t){
+  if (t._d) return t._d;
+  const rnd = seededRnd(t, 11);
+  const order = Array.from({ length:PIECES }, (_, i) => i);
+  for (let i = PIECES - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const x = order[i]; order[i] = order[j]; order[j] = x; }
+  const host = hostOf(t.source);
+  const own = host === 'rutracker.org' ? 'http://bt4.t-ru.org/ann?pk=••••••••' : host === 'rutor.info' ? 'udp://opentor.net:6969' : null;
+  const urls = (own ? [own] : []).concat(['udp://tracker.opentrackr.org:1337/announce', 'udp://open.stealth.si:80/announce', 'udp://exodus.desync.com:6969/announce']);
+  const hist = [];
+  for (let i = 0; i < 1800; i++) hist.push({ d:t.state === 'down' ? t.down * (0.55 + rnd() * 0.75) : 0, u:running(t) ? Math.max(t.up, 0.05 * MB) * (0.4 + rnd() * 1.2) : 0 });
+  t.files.forEach((f) => { if (!f.prio) f.prio = f.on ? 'normal' : 'skip'; });
+  t._d = {
+    order:order, hist:hist,
+    pieceSize:t.size > 20 * GB ? 16 * MB : t.size > 2 * GB ? 4 * MB : 1 * MB,
+    avail:Array.from({ length:PIECES }, () => Math.floor(rnd() * 6)),
+    trackers:urls.map((url, i) => ({ url:url, tier:i, status:i === urls.length - 2 ? 'warn' : 'ok', next:120 + Math.floor(rnd() * 1500) })),
+    peers:null,
+    web:/ubuntu/i.test(t.name) ? ['https://releases.ubuntu.com/26.04/' + t.files[0].name] : [],
+    wasted:Math.round(rnd() * 40) * MB, session:0.1 + rnd() * 0.3,
+    createdBy:['qBittorrent v5.1.2', 'Transmission/4.0.6', 'uTorrent/3.6', 'mktorrent 1.1'][Math.floor(rnd() * 4)],
+    priv:host === 'rutracker.org', comment:host === 'rutracker.org' ? t.source : '',
+    activeSec:Math.max(900, (Date.now() - new Date(t.added).getTime()) / 1000 * 0.35),
+    limits:{ down:'', up:'', conns:'100' }, share:'global', seq:false, firstLast:false, superSeed:false, range:60
+  };
+  return t._d;
+}
+function peersOf(t){
+  if (!running(t)) return [];
+  const D = detailOf(t);
+  if (!D.peers) {
+    const rnd = seededRnd(t, 23), n = Math.max(5, Math.min(18, Math.round((t.seeds + t.peers) / 9)));
+    D.peers = Array.from({ length:n }, (_, i) => {
+      const seed = t.state === 'down' && rnd() < 0.62, utp = rnd() < 0.45, upl = t.state === 'seed' || rnd() < 0.4;
+      const flags = [seed ? 'D' : (t.state === 'down' ? (rnd() < 0.5 ? 'd' : 'K') : ''), upl ? 'U' : (rnd() < 0.3 ? 'u' : ''), rnd() < 0.7 ? 'E' : 'e', D.priv ? '' : ['H', 'X', 'L'][Math.floor(rnd() * 3)], utp ? 'P' : '', rnd() < 0.3 ? 'I' : ''].filter(Boolean).join(' ');
+      return { id:i, cc:COUNTRIES[Math.floor(rnd() * COUNTRIES.length)], ip:[20 + Math.floor(rnd() * 200), Math.floor(rnd() * 256), Math.floor(rnd() * 256), Math.floor(rnd() * 256)].join('.'), port:10000 + Math.floor(rnd() * 50000),
+        conn:utp ? 'µTP' : 'BT', flags:flags, client:CLIENTS[Math.floor(rnd() * CLIENTS.length)], seed:seed, progress:seed ? 1 : rnd() * 0.92,
+        down:seed ? (0.2 + rnd() * 2.4) * MB : 0, up:upl ? rnd() * 0.3 * MB : 0, got:rnd() * 1.4 * GB, sent:rnd() * 0.4 * GB, rel:seed ? 0 : rnd(), file:t.files[Math.floor(rnd() * t.files.length)].name };
+    });
+  }
+  return D.peers;
+}
+
+function detailGeneral(t){
+  const D = detailOf(t), peers = peersOf(t);
+  const seedsC = peers.filter((p) => p.progress >= 1).length, leechC = peers.length - seedsC;
+  const have = Math.floor(t.progress * PIECES), haveSet = new Set(D.order.slice(0, have)), dlSet = new Set(t.state === 'down' ? D.order.slice(have, have + 4) : []);
+  let bar = '', av = '';
+  for (let i = 0; i < PIECES; i++) {
+    bar += '<span' + (haveSet.has(i) ? ' class="have"' : dlSet.has(i) ? ' class="dl"' : '') + '></span>';
+    av += '<span class="have" style="opacity:' + (running(t) ? 0.12 + Math.min(1, D.avail[i] / 5) * 0.88 : 0.08).toFixed(2) + '"></span>';
+  }
+  const total = selectedSize(t), done = t.progress * total, pieces = Math.ceil(t.size / D.pieceSize);
+  const hist = D.hist.slice(-300), avgD = avg(hist.map((p) => p.d)), avgU = avg(hist.map((p) => p.u));
+  const nextAnnounce = Math.min.apply(null, D.trackers.map((x) => x.next));
+  const stat = (k, v) => '<div class="stat"><span>' + k + '</span><b>' + v + '</b></div>';
+  return '<div class="ov">' +
+    '<div class="gen-bars"><span>Скачано</span><div class="pieces">' + bar + '</div><b>' + nf1.format(t.progress * 100) + '%</b>' +
+      '<span>Доступность</span><div class="pieces avail">' + av + '</div><b>' + (running(t) ? nf2.format(seedsC + 0.37) : '—') + '</b></div>' +
+    '<div class="sec-t">Передача</div><div class="stat-grid c3">' +
+      stat('Время активности', fmtDuration(D.activeSec)) + stat('Осталось', t.state === 'down' ? fmtEta((1 - t.progress) * total / Math.max(1, t.down * PROTO_SPEEDUP)) : t.progress >= 1 ? '—' : '∞') + stat('Соединения', peers.length + ' (лимит ' + (D.limits.conns || '∞') + ')') +
+      stat('Скачано', fmtSize(done) + ' (за сессию ' + fmtSize(done * D.session) + ')') + stat('Отдано', fmtSize(t.size * t.ratio)) + stat('Сиды', seedsC + ' (в сети ' + t.seeds + ')') +
+      stat('Скорость загрузки', fmtRate(t.state === 'down' ? t.down : 0) + ' (средн. ' + fmtRate(avgD) + ')') + stat('Скорость отдачи', fmtRate(running(t) ? t.up : 0) + ' (средн. ' + fmtRate(avgU) + ')') + stat('Пиры', leechC + ' (в сети ' + t.peers + ')') +
+      stat('Лимит загрузки', limitText(D.limits.down)) + stat('Лимит отдачи', limitText(D.limits.up)) + stat('Потеряно', fmtSize(D.wasted)) +
+      stat('Рейтинг', nf2.format(t.ratio)) + stat('Переобъявление через', running(t) ? mmss(nextAnnounce) : '—') + stat('Популярность', nf2.format(t.ratio / Math.max(1, D.activeSec / 86400))) +
+    '</div><div class="sec-t">Информация</div><div class="stat-grid">' +
+      stat('Общий размер', fmtSize(t.size)) + stat('Части', pieces + ' × ' + fmtSize(D.pieceSize) + ' (есть ' + Math.floor(pieces * t.progress) + ')') + stat('Создан программой', D.createdBy) + stat('Частный', D.priv ? 'Да' : 'Нет') +
+      stat('Добавлен', fmtDate(t.added)) + stat('Завершён', t.completed ? fmtDate(t.completed) : '—') + stat('Создан', fmtDate(t.added)) + stat('Категория', esc(catOf(t.cat).name)) +
+    '</div><dl class="kv"><dt>Хеш v1</dt><dd class="mono">' + t.hash + '</dd><dt>Хеш v2</dt><dd class="mono">—</dd><dt>Папка</dt><dd class="mono">' + esc(t.path) + '</dd>' +
+      '<dt>Комментарий</dt><dd>' + (D.comment ? esc(D.comment) : '—') + '</dd>' +
+      '<dt>Страница раздачи</dt><dd>' + (t.source ? '<button class="src-link" data-src>' + icon('external', 13) + esc(t.source) + '</button>' : '—') + '</dd></dl></div>';
+}
+function detailTrackers(t){
+  const D = detailOf(t), on = running(t);
+  const sys = [['DHT', 'dht'], ['PeX', 'pex'], ['LSD', 'lsd']].map((s) => {
+    const st = D.priv ? ['idle', 'Отключено для этого торрента'] : on ? ['ok', 'Работает'] : ['idle', 'Отключено'];
+    const n = !on || D.priv ? 0 : s[1] === 'dht' ? Math.round(t.peers * 0.7) : s[1] === 'pex' ? Math.min(9, t.peers) : 0;
+    return '<tr><td class="mono">** [' + s[0] + '] **</td><td></td><td></td><td><span class="st ' + st[0] + '">' + st[1] + '</span></td><td class="num">' + n + '</td><td class="num">' + Math.round(n * 0.6) + '</td><td class="num">' + Math.round(n * 0.4) + '</td><td class="num"></td><td>' + (D.priv ? 'Частный торрент — только трекер' : '') + '</td><td class="num"></td><td class="num"></td></tr>';
+  }).join('');
+  const rows = D.trackers.map((tr, i) => {
+    const st = !on ? ['idle', 'Не связывался'] : tr.status === 'warn' ? ['warn', 'Не работает'] : tr.status === 'upd' ? ['upd', 'Обновляется…'] : ['ok', 'Работает'];
+    const ok = on && tr.status === 'ok', s = ok ? Math.max(1, Math.round(t.seeds * (1 - i * 0.18))) : 0, l = ok ? Math.max(0, Math.round(t.peers * (1 - i * 0.2))) : 0;
+    return '<tr data-tr="' + i + '"><td class="mono">' + esc(tr.url) + '</td><td class="num">' + tr.tier + '</td><td>v1</td><td><span class="st ' + st[0] + '">' + st[1] + '</span></td><td class="num">' + (s + l) + '</td><td class="num">' + s + '</td><td class="num">' + l + '</td><td class="num">' + (ok ? 1200 + i * 431 : 0) + '</td><td>' + (on && tr.status === 'warn' ? 'Тайм-аут соединения' : '') + '</td><td class="num">' + (on ? mmss(tr.next) : '') + '</td><td class="num">30:00</td></tr>';
+  }).join('');
+  return '<div class="dd-tools"><span class="hint">Правый клик по трекеру — скопировать, изменить адрес или удалить</span><button class="btn btn-line" data-tact="add">' + icon('plus', 14) + 'Добавить трекеры</button><button class="btn btn-line" data-tact="announce">' + icon('refresh', 14) + 'Переобъявить</button></div>' +
+    '<div class="table-wrap"><table class="ptable"><thead><tr><th>Адрес</th><th>Уровень</th><th>Протокол</th><th>Статус</th><th class="num">Пиры</th><th class="num">Сиды</th><th class="num">Личи</th><th class="num">Скачали</th><th>Сообщение</th><th class="num">Следующий запрос</th><th class="num">Мин. интервал</th></tr></thead><tbody>' + sys + rows + '</tbody></table></div>';
+}
+function detailPeers(t){
+  const peers = peersOf(t);
+  const tools = '<div class="dd-tools"><span class="hint">' + (peers.length ? peers.length + ' подключено · правый клик — скопировать адрес или заблокировать' : '') + '</span><button class="btn btn-line" data-tact="addpeer">' + icon('plus', 14) + 'Добавить пиры</button></div>';
+  if (!peers.length) return tools + '<div class="files-wait">' + (t.state === 'queued' ? 'Торрент в очереди — соединений пока нет' : 'Торрент на паузе — соединений нет') + '</div>';
+  const rows = peers.map((p, i) => '<tr data-peer="' + i + '"><td><span class="cc">' + p.cc + '</span></td><td class="mono">' + p.ip + '</td><td class="num">' + p.port + '</td><td>' + p.conn + '</td><td class="flags">' + p.flags + '</td><td>' + p.client + '</td>' +
+    '<td><span class="mini-bar"><span style="width:' + (p.progress * 100) + '%"></span></span><span class="mono">' + Math.floor(p.progress * 100) + '%</span></td>' +
+    '<td class="num">' + (p.down ? fmtRate(p.down) : '') + '</td><td class="num">' + (p.up ? fmtRate(p.up) : '') + '</td><td class="num">' + fmtSize(p.got) + '</td><td class="num">' + fmtSize(p.sent) + '</td><td class="num">' + Math.round(p.rel * 100) + '%</td><td>' + esc(p.file) + '</td></tr>').join('');
+  return tools + '<div class="table-wrap"><table class="ptable"><thead><tr><th>Страна</th><th>Адрес</th><th class="num">Порт</th><th>Соединение</th><th>Флаги</th><th>Клиент</th><th>Прогресс</th><th class="num">↓</th><th class="num">↑</th><th class="num">Скачано</th><th class="num">Отдано</th><th class="num">Значимость</th><th>Файлы</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="legend-flags">' + FLAG_HELP.map((f) => '<b>' + f[0] + '</b> ' + f[1]).join(' · ') + '</div>';
+}
+function detailWeb(t){
+  const D = detailOf(t);
+  const tools = '<div class="dd-tools"><span class="hint">HTTP-зеркала: с них можно качать параллельно с пирами</span><button class="btn btn-line" data-tact="addweb">' + icon('plus', 14) + 'Добавить веб-источник</button></div>';
+  if (!D.web.length) return tools + '<div class="web-empty">У этого торрента нет веб-источников.</div>';
+  return tools + '<div class="table-wrap"><table class="ptable"><thead><tr><th>Адрес</th></tr></thead><tbody>' + D.web.map((u) => '<tr><td class="mono">' + esc(u) + '</td></tr>').join('') + '</tbody></table></div>';
+}
+function detailFiles(t){
+  detailOf(t);
+  const peersSeeds = peersOf(t).filter((p) => p.progress >= 1).length;
+  const rows = t.files.map((f, i) => {
+    const fp = fileProgress(t, i);
+    return '<tr><td><button class="cbx" role="checkbox" aria-checked="' + f.on + '" data-file="' + i + '"><span class="cbx-box">' + icon('check', 13) + '</span><span class="cbx-name">' + esc(f.name) + '</span></button></td><td class="num">' + fmtSize(f.size) + '</td>' +
+      '<td><span class="mini-bar"><span data-fp="' + i + '" style="width:' + (fp * 100) + '%"></span></span><span class="mono">' + nf1.format(fp * 100) + '%</span></td>' +
+      '<td><button class="prio-btn ' + f.prio + '" data-prio="' + i + '">' + PRIO[f.prio] + icon('chev', 12) + '</button></td><td class="num">' + (f.on ? fmtSize(f.size * (1 - fp)) : '—') + '</td><td class="num">' + (running(t) ? nf2.format(peersSeeds + 0.37) : '—') + '</td></tr>';
+  }).join('');
+  return '<div class="dd-tools"><button class="btn btn-line" data-fsel="all">Выбрать все</button><button class="btn btn-line" data-fsel="none">Снять все</button><span class="hint">Снятые файлы не скачиваются. Приоритет — какие файлы качать в первую очередь</span></div>' +
+    '<div class="table-wrap"><table class="ptable"><thead><tr><th>Имя</th><th class="num">Размер</th><th>Прогресс</th><th>Приоритет</th><th class="num">Осталось</th><th class="num">Доступность</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+function detailSpeed(t){
+  const D = detailOf(t), pts = D.hist.slice(-D.range), step = Math.max(1, Math.floor(pts.length / 240)), sample = [];
+  for (let i = 0; i < pts.length; i += step) { const c = pts.slice(i, i + step); sample.push({ d:avg(c.map((p) => p.d)), u:avg(c.map((p) => p.u)) }); }
+  const max = Math.max(MB, Math.max.apply(null, sample.map((p) => Math.max(p.d, p.u)))) * 1.15, W = 600, H = 150;
+  const x = (i) => (i / Math.max(1, sample.length - 1) * W).toFixed(1), y = (v) => (H - v / max * H).toFixed(1);
+  const line = (k) => sample.map((p, i) => x(i) + ',' + y(p[k])).join(' ');
+  const last = pts[pts.length - 1] || { d:0, u:0 };
+  const ranges = [[60, '1 мин'], [300, '5 мин'], [1800, '30 мин']];
+  return '<div class="dd-tools"><div class="segc" role="radiogroup" aria-label="Период" data-range>' + ranges.map((r) => '<button role="radio" data-v="' + r[0] + '" aria-checked="' + (D.range === r[0]) + '">' + r[1] + '</button>').join('') + '</div>' +
+    '<span class="chart-legend"><i style="background:var(--accent)"></i>Загрузка ' + fmtRate(last.d) + '<i style="background:var(--text-2)"></i>Отдача ' + fmtRate(last.u) + '</span></div>' +
+    '<div class="chart"><div class="chart-y"><span>' + fmtRate(max) + '</span><span>' + fmtRate(max / 2) + '</span><span>0</span></div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="График скорости загрузки и отдачи">' +
+      [0.25, 0.5, 0.75].map((g) => '<line x1="0" x2="' + W + '" y1="' + H * g + '" y2="' + H * g + '" style="stroke:var(--line);stroke-width:1" vector-effect="non-scaling-stroke"/>').join('') +
+      '<polygon points="0,' + H + ' ' + line('d') + ' ' + W + ',' + H + '" style="fill:var(--accent-soft)"/>' +
+      '<polyline points="' + line('d') + '" style="fill:none;stroke:var(--accent);stroke-width:2" vector-effect="non-scaling-stroke"/>' +
+      '<polyline points="' + line('u') + '" style="fill:none;stroke:var(--text-2);stroke-width:1.5" vector-effect="non-scaling-stroke"/></svg></div>';
+}
+function detailParams(t){
+  const D = detailOf(t);
+  const num = (id, label, hint, unit, short) => '<div class="param"><span class="lbl2">' + label + '<span>' + hint + '</span></span><label class="num-in"><input data-limit="' + id + '" value="' + esc(D.limits[id]) + '" placeholder="' + (id === 'conns' ? '' : 'без лимита') + '" inputmode="numeric" aria-label="' + label + '"' + (short ? ' class="short"' : '') + '>' + (unit ? '<span>' + unit + '</span>' : '') + '</label></div>';
+  const sw = (id, label, hint) => '<div class="param"><span class="lbl2">' + label + '<span>' + hint + '</span></span><button class="switch" role="switch" aria-checked="' + D[id] + '" data-pswitch="' + id + '"><span class="sr">' + label + '</span></button></div>';
+  const share = [['global', 'Как в настройках'], ['ratio', 'До рейтинга 2,0'], ['none', 'Не раздавать']];
+  return '<div class="params">' +
+    num('down', 'Лимит загрузки', 'Только для этого торрента', 'КБ/с') + num('up', 'Лимит отдачи', 'Только для этого торрента', 'КБ/с') +
+    num('conns', 'Максимум соединений', 'Пиров одновременно', '', true) +
+    '<div class="param"><span class="lbl2">Раздача<span>Когда остановить отдачу</span></span><div class="segc" role="radiogroup" aria-label="Раздача" data-share>' + share.map((s) => '<button role="radio" data-v="' + s[0] + '" aria-checked="' + (D.share === s[0]) + '">' + s[1] + '</button>').join('') + '</div></div>' +
+    sw('seq', 'Загружать последовательно', 'Части по порядку — видео можно начать смотреть раньше') + sw('firstLast', 'Сначала первые и последние части', 'Быстрее появляется превью и длительность') +
+    sw('superSeed', 'Режим суперсида', 'Для первой раздачи своего торрента') +
+    '<div class="param"><span class="lbl2">Папка<span class="mono">' + esc(t.path) + '</span></span><button class="btn btn-line" data-pact="move">' + icon('folder', 14) + 'Переместить…</button></div>' +
+    '<div class="param"><span class="lbl2">Категория<span>' + esc(catOf(t.cat).name) + '</span></span><button class="btn btn-line" data-pact="cat">' + icon('tag', 14) + 'Изменить</button></div>' +
+    '<div class="param-actions"><button class="btn btn-line" data-pact="recheck">' + icon('refresh', 14) + 'Проверить файлы</button><button class="btn btn-line" data-pact="announce">' + icon('up', 14) + 'Переобъявить трекерам</button><button class="btn btn-line" data-pact="export">' + icon('down', 14) + 'Сохранить .torrent</button><button class="btn btn-line" data-pact="magnet">' + icon('magnet', 14) + 'Скопировать magnet</button><button class="btn btn-line" data-pact="hash">' + icon('copy', 14) + 'Скопировать хеш</button></div></div>';
+}
+const DETAIL_RENDER = { general:detailGeneral, trackers:detailTrackers, peers:detailPeers, web:detailWeb, files:detailFiles, speed:detailSpeed, params:detailParams };
+const LIVE_TABS = new Set(['general', 'trackers', 'peers', 'speed']);
 function renderDetail(){
   const t = selTorrent(), d = $('#dlDetail');
   d.classList.toggle('show', !!t);
   if (!t) return;
-  const tabs = '<div class="tabs" role="tablist" aria-label="Подробности"><button role="tab" data-dtab="files" aria-selected="' + (dlState.detailTab === 'files') + '">Файлы<span class="n">' + t.files.length + '</span></button><button role="tab" data-dtab="info" aria-selected="' + (dlState.detailTab === 'info') + '">Сведения</button></div>';
-  const body = dlState.detailTab === 'files'
-    ? t.files.map((f, i) => '<div class="frow"><button class="cbx" role="checkbox" aria-checked="' + f.on + '" data-file="' + i + '"><span class="cbx-box">' + icon('check', 13) + '</span><span class="cbx-name">' + esc(f.name) + '</span></button><span class="mono">' + fmtSize(f.size) + '</span><div class="tbar"><span data-fp="' + i + '" style="width:' + (fileProgress(t, i) * 100) + '%"></span></div></div>').join('')
-    : '<dl class="kv"><dt>Хеш</dt><dd class="mono">' + t.hash + '</dd><dt>Папка</dt><dd class="mono">' + esc(t.path) + '</dd><dt>Категория</dt><dd>' + esc(catOf(t.cat).name) + '</dd><dt>Добавлен</dt><dd>' + fmtDate(t.added) + '</dd>' +
-      '<dt>Страница раздачи</dt><dd>' + (t.source ? '<button class="src-link" data-src="' + t.id + '">' + icon('external', 13) + esc(t.source) + '</button>' : '—') + '</dd>' +
-      '<dt>Отдано</dt><dd class="mono">' + fmtSize(t.size * t.ratio) + ' · рейтинг ' + nf2.format(t.ratio) + '</dd></dl>';
-  d.innerHTML = '<div class="dd-head">' + tabs + '<b>' + esc(t.name) + '</b><button class="ibtn" data-act="close-detail" aria-label="Скрыть подробности">' + icon('x', 15) + '</button></div><div class="dd-body">' + body + '</div>';
+  const D = detailOf(t);
+  const counts = { trackers:D.trackers.length + 3, peers:peersOf(t).length, web:D.web.length, files:t.files.length };
+  const tabs = '<div class="tabs" role="tablist" aria-label="Подробности торрента">' + DETAIL_TABS.map((x) => '<button role="tab" data-dtab="' + x[0] + '" aria-selected="' + (dlState.detailTab === x[0]) + '">' + x[1] + (counts[x[0]] !== undefined ? '<span class="n">' + counts[x[0]] + '</span>' : '') + '</button>').join('') + '</div>';
+  d.innerHTML = '<div class="dd-resize" data-resize aria-hidden="true"></div><div class="dd-head">' + tabs + '<b>' + esc(t.name) + '</b><button class="ibtn" data-act="close-detail" aria-label="Скрыть подробности">' + icon('x', 15) + '</button></div><div class="dd-body">' + DETAIL_RENDER[dlState.detailTab](t) + '</div>';
+}
+function refreshDetailBody(){
+  const t = selTorrent(), body = $('#dlDetail .dd-body');
+  if (!t || !body || !LIVE_TABS.has(dlState.detailTab)) return;
+  const wrap = body.querySelector('.table-wrap'), top = body.scrollTop, left = wrap ? wrap.scrollLeft : 0, wrapTop = wrap ? wrap.scrollTop : 0;
+  body.innerHTML = DETAIL_RENDER[dlState.detailTab](t);
+  body.scrollTop = top;
+  const w2 = body.querySelector('.table-wrap'); if (w2) { w2.scrollLeft = left; w2.scrollTop = wrapTop; }
 }
 
 /* ---------- Архив ---------- */
@@ -2187,12 +2486,89 @@ $('#dlList').addEventListener('click', (e) => {
   dlState.sel = t.id; renderDownloads();
 });
 $('#dlList').addEventListener('contextmenu', (e) => { const row = e.target.closest('[data-tid]'); if (!row) return; e.preventDefault(); dlState.sel = row.dataset.tid; renderDownloads(); activeMenu(byTid(row.dataset.tid), { x:e.clientX, y:e.clientY }); });
-$('#dlDetail').addEventListener('click', (e) => {
+$('#dlDetail').addEventListener('click', async (e) => {
   const t = selTorrent(); if (!t) return;
+  const D = detailOf(t);
   const tab = e.target.closest('[data-dtab]'); if (tab) { dlState.detailTab = tab.dataset.dtab; renderDetail(); return; }
-  const f = e.target.closest('[data-file]'); if (f) { const file = t.files[+f.dataset.file]; file.on = !file.on; renderDetail(); toast(file.on ? 'Файл снова в загрузке' : 'Файл не будет скачиваться'); return; }
+  const f = e.target.closest('[data-file]');
+  if (f) { const file = t.files[+f.dataset.file]; file.on = !file.on; file.prio = file.on ? (file.prio === 'skip' ? 'normal' : file.prio) : 'skip'; renderDetail(); toast(file.on ? 'Файл снова в загрузке' : 'Файл не будет скачиваться'); return; }
+  const pr = e.target.closest('[data-prio]');
+  if (pr) {
+    const file = t.files[+pr.dataset.prio];
+    openMenu(pr, Object.keys(PRIO).map((k) => ({ label:PRIO[k], icon:'tag', checked:file.prio === k, run:() => { file.prio = k; file.on = k !== 'skip'; renderDetail(); } })));
+    return;
+  }
+  const fsel = e.target.closest('[data-fsel]');
+  if (fsel) { const on = fsel.dataset.fsel === 'all'; t.files.forEach((x) => { x.on = on; x.prio = on ? (x.prio === 'skip' ? 'normal' : x.prio) : 'skip'; }); renderDetail(); return; }
   if (e.target.closest('[data-src]')) { openSourceInTrackers(t); return; }
-  if (e.target.closest('[data-act="close-detail"]')) { dlState.sel = null; renderDownloads(); }
+  if (e.target.closest('[data-act="close-detail"]')) { dlState.sel = null; renderDownloads(); return; }
+  const range = e.target.closest('[data-range] [data-v]'); if (range) { D.range = +range.dataset.v; renderDetail(); return; }
+  const share = e.target.closest('[data-share] [data-v]'); if (share) { D.share = share.dataset.v; toast('Раздача: ' + share.textContent); return; }
+  const sw = e.target.closest('[data-pswitch]');
+  if (sw) { const k = sw.dataset.pswitch; D[k] = sw.getAttribute('aria-checked') !== 'true'; toast((D[k] ? 'Включено: ' : 'Выключено: ') + sw.querySelector('.sr').textContent.toLowerCase()); return; }
+  const ta = e.target.closest('[data-tact]');
+  if (ta) {
+    const a = ta.dataset.tact;
+    if (a === 'announce') { D.trackers.forEach((x) => { x.next = 1800; if (x.status === 'upd') x.status = 'ok'; }); renderDetail(); toast('Трекеры опрошены'); }
+    if (a === 'add') { const v = await formModal({ title:'Добавить трекеры', text:'Адрес трекера целиком, например udp://tracker.example.org:6969/announce', fields:[{ id:'url', label:'Адрес', placeholder:'udp://…', mono:true }], ok:'Добавить' }); if (v && v.url) { D.trackers.push({ url:v.url, tier:D.trackers.length, status:'upd', next:5 }); renderDetail(); } }
+    if (a === 'addpeer') { const v = await formModal({ title:'Добавить пиры', text:'IP-адрес и порт: 203.0.113.7:51413', fields:[{ id:'ip', label:'Адрес', placeholder:'IP:порт', mono:true }], ok:'Добавить' }); if (v && v.ip) toast('Подключаемся к ' + v.ip); }
+    if (a === 'addweb') { const v = await formModal({ title:'Добавить веб-источник', fields:[{ id:'url', label:'Адрес', placeholder:'https://…', mono:true }], ok:'Добавить' }); if (v && v.url) { D.web.push(v.url); renderDetail(); } }
+    return;
+  }
+  const pa = e.target.closest('[data-pact]');
+  if (pa) {
+    const a = pa.dataset.pact;
+    if (a === 'move') { const v = await formModal({ title:'Переместить файлы', text:'В приложении здесь откроется выбор папки. Файлы переедут, загрузка продолжится с того же места.', fields:[{ id:'path', label:'Новая папка', value:t.path, mono:true }], ok:'Переместить' }); if (v && v.path) { t.path = v.path; renderDetail(); toast('Файлы переезжают в ' + v.path); } }
+    if (a === 'cat') openMenu(pa, categoryItems(t, (c) => { t.cat = c.id; renderDownloads(); toast('Категория: «' + c.name + '»'); }));
+    if (a === 'recheck') { toast('Проверяем файлы: ' + fmtSize(t.size) + '…'); setTimeout(() => toast('Файлы целы — все части на месте'), 1600); }
+    if (a === 'announce') { D.trackers.forEach((x) => { x.next = 1800; }); toast('Трекеры опрошены'); }
+    if (a === 'export') toast('Сохранится ' + t.name + '.torrent — копия того, что лежит в архиве');
+    if (a === 'magnet') toast('Magnet-ссылка скопирована');
+    if (a === 'hash') toast('Хеш скопирован: ' + t.hash);
+  }
+});
+$('#dlDetail').addEventListener('change', (e) => {
+  const inp = e.target.closest('[data-limit]'); const t = selTorrent(); if (!inp || !t) return;
+  const v = inp.value.replace(/\D/g, ''); inp.value = v;
+  detailOf(t).limits[inp.dataset.limit] = v;
+  const names = { down:'Лимит загрузки', up:'Лимит отдачи', conns:'Максимум соединений' };
+  toast(names[inp.dataset.limit] + ': ' + (v ? v + (inp.dataset.limit === 'conns' ? '' : ' КБ/с') : 'без ограничений'));
+});
+$('#dlDetail').addEventListener('contextmenu', (e) => {
+  const t = selTorrent(); if (!t) return;
+  const D = detailOf(t);
+  const pr = e.target.closest('[data-peer]');
+  if (pr) {
+    e.preventDefault();
+    const p = peersOf(t)[+pr.dataset.peer];
+    openMenu({ x:e.clientX, y:e.clientY }, [
+      { label:'Скопировать IP:порт', icon:'copy', run:() => toast('Скопировано: ' + p.ip + ':' + p.port) },
+      'sep',
+      { label:'Заблокировать навсегда', icon:'x', danger:true, run:() => { D.peers = D.peers.filter((x) => x !== p); renderDetail(); toast('Пир ' + p.ip + ' заблокирован'); } }
+    ]);
+    return;
+  }
+  const tr = e.target.closest('[data-tr]');
+  if (tr) {
+    e.preventDefault();
+    const x = D.trackers[+tr.dataset.tr];
+    openMenu({ x:e.clientX, y:e.clientY }, [
+      { label:'Скопировать адрес', icon:'copy', run:() => toast('Скопировано: ' + x.url) },
+      { label:'Изменить адрес…', icon:'edit', run:async () => { const v = await formModal({ title:'Адрес трекера', fields:[{ id:'url', label:'Адрес', value:x.url, mono:true }], ok:'Сохранить' }); if (v && v.url) { x.url = v.url; x.status = 'upd'; renderDetail(); } } },
+      { label:'Переобъявить', icon:'refresh', run:() => { x.next = 1800; x.status = x.status === 'warn' ? 'warn' : 'ok'; renderDetail(); } },
+      'sep',
+      { label:'Удалить трекер', icon:'trash', danger:true, run:() => { D.trackers = D.trackers.filter((y) => y !== x); renderDetail(); toast('Трекер удалён из торрента'); } }
+    ]);
+  }
+});
+/* высота панели подробностей тянется за верхний край, как разделитель в qBittorrent */
+$('#dlDetail').addEventListener('mousedown', (e) => {
+  if (!e.target.closest('[data-resize]')) return;
+  e.preventDefault();
+  const panel = $('#dlDetail'), startY = e.clientY, startH = panel.offsetHeight, max = $('.dl-body').offsetHeight - 120;
+  const move = (ev) => { panel.style.height = Math.max(180, Math.min(max, startH - (ev.clientY - startY))) + 'px'; };
+  const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+  window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
 });
 $('#archList').addEventListener('click', (e) => {
   const row = e.target.closest('[data-tid]'); if (!row) return;
@@ -2269,6 +2645,19 @@ $('#trkFwd').addEventListener('click', () => { if (!trk.fwd.length) return; trk.
 $('#trkReload').addEventListener('click', () => { $('#sitePage').style.opacity = '.4'; setTimeout(() => { $('#sitePage').style.opacity = ''; renderTrackers(); }, 250); });
 $('#trkExternal').addEventListener('click', () => toast('Откроется в браузере по умолчанию: ' + pageUrl()));
 
+/* ---------- настройки загрузок ---------- */
+function renderSettingsCats(){
+  $('#setCats').innerHTML = CATS.map((c) => '<div class="folder-row" data-setcat="' + c.id + '">' + icon(c.icon, 15) + '<b style="font-family:var(--f-ui);font-weight:500;color:var(--text);min-width:120px">' + esc(c.name) + '</b><span>' + esc(c.path) + '</span><button class="ibtn" style="width:28px;height:28px" aria-label="Действия с категорией «' + esc(c.name) + '»">' + icon('more', 16) + '</button></div>').join('');
+}
+$('#setCats').addEventListener('click', (e) => { const row = e.target.closest('[data-setcat]'); const b = e.target.closest('.ibtn'); if (!row || !b) return; categoryMenu(CATS.find((c) => c.id === row.dataset.setcat), b); });
+$('#setCatAdd').addEventListener('click', async () => {
+  const v = await formModal({ title:'Новая категория', text:'У категории своя папка для загрузок.', fields:[{ id:'name', label:'Название' }, { id:'path', label:'Папка по умолчанию', placeholder:'D:\\Фильмы', mono:true }], ok:'Создать' });
+  if (v && createCategory(v.name, v.path)) renderDownloads();
+});
+$('#portRnd').addEventListener('click', () => { $('#portIn').value = 49152 + Math.floor(Math.random() * 16383); $('#portState').textContent = 'Проверяем порт…'; setTimeout(() => { $('#portState').textContent = 'Порт открыт — к вам могут подключаться'; }, 900); });
+$('[data-setpath]').addEventListener('click', async (e) => { const v = await formModal({ title:'Папка по умолчанию', fields:[{ id:'path', label:'Папка', value:NO_CAT.path, mono:true }], ok:'Сохранить' }); if (v && v.path) { NO_CAT.path = v.path; e.target.closest('.path-row').querySelector('span').textContent = v.path; } });
+$('#assocTorrent').addEventListener('click', () => toast('Kino станет программой по умолчанию для .torrent и magnet-ссылок'));
+
 /* ---------- живой прогресс ---------- */
 function updateGlobal(){
   const downing = TORRENTS.filter((t) => t.state === 'down');
@@ -2290,6 +2679,21 @@ function tickTorrents(){
       t.progress = Math.min(1, t.progress + t.down * PROTO_SPEEDUP / selectedSize(t));
       if (t.progress >= 1) { t.state = 'seed'; t.completed = todayISO(); finished = true; toast('Скачано: ' + t.name); }
     } else if (t.state === 'seed') { t.up = Math.min(4 * MB, Math.max(0.05 * MB, t.up * (0.9 + Math.random() * 0.2))); t.ratio += t.up / t.size; }
+    const D = t._d; // живые подробности — только у торрентов, которые уже открывали
+    if (D) {
+      D.hist.push({ d:t.state === 'down' ? t.down : 0, u:running(t) ? t.up : 0 });
+      if (D.hist.length > 1800) D.hist.shift();
+      if (running(t)) {
+        D.activeSec += 1;
+        D.trackers.forEach((x) => { x.next = x.next > 0 ? x.next - 1 : 1800; });
+        (D.peers || []).forEach((p) => {
+          if (p.down) p.down = Math.max(0.05 * MB, p.down * (0.85 + Math.random() * 0.3));
+          if (p.up) p.up = Math.max(0.01 * MB, p.up * (0.85 + Math.random() * 0.3));
+          if (p.progress < 1) p.progress = Math.min(1, p.progress + Math.random() * 0.002);
+          p.got += p.down; p.sent += p.up;
+        });
+      }
+    }
   });
   if (currentScreen === 'downloads' && dlState.tab === 'active' && !$('#menu').classList.contains('open')) {
     if (finished) renderDownloads();
@@ -2301,7 +2705,7 @@ function tickTorrents(){
         document.querySelector('[data-spd="' + t.id + '"]').innerHTML = speedHTML(t);
       });
       const s = selTorrent();
-      if (s) $$('[data-fp]').forEach((b) => { b.style.width = (fileProgress(s, +b.dataset.fp) * 100) + '%'; });
+      if (s) { $$('[data-fp]').forEach((b) => { b.style.width = (fileProgress(s, +b.dataset.fp) * 100) + '%'; }); refreshDetailBody(); }
     }
   }
   updateGlobal();
@@ -2339,7 +2743,11 @@ function protoState(s){
   $$('[data-proto-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoState === s)));
 }
 function protoTorrent(kind){
-  if (kind === 'magnet') {
+  if (kind === 'details') {
+    dlState.tab = 'active'; dlState.cat = 'all'; dlState.sel = 't1'; dlState.detailTab = 'peers'; go('downloads');
+  } else if (kind === 'settings') {
+    go('settings'); setTimeout(() => $('#s-dl').scrollIntoView({ block:'start' }), 80);
+  } else if (kind === 'magnet') {
     dlState.tab = 'active'; go('downloads');
     openAdd({ mode:'magnet', from:'magnet' });
     setTimeout(() => { const i = $('#addMagnet'); i.value = 'magnet:?xt=urn:btih:' + fakeHash('Big Buck Bunny 4K') + '&dn=Big+Buck+Bunny+4K+(open+movie)'; i.dispatchEvent(new Event('input')); }, 500);
