@@ -1,0 +1,102 @@
+/*
+ * Токены оформления «Проектор».
+ * Единственный источник цветов, шрифтов, размеров текста, радиусов, теней и кривых анимации.
+ * Палитра Tailwind по умолчанию отключена (`--color-*: initial`), в коде — только эти имена.
+ */
+@theme {
+  --color-*: initial;
+
+  /* Поверхности: от фона к приподнятым слоям */
+  --color-bg: #0e0d0c;
+  --color-panel: #161514;
+  --color-raise: #1f1d1b;
+  --color-raise-2: #2a2724;
+  --color-line: #221f1c;
+  --color-line-2: #2f2b27;
+
+  /* Текст: fg — основной, fg-2..fg-4 — по убыванию важности */
+  --color-fg: #f2ede6;
+  --color-fg-2: #b8afa4;
+  --color-fg-3: #8c847a;
+  --color-fg-4: #a39a90;
+
+  /* Акцент — лампа проектора. Производные цвета считаются от него */
+  --color-accent: #ff7a2e;
+  --color-accent-hover: color-mix(in oklab, var(--color-accent), white 16%);
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 16%, transparent);
+  --color-accent-fg: color-mix(in oklab, var(--color-accent), white 22%);
+  --color-on-accent: #170b03;
+  --color-danger: #f2555a;
+
+  /* Слои поверх контента и видео */
+  --color-hover: rgb(242 237 230 / 0.07);
+  --color-hover-2: rgb(242 237 230 / 0.13);
+  --color-glass: rgb(18 17 16 / 0.86);
+  --color-glass-line: rgb(242 237 230 / 0.1);
+  --color-track: rgb(242 237 230 / 0.22);
+  --color-track-buffer: rgb(242 237 230 / 0.34);
+  --color-scrim: rgb(0 0 0 / 0.78);
+  --color-video: #000000;
+  --color-win-close: #c42b1c;
+  --color-win-close-fg: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Шрифты лежат внутри приложения (fontsource), сеть не нужна */
+  --font-*: initial;
+  --font-display: 'Unbounded Variable', system-ui, sans-serif;
+  --font-sans: 'Golos Text Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --text-*: initial;
+  --text-2xs: 11px;
+  --text-2xs--line-height: 14px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 15px;
+  --text-md--line-height: 20px;
+  --text-lg: 17px;
+  --text-lg--line-height: 22px;
+  --text-xl: 19px;
+  --text-xl--line-height: 24px;
+  --text-2xl: 22px;
+  --text-2xl--line-height: 28px;
+  --text-3xl: 32px;
+  --text-3xl--line-height: 36px;
+  --text-hero: 46px;
+  --text-hero--line-height: 46px;
+
+  --tracking-display: -0.03em;
+  --tracking-caps: 0.06em;
+
+  --radius-*: initial;
+  --radius-xs: 5px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  --shadow-*: initial;
+  --shadow-pop: 0 18px 50px rgb(0 0 0 / 0.55);
+  --shadow-thumb: 0 0 0 3px rgb(0 0 0 / 0.35);
+
+  --ease-*: initial;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --spacing: 4px;
+}
+
+/* Длительности анимаций: всё быстро, 100–300 мс */
+:root {
+  --duration-press: 100ms;
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+}

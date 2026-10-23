@@ -1,0 +1,109 @@
+/*
+ * База без браузерного легаси: окно ведёт себя как нативное приложение Windows,
+ * а не как веб-страница. Поверх preflight из Tailwind.
+ */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Интерфейс не выделяется мышью, курсор — стрелка, страница не «пружинит» */
+    user-select: none;
+    cursor: default;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Текст выделяется только в полях ввода и там, где это явно разрешено */
+  input,
+  textarea,
+  [data-selectable] {
+    user-select: text;
+  }
+
+  input,
+  textarea {
+    cursor: text;
+  }
+
+  /* В Windows-приложениях у кнопок и ссылок нет курсора-руки */
+  a,
+  button,
+  label,
+  summary,
+  [role='button'] {
+    cursor: default;
+  }
+
+  /* Картинки и ссылки не перетаскиваются «призраками» */
+  img,
+  svg,
+  video,
+  a {
+    -webkit-user-drag: none;
+  }
+
+  /* Системные полосы прокрутки скрыты — прокрутка только через ScrollArea */
+  * {
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Синей обводки браузера нет; кольцо фокуса рисуют компоненты при навигации с клавиатуры */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-fg);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-fg-3);
+    opacity: 1;
+  }
+
+  /* Встроенные «крестики» и стрелки полей ввода */
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-results-button,
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

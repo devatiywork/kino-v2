@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ui-playground",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--filter", "@kino/ui", "dev"],
+      "port": 5180
+    }
+  ]
+}

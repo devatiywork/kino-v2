@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/unbounded';
+@import '@fontsource-variable/golos-text';
+@import '@fontsource-variable/jetbrains-mono';
+@import './tokens.css';
+@import './base.css';
+
+/* Классы из исходников библиотеки попадают в сборку и у приложения, которое её подключает */
+@source '../';

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+target/
+release/
+.vite/
+
+# libmpv binaries (bundled at build time, not committed)
+apps/desktop/src-tauri/libmpv/*.dll
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs / env
+*.log
+.env
+.env.*

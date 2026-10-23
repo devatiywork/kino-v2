@@ -1,0 +1,13 @@
+{
+  "name": "kino",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kino — быстрый видеоплеер для Windows на Tauri и mpv",
+  "license": "MIT",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "ui": "bun run --filter @kino/ui dev",
+    "test": "bun run --filter \"*\" test",
+    "typecheck": "bun run --filter \"*\" typecheck"
+  }
+}
