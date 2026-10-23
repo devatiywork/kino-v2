@@ -10,7 +10,6 @@ export const initialPlayback: PlayerSnapshot = {
   episode: null,
   hasPrev: false,
   hasNext: false,
-  autoplay: true,
   duration: null,
   position: 0,
   paused: false,

@@ -20,8 +20,6 @@ use episode::{describe, FileInfo};
 use series::{Episode, Season, SeriesSummary};
 use track_pref::TrackPref;
 
-/// An episode counts as watched after 90% (SPEC 3.2)
-pub const WATCHED_RATIO: f64 = 0.9;
 /// Shorter starts are not worth resuming
 const RESUME_MIN: f64 = 10.0;
 /// Close to the end — start over instead of resuming the credits
@@ -31,8 +29,9 @@ pub fn now_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or_default()
 }
 
-pub fn is_watched(position: f64, duration: Option<f64>) -> bool {
-    matches!(duration, Some(d) if d > 0.0 && position / d >= WATCHED_RATIO)
+/// `ratio` — «Считать просмотренной после» (SPEC 3.2: 90% by default)
+pub fn is_watched(position: f64, duration: Option<f64>, ratio: f64) -> bool {
+    matches!(duration, Some(d) if d > 0.0 && position / d >= ratio)
 }
 
 /// Where to continue a file, if anywhere
@@ -132,11 +131,26 @@ pub struct SeriesDetail {
     pub subtitles: Option<PrefLabel>,
 }
 
+/// What the settings decide for the library (SPEC 6 «Библиотека и история»)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Policy {
+    /// Off — opening and watching leave no trace: no positions, viewings or frames
+    pub keep_history: bool,
+    pub watched_ratio: f64,
+}
+
+impl Default for Policy {
+    fn default() -> Self {
+        Self { keep_history: true, watched_ratio: 0.9 }
+    }
+}
+
 pub struct Library {
     conn: Mutex<Connection>,
     thumbs: PathBuf,
     /// Series folders already scanned in this run (opening an episode scans its folder once)
     scanned: Mutex<std::collections::HashSet<String>>,
+    policy: Mutex<Policy>,
 }
 
 const FILE_COLUMNS: &str =
@@ -144,7 +158,7 @@ const FILE_COLUMNS: &str =
 
 impl Library {
     pub fn open(db_path: &Path, thumbs: PathBuf) -> rusqlite::Result<Self> {
-        Ok(Self { conn: Mutex::new(db::open(db_path)?), thumbs, scanned: Mutex::default() })
+        Ok(Self { conn: Mutex::new(db::open(db_path)?), thumbs, scanned: Mutex::default(), policy: Mutex::default() })
     }
 
     #[cfg(test)]
@@ -153,6 +167,7 @@ impl Library {
             conn: Mutex::new(db::open_in_memory().unwrap()),
             thumbs: std::env::temp_dir().join("kino-test-thumbs"),
             scanned: Mutex::default(),
+            policy: Mutex::default(),
         }
     }
 
@@ -181,6 +196,18 @@ impl Library {
         self.conn.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
+    pub fn set_policy(&self, policy: Policy) {
+        *self.policy.lock().unwrap_or_else(|p| p.into_inner()) = policy;
+    }
+
+    fn policy(&self) -> Policy {
+        *self.policy.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
+    pub fn keeps_history(&self) -> bool {
+        self.policy().keep_history
+    }
+
     pub fn thumb_path(&self, file_id: i64) -> PathBuf {
         self.thumbs.join(format!("{file_id}.jpg"))
     }
@@ -206,7 +233,7 @@ impl Library {
         })
     }
 
-    /// Remember the file as just opened; returns its id and series
+    /// Remember the file as just opened (without history — only that it exists); returns its id and series
     pub fn register(&self, path: &str, info: &FileInfo, duration: Option<f64>) -> rusqlite::Result<FileRef> {
         let (series_key, series_title) = match &info.series {
             Some((key, title)) => (Some(key.as_str()), Some(title.as_str())),
@@ -218,9 +245,20 @@ impl Library {
              ON CONFLICT (path) DO UPDATE SET
                 title = excluded.title, series_key = excluded.series_key, series_title = excluded.series_title,
                 season = excluded.season, episode = excluded.episode, series_dir = excluded.series_dir,
-                duration = COALESCE(excluded.duration, duration), last_played_at = excluded.last_played_at
+                duration = COALESCE(excluded.duration, duration),
+                last_played_at = COALESCE(excluded.last_played_at, last_played_at)
              RETURNING id",
-            params![path, info.title, series_key, series_title, info.season, info.episode, info.series_dir, duration, now_ms()],
+            params![
+                path,
+                info.title,
+                series_key,
+                series_title,
+                info.season,
+                info.episode,
+                info.series_dir,
+                duration,
+                self.keeps_history().then(now_ms)
+            ],
             |r| r.get(0),
         )?;
         Ok(FileRef { id, series_key: series_key.map(str::to_owned) })
@@ -364,11 +402,12 @@ impl Library {
     /// Position of the file and of the current viewing; the viewing row appears on the first save
     pub fn save_progress(&self, file_id: i64, position: f64, duration: Option<f64>, view: &mut Option<i64>, started_at: i64) -> rusqlite::Result<()> {
         let now = now_ms();
+        let watched = is_watched(position, duration, self.policy().watched_ratio);
         let conn = self.conn();
         conn.execute(
             "UPDATE player_files SET position = ?2, duration = COALESCE(?3, duration),
                 watched = MAX(watched, ?4), last_played_at = ?5 WHERE id = ?1",
-            params![file_id, position, duration, is_watched(position, duration), now],
+            params![file_id, position, duration, watched, now],
         )?;
         match view {
             Some(id) => {
@@ -466,8 +505,34 @@ impl Library {
         Ok(items.into_iter().take(limit as usize).map(|(_, f)| f).collect())
     }
 
+    /// SPEC 6 «Очистить историю»: viewings, positions, frames and the track memory are gone.
+    /// Library folders and their episodes stay; files that were only played are forgotten
+    pub fn clear_history(&self) -> rusqlite::Result<()> {
+        self.conn().execute_batch(
+            "BEGIN;
+             DELETE FROM player_views;
+             DELETE FROM player_series_tracks;
+             DELETE FROM player_files WHERE folder_id IS NULL;
+             UPDATE player_files SET position = 0, watched = 0, last_played_at = NULL, has_thumb = 0;
+             COMMIT;",
+        )?;
+        self.scanned.lock().unwrap_or_else(|p| p.into_inner()).clear();
+        match std::fs::read_dir(&self.thumbs) {
+            Ok(entries) => {
+                for entry in entries.flatten() {
+                    if let Err(e) = std::fs::remove_file(entry.path()) {
+                        eprintln!("[library] remove frame {}: {e}", entry.path().display());
+                    }
+                }
+            }
+            Err(e) => eprintln!("[library] frames folder: {e}"),
+        }
+        Ok(())
+    }
+
     /// Viewings, newest first (SPEC 3.2 «История по дням»)
     pub fn history(&self, limit: u32) -> rusqlite::Result<Vec<HistoryEntry>> {
+        let ratio = self.policy().watched_ratio;
         let conn = self.conn();
         let sql = format!(
             "SELECT {FILE_COLUMNS}, v.id, v.started_at, v.ended_at, v.position, v.duration
@@ -483,7 +548,7 @@ impl Library {
                 started_at: r.get(12)?,
                 ended_at: r.get(13)?,
                 position,
-                watched: is_watched(position, duration),
+                watched: is_watched(position, duration, ratio),
                 file: self.file_from_row(r)?,
             })
         })?;
@@ -614,6 +679,50 @@ mod tests {
         lib.remove_folder(folder.id).unwrap();
         assert!(lib.folders().unwrap().is_empty());
         assert!(lib.series_list().unwrap().is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_watched_threshold_comes_from_the_settings() {
+        let lib = Library::in_memory();
+        let file = open(&lib, r"D:\Films\Heat.1995.mkv", 1000.0);
+        lib.set_policy(Policy { watched_ratio: 0.95, ..Policy::default() });
+        lib.save_progress(file.id, 920.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        assert!(!lib.history(10).unwrap()[0].watched, "92% < 95%");
+        lib.set_policy(Policy { watched_ratio: 0.85, ..Policy::default() });
+        assert!(lib.history(10).unwrap()[0].watched, "92% ≥ 85%");
+    }
+
+    #[test]
+    fn without_history_opening_a_file_leaves_no_trace() {
+        let lib = Library::in_memory();
+        lib.set_policy(Policy { keep_history: false, ..Policy::default() });
+        open(&lib, r"D:\Films\Heat.1995.mkv", 1000.0);
+        assert!(!lib.keeps_history());
+        assert!(lib.continue_watching(10).unwrap().is_empty());
+        let played: Option<i64> = lib.conn().query_row("SELECT last_played_at FROM player_files", [], |r| r.get(0)).unwrap();
+        assert_eq!(played, None);
+    }
+
+    #[test]
+    fn clearing_the_history_keeps_the_library_folders() {
+        let lib = Library::in_memory();
+        let (root, files) = season_on_disk("clear");
+        let folder = lib.add_folder(&root.to_string_lossy()).unwrap();
+        lib.add_scanned(&files, Some(folder.id)).unwrap();
+        let e1 = lib.register(&files[1].to_string_lossy(), &describe(&files[1]), Some(1000.0)).unwrap();
+        lib.save_progress(e1.id, 500.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_pref("show:show", TrackKind::Sub, &TrackPref::Off).unwrap();
+        let film = open(&lib, r"D:\Films\Heat.1995.mkv", 1000.0);
+        lib.save_progress(film.id, 500.0, Some(1000.0), &mut None, now_ms()).unwrap();
+
+        lib.clear_history().unwrap();
+        assert!(lib.history(10).unwrap().is_empty());
+        assert!(lib.continue_watching(10).unwrap().is_empty());
+        assert_eq!(lib.series_prefs("show:show").unwrap(), SeriesPrefs::default());
+        let series = lib.series_list().unwrap();
+        assert_eq!((series.len(), series[0].episodes, series[0].watched), (1, 3, 0), "the folder's series stays");
+        assert_eq!(lib.resume_position(r"D:\Films\Heat.1995.mkv").unwrap(), None);
         std::fs::remove_dir_all(&root).unwrap();
     }
 

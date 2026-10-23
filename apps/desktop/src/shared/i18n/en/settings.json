@@ -1,0 +1,124 @@
+{
+  "title": "Settings",
+  "sections": "Settings sections",
+  "appearance": {
+    "title": "Appearance",
+    "theme": "Theme",
+    "themeHint": "Changes at once, no restart. The player is always dark",
+    "themes": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "Like Windows"
+    },
+    "accent": "Accent colour",
+    "accentHint": "Progress, selected tracks, main buttons",
+    "accents": {
+      "ember": "Orange",
+      "gold": "Gold",
+      "lime": "Lime",
+      "teal": "Teal",
+      "violet": "Lilac"
+    },
+    "language": "Interface language",
+    "languages": {
+      "ru": "Русский",
+      "en": "English"
+    }
+  },
+  "playback": {
+    "title": "Playback",
+    "resume": "Continue where you stopped",
+    "resumeHint": "And show “Continued from 23:14 · Start over”",
+    "autoplay": "Play the next episode",
+    "autoplayHint": "Playback stops at the end of a season",
+    "speed": "Default speed",
+    "speedHint": "Every run of Kino starts with it",
+    "volume": "Default volume",
+    "volumeHint": "Every run of Kino starts with it",
+    "hwdec": "Hardware decoding",
+    "hwdecHint": "Less CPU load for 4K and HEVC. Turn it off if the picture has artefacts"
+  },
+  "tracks": {
+    "title": "Audio and subtitles",
+    "hint": "For a series, what you chose in its earlier episodes comes first",
+    "audio": "Preferred audio",
+    "audioHint": "If the file has none — as in the file",
+    "audios": {
+      "russian": "Russian",
+      "original": "Original"
+    },
+    "russianSubs": "Subtitles with Russian audio",
+    "russianSubsHint": "Forced — signs and inscriptions only",
+    "russianSubsOptions": {
+      "off": "Off",
+      "forced": "Forced",
+      "full": "Full"
+    },
+    "size": "Subtitle size",
+    "sizes": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    },
+    "position": "Subtitle position",
+    "positionHint": "For SRT and plain ASS; styled ASS place themselves",
+    "positions": {
+      "bottom": "At the edge",
+      "raised": "Higher",
+      "high": "Highest"
+    }
+  },
+  "library": {
+    "title": "Library and history",
+    "history": "Keep the watch history",
+    "historyHint": "Stop positions, viewings and frames. Stored on this computer only",
+    "watched": "Count as watched after",
+    "folders": "Series folders",
+    "foldersHint": "Kino looks through them at start and adds new episodes itself",
+    "noFolders": "No folders yet",
+    "clear": "Clear the history",
+    "clearHint": "Stop positions and remembered tracks go too. Folders and episodes stay",
+    "clearButton": "Clear",
+    "clearTitle": "Clear the history?",
+    "clearText": "All viewings, stop positions, frames and remembered series audio will be removed. This cannot be undone.",
+    "cleared": "History cleared"
+  },
+  "hotkeys": {
+    "title": "Hotkeys",
+    "hint": "Click a key in the table, then press the new one. Escape cancels",
+    "listening": "Press…",
+    "reset": "Restore defaults",
+    "space": "Space",
+    "actions": {
+      "togglePause": "Pause / play",
+      "seekBack": "Back 10 seconds",
+      "seekForward": "Forward 10 seconds",
+      "volumeUp": "Louder",
+      "volumeDown": "Quieter",
+      "toggleFullscreen": "Fullscreen",
+      "toggleMute": "Mute",
+      "toggleSubtitles": "Subtitles on/off",
+      "nextEpisode": "Next episode",
+      "prevEpisode": "Previous episode",
+      "exitFullscreen": "Leave fullscreen"
+    },
+    "fixed": "Fixed",
+    "recordLabel": "{{action}} — {{key}}. Click to assign another key",
+    "swapped": "{{key}} is now “{{action}}”, and “{{other}}” is {{old}}",
+    "reserved": "{{key}} cannot be assigned: Escape leaves fullscreen, Tab moves the focus",
+    "modifier": "Shortcuts with Ctrl, Alt and Win are not assigned — press a single key"
+  },
+  "system": {
+    "title": "System",
+    "keepAwake": "Keep the computer awake",
+    "keepAwakeHint": "Only while a video plays: the screen stays on, no sleep"
+  },
+  "reset": {
+    "button": "Reset settings",
+    "hint": "History, series folders and remembered tracks stay",
+    "title": "Reset the settings?",
+    "text": "All settings, hotkeys included, return to the defaults.",
+    "confirm": "Reset",
+    "done": "Settings reset"
+  }
+}

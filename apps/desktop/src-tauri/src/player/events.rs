@@ -2,7 +2,6 @@
 //! the library learns about opened files, positions and track memory from here
 
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -12,13 +11,16 @@ use libmpv2::{Format, Mpv};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
+use super::keep_awake::KeepAwake;
 use super::session::{self, Session};
 use super::state::{Change, ObservedFormat, PlayerSnapshot, Prop, OBSERVED};
+use super::track_defaults::{self, SubtitleChoice};
 use super::tracks::{parse_track_list, Track, TrackKind};
 use crate::library::commands::CHANGED_EVENT;
 use crate::library::episode::describe;
-use crate::library::track_pref::{choose, Choice};
+use crate::library::track_pref::{choose, Choice, TrackPref};
 use crate::library::Library;
+use crate::settings::SettingsStore;
 
 pub const STATE_EVENT: &str = "player://state";
 pub const POSITION_EVENT: &str = "player://position";
@@ -56,7 +58,8 @@ pub struct Context {
     pub snapshot: Arc<Mutex<PlayerSnapshot>>,
     pub session: Arc<Mutex<Option<Session>>>,
     pub library: Arc<Library>,
-    pub autoplay: Arc<AtomicBool>,
+    pub settings: Arc<SettingsStore>,
+    pub awake: Arc<KeepAwake>,
 }
 
 pub fn spawn(ctx: Context) -> libmpv2::Result<()> {
@@ -113,6 +116,7 @@ fn run(ctx: &Context) {
                         let state = s.clone();
                         drop(s);
                         emit(&ctx.app, STATE_EVENT, state.clone());
+                        ctx.awake.set(state.is_playing() && ctx.settings.read(|s| s.keep_awake));
                         // Pausing (also leaving the player) and reaching the end save right away
                         if (name == "pause" && state.paused) || (name == "eof-reached" && state.eof) {
                             save_now(ctx, name == "pause");
@@ -170,9 +174,7 @@ fn file_loaded(ctx: &Context) {
 
     match ctx.library.register(&path, &info, duration) {
         Ok(file) => {
-            if let Some(key) = &file.series_key {
-                apply_track_memory(ctx, key, &tracks);
-            }
+            choose_tracks(ctx, file.series_key.as_deref(), &tracks);
             *session::lock(&ctx.session) = Some(Session::new(file.id, file.series_key));
             emit(&ctx.app, CHANGED_EVENT, ());
             update_neighbors(&ctx.app, &ctx.library, &ctx.snapshot, file.id);
@@ -220,7 +222,7 @@ fn update_neighbors(app: &AppHandle, library: &Library, snapshot: &Mutex<PlayerS
 /// SPEC 3.3: the episode ended — the next one of the same season starts; at the end of the
 /// season playback stops on the last frame
 fn autoplay_next(ctx: &Context) {
-    if !ctx.autoplay.load(Ordering::Relaxed) {
+    if !ctx.settings.read(|s| s.autoplay) {
         return;
     }
     let Some(file_id) = session::lock(&ctx.session).as_ref().map(|s| s.file_id) else { return };
@@ -229,36 +231,72 @@ fn autoplay_next(ctx: &Context) {
         Ok(None) => return,
         Err(e) => return eprintln!("[library] next episode: {e}"),
     };
-    match super::load(&ctx.client, &ctx.library, &next.path) {
+    match super::load(&ctx.client, &ctx.library, &ctx.settings, &next.path) {
         Ok(opened) => emit(&ctx.app, AUTOPLAY_EVENT, Autoplay { resumed_from: opened.resumed_from, season: next.season, episode: next.episode }),
         Err(e) => eprintln!("[player] autoplay: {e}"),
     }
 }
 
-/// SPEC 3.3: tracks are reset per file; the remembered ones are applied once the new
-/// file's track list is known, by language and title only
-fn apply_track_memory(ctx: &Context, series_key: &str, tracks: &[Track]) {
-    let prefs = match ctx.library.series_prefs(series_key) {
-        Ok(prefs) => prefs,
-        Err(e) => return eprintln!("[library] series prefs: {e}"),
-    };
-    for (kind, pref, property) in [(TrackKind::Audio, &prefs.audio, "aid"), (TrackKind::Sub, &prefs.sub, "sid")] {
-        let Some(pref) = pref else { continue };
-        let id = match choose(tracks, kind, pref) {
-            Choice::Select(id) => Some(id),
-            Choice::Off => None,
-            Choice::Fallback { id, wanted, chosen } => {
-                emit(&ctx.app, NOTICE_EVENT, Notice::TrackNotFound { track: kind, wanted, chosen });
-                id
-            }
-        };
-        let result = match id {
-            Some(id) => ctx.client.set_property(property, id),
-            None => ctx.client.set_property(property, "no"),
-        };
-        if let Err(e) = result {
-            eprintln!("[player] {property}: {e}");
+/// SPEC 3.3: tracks are reset per file and chosen once the new file's track list is known.
+/// The series memory comes first (by language and title only); where nothing is remembered,
+/// the settings' preferred audio and the subtitles for a Russian dub (SPEC 6)
+fn choose_tracks(ctx: &Context, series_key: Option<&str>, tracks: &[Track]) {
+    let prefs = match series_key.map(|key| ctx.library.series_prefs(key)).transpose() {
+        Ok(prefs) => prefs.unwrap_or_default(),
+        Err(e) => {
+            eprintln!("[library] series prefs: {e}");
+            Default::default()
         }
+    };
+    let (preferred_audio, russian_subs) = ctx.settings.read(|s| (s.preferred_audio, s.russian_audio_subtitles));
+
+    let mut audio = tracks.iter().find(|t| t.kind == TrackKind::Audio && t.is_selected).map(|t| t.id);
+    match &prefs.audio {
+        Some(pref) => audio = apply_memory(ctx, tracks, TrackKind::Audio, pref),
+        None => {
+            if let Some(id) = track_defaults::audio(tracks, preferred_audio) {
+                select(ctx, "aid", Some(id));
+                audio = Some(id);
+            }
+        }
+    }
+    match &prefs.sub {
+        Some(pref) => {
+            apply_memory(ctx, tracks, TrackKind::Sub, pref);
+        }
+        None => {
+            let playing = audio.and_then(|id| tracks.iter().find(|t| t.kind == TrackKind::Audio && t.id == id));
+            match track_defaults::subtitles(tracks, playing, russian_subs) {
+                SubtitleChoice::Keep => {}
+                SubtitleChoice::Off => select(ctx, "sid", None),
+                SubtitleChoice::Select(id) => select(ctx, "sid", Some(id)),
+            }
+        }
+    }
+}
+
+/// The remembered track of a series in this file; returns what got selected
+fn apply_memory(ctx: &Context, tracks: &[Track], kind: TrackKind, pref: &TrackPref) -> Option<i64> {
+    let id = match choose(tracks, kind, pref) {
+        Choice::Select(id) => Some(id),
+        Choice::Off => None,
+        Choice::Fallback { id, wanted, chosen } => {
+            emit(&ctx.app, NOTICE_EVENT, Notice::TrackNotFound { track: kind, wanted, chosen });
+            id
+        }
+    };
+    select(ctx, if kind == TrackKind::Audio { "aid" } else { "sid" }, id);
+    id
+}
+
+/// `aid` / `sid`: a track of this file, or none
+fn select(ctx: &Context, property: &str, id: Option<i64>) {
+    let result = match id {
+        Some(id) => ctx.client.set_property(property, id),
+        None => ctx.client.set_property(property, "no"),
+    };
+    if let Err(e) = result {
+        eprintln!("[player] {property}: {e}");
     }
 }
 

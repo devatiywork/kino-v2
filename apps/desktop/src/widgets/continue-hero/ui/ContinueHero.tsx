@@ -1,6 +1,7 @@
 import { Button, IconPlay } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { durationText, episodeLine, headline, progressRatio, Thumb } from '../../../entities/library'
+import { useSettings } from '../../../entities/settings'
 import { useOpenVideo } from '../../../features/open-video'
 import type { LibraryFile } from '../../../shared/ipc/library'
 import { fileName } from '../../../shared/lib/media'
@@ -10,6 +11,8 @@ import { formatTime } from '../../../shared/lib/formatTime'
 export function ContinueHero({ file }: { file: LibraryFile }) {
   const { t } = useTranslation('library')
   const { openFile } = useOpenVideo()
+  // «Продолжать с места остановки» is off: the button says what will happen
+  const resume = useSettings((s) => s.resume)
   const line = episodeLine(file, t)
   const withHours = (file.duration ?? 0) >= 3600
 
@@ -39,11 +42,11 @@ export function ContinueHero({ file }: { file: LibraryFile }) {
         <div className="mt-1.5 flex flex-wrap gap-2.5">
           <Button variant="primary" size="lg" icon={<IconPlay size={16} />} isDisabled={!file.exists} onPress={() => void openFile(file)}>
             {/* The next episode of a series is offered from its start */}
-            {file.position >= 10
+            {resume && file.position >= 10
               ? t('continueFrom', { time: formatTime(file.position) })
               : file.episode != null
                 ? t('playEpisode', { episode: file.episode })
-                : t('continue')}
+                : t(resume ? 'continue' : 'playFromStart')}
           </Button>
           {!file.exists ? <span className="self-center text-sm text-danger">{t('missing')}</span> : null}
         </div>

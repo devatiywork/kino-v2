@@ -154,11 +154,22 @@
   --kino-fg-2: #b8afa4;
   --kino-fg-3: #8c847a;
   --kino-fg-4: #a39a90;
-  --kino-accent: var(--kino-accent-custom, #ff7a2e);
+  /* Набор акцентов (applyAccent): яркие, текст на них тёмный */
+  --kino-accent-ember: #ff7a2e;
+  --kino-accent-gold: #e8c26a;
+  --kino-accent-lime: #b5dc5a;
+  --kino-accent-teal: #2bb3a3;
+  --kino-accent-violet: #b4a2ff;
+  --kino-on-accent-ember: #170b03;
+  --kino-on-accent-gold: #1a1303;
+  --kino-on-accent-lime: #111a03;
+  --kino-on-accent-teal: #03211e;
+  --kino-on-accent-violet: #170f35;
+  --kino-accent: var(--kino-accent-ember);
   --kino-accent-hover: color-mix(in oklab, var(--kino-accent), white 16%);
   --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 16%, transparent);
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 22%);
-  --kino-on-accent: #170b03;
+  --kino-on-accent: var(--kino-on-accent-ember);
   --kino-danger: #f2555a;
   --kino-on-danger: #1a0506;
   --kino-hover: rgb(242 237 230 / 0.07);
@@ -192,11 +203,22 @@
   --kino-fg-2: #4f4840;
   --kino-fg-3: #6b635a;
   --kino-fg-4: #5c544c;
-  --kino-accent: var(--kino-accent-custom, #c94a0c);
+  /* Тот же набор, темнее: белый текст на акценте — не ниже 4.5:1 */
+  --kino-accent-ember: #c94a0c;
+  --kino-accent-gold: #8a6512;
+  --kino-accent-lime: #4a7612;
+  --kino-accent-teal: #0f766e;
+  --kino-accent-violet: #6a4ed2;
+  --kino-on-accent-ember: #ffffff;
+  --kino-on-accent-gold: #ffffff;
+  --kino-on-accent-lime: #ffffff;
+  --kino-on-accent-teal: #ffffff;
+  --kino-on-accent-violet: #ffffff;
+  --kino-accent: var(--kino-accent-ember);
   --kino-accent-hover: color-mix(in oklab, var(--kino-accent), black 12%);
   --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 12%, transparent);
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 18%);
-  --kino-on-accent: #ffffff;
+  --kino-on-accent: var(--kino-on-accent-ember);
   --kino-danger: #cf3238;
   --kino-on-danger: #ffffff;
   --kino-hover: rgb(29 26 23 / 0.05);
@@ -211,4 +233,30 @@
   --kino-win-close-fg: #ffffff;
   --kino-shadow-pop: 0 12px 36px rgb(60 45 30 / 0.16), 0 2px 6px rgb(60 45 30 / 0.08);
   --kino-shadow-thumb: 0 0 0 3px rgb(255 255 255 / 0.9);
+}
+
+/* ---------- Акцентный цвет ----------
+ * applyAccent ставит data-accent на корень. Каждый элемент с data-theme заново выбирает акцент
+ * из своей темы, поэтому вложенная тёмная тема (плеер поверх светлой) получает свой оттенок.
+ * ember — акцент по умолчанию, для него правила не нужны.
+ */
+[data-accent='gold'][data-theme],
+[data-accent='gold'] [data-theme] {
+  --kino-accent: var(--kino-accent-gold);
+  --kino-on-accent: var(--kino-on-accent-gold);
+}
+[data-accent='lime'][data-theme],
+[data-accent='lime'] [data-theme] {
+  --kino-accent: var(--kino-accent-lime);
+  --kino-on-accent: var(--kino-on-accent-lime);
+}
+[data-accent='teal'][data-theme],
+[data-accent='teal'] [data-theme] {
+  --kino-accent: var(--kino-accent-teal);
+  --kino-on-accent: var(--kino-on-accent-teal);
+}
+[data-accent='violet'][data-theme],
+[data-accent='violet'] [data-theme] {
+  --kino-accent: var(--kino-accent-violet);
+  --kino-on-accent: var(--kino-on-accent-violet);
 }

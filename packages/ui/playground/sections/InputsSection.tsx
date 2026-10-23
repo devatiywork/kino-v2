@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Kbd, Logo, SegmentedControl, Slider, Switch } from '../../src'
+import { Kbd, KeyRecorder, Logo, SegmentedControl, Slider, Switch, SwatchPicker } from '../../src'
 import { Demo } from './Demo'
 
 const INTRO = [
@@ -17,6 +17,7 @@ const SIZES = [
 export function InputsSection() {
   const [intro, setIntro] = useState<string>('ask')
   const [volume, setVolume] = useState(80)
+  const [pauseKey, setPauseKey] = useState('Space')
 
   return (
     <>
@@ -49,6 +50,25 @@ export function InputsSection() {
         <Kbd>← →</Kbd>
         <Kbd>Ctrl K</Kbd>
         <Kbd>F</Kbd>
+      </Demo>
+      <Demo title={`Переназначение клавиши · code: ${pauseKey}`}>
+        <KeyRecorder aria-label={`Пауза — ${pauseKey}`} listeningLabel="Нажмите клавишу" onRecord={(key) => setPauseKey(key.code)}>
+          {pauseKey === 'Space' ? 'Пробел' : pauseKey}
+        </KeyRecorder>
+        <KeyRecorder aria-label="Недоступно" listeningLabel="" onRecord={() => undefined} isDisabled>
+          F
+        </KeyRecorder>
+      </Demo>
+      <Demo title="Образцы цвета">
+        <SwatchPicker
+          aria-label="Акцент для примера"
+          defaultValue="teal"
+          options={[
+            { value: 'ember', label: 'Оранжевый', color: 'var(--kino-accent-ember)' },
+            { value: 'teal', label: 'Бирюзовый', color: 'var(--kino-accent-teal)' },
+            { value: 'violet', label: 'Сиреневый', color: 'var(--kino-accent-violet)' },
+          ]}
+        />
       </Demo>
       <Demo title="Логотип">
         <Logo size="sm" />

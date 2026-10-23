@@ -84,7 +84,8 @@ test.describe('сериалы', () => {
     await expect(panel.locator('[aria-current="true"]')).toHaveAccessibleName(/^Серия 1,/)
 
     await panel.getByRole('switch', { name: 'Автовоспроизведение' }).click({ force: true })
-    await expect.poll(async () => (await kino.snapshot()).autoplay).toBe(false)
+    // the same setting as on the settings screen
+    await expect.poll(async () => (await kino.settings()).autoplay).toBe(false)
     await kino.invoke('player_seek', { seconds: 10, mode: 'absolute' })
     await expect.poll(async () => (await kino.snapshot()).eof, { timeout: 20_000 }).toBe(true)
     await page.waitForTimeout(1500)

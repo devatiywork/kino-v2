@@ -40,5 +40,8 @@
   "errors": {
     "notVideo": "Это не видеофайл: {{name}}",
     "open": "Не удалось открыть: {{message}}"
+  },
+  "actions": {
+    "cancel": "Отмена"
   }
 }

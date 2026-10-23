@@ -1,5 +1,5 @@
 import { useEffect, useState, type UIEvent } from 'react'
-import { applyTheme, Button, Logo, ScrollArea, SegmentedControl, type ThemeMode } from '../src'
+import { applyAccent, applyTheme, Button, Logo, ScrollArea, SegmentedControl, SwatchPicker, type AccentName, type ThemeMode } from '../src'
 import { ButtonsSection } from './sections/ButtonsSection'
 import { IconsSection } from './sections/IconsSection'
 import { InputsSection } from './sections/InputsSection'
@@ -24,11 +24,21 @@ const THEMES = [
   { value: 'system', label: 'Как в системе' },
 ] as const
 
+const ACCENT_OPTIONS = [
+  { value: 'ember', label: 'Оранжевый', color: 'var(--kino-accent-ember)' },
+  { value: 'gold', label: 'Золотой', color: 'var(--kino-accent-gold)' },
+  { value: 'lime', label: 'Лайм', color: 'var(--kino-accent-lime)' },
+  { value: 'teal', label: 'Бирюзовый', color: 'var(--kino-accent-teal)' },
+  { value: 'violet', label: 'Сиреневый', color: 'var(--kino-accent-violet)' },
+] as const
+
 export function App() {
   const [active, setActive] = useState<string>(SECTIONS[0].id)
   const [theme, setTheme] = useState<ThemeMode>('dark')
+  const [accent, setAccent] = useState<AccentName>('ember')
 
   useEffect(() => applyTheme(theme), [theme])
+  useEffect(() => applyAccent(accent), [accent])
 
   // Подсветка раздела в меню следует за прокруткой: текущий — последний, чей заголовок выше трети экрана
   const onScroll = (event: UIEvent<HTMLDivElement>) => {
@@ -58,6 +68,7 @@ export function App() {
         <Logo />
         <span className="text-sm text-fg-3">UI-библиотека · витрина компонентов</span>
         <div className="flex-1" />
+        <SwatchPicker aria-label="Акцентный цвет" options={ACCENT_OPTIONS} value={accent} onChange={setAccent} className="[&>label]:size-5" />
         <SegmentedControl aria-label="Тема" options={THEMES} value={theme} onChange={setTheme} size="sm" />
       </header>
       <div className="flex min-h-0 flex-1">

@@ -65,6 +65,13 @@ const MIGRATIONS: &[&str] = &[
         value TEXT NOT NULL
     );
     "#,
+    // 3 — all settings in one JSON row (settings/mod.rs); the autoplay switch of 0.9 moves there
+    r#"
+    INSERT INTO app_settings (key, value)
+        SELECT 'settings', '{"autoplay":' || CASE value WHEN '0' THEN 'false' ELSE 'true' END || '}'
+        FROM app_settings WHERE key = 'player.autoplay';
+    DELETE FROM app_settings WHERE key = 'player.autoplay';
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
@@ -110,5 +117,23 @@ mod tests {
             .query_row("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'player_%'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(tables, 4);
+    }
+
+    #[test]
+    fn the_old_autoplay_switch_moves_into_the_settings() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(MIGRATIONS[0]).unwrap();
+        conn.execute_batch(MIGRATIONS[1]).unwrap();
+        conn.pragma_update(None, "user_version", 2).unwrap();
+        conn.execute("INSERT INTO app_settings (key, value) VALUES ('player.autoplay', '0')", []).unwrap();
+        migrate(&mut conn).unwrap();
+        let rows: Vec<(String, String)> = conn
+            .prepare("SELECT key, value FROM app_settings")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(rows, [("settings".to_string(), r#"{"autoplay":false}"#.to_string())]);
     }
 }

@@ -9,6 +9,8 @@ export {
 } from './components/segmented-control/SegmentedControl'
 export { Slider, type SliderProps } from './components/slider/Slider'
 export { Kbd, type KbdProps } from './components/kbd/Kbd'
+export { KeyRecorder, type KeyRecorderProps, type RecordedKey } from './components/key-recorder/KeyRecorder'
+export { SwatchPicker, type SwatchOption, type SwatchPickerProps } from './components/swatch-picker/SwatchPicker'
 export { ScrollArea, type ScrollAreaProps } from './components/scroll-area/ScrollArea'
 export { Popover, popoverStyles, type PopoverProps } from './components/popover/Popover'
 export { PopoverButton, type PopoverButtonProps } from './components/popover/PopoverButton'
@@ -34,5 +36,13 @@ export * from './icons'
 export { cn } from './lib/cn'
 export { tv, type VariantProps } from './lib/tv'
 export { installDesktopGuards, isBrowserShortcut, type DesktopGuardsOptions } from './lib/desktopGuards'
-export { applyAccent, applyTheme, resolveTheme, type ResolvedTheme, type ThemeMode } from './lib/theme'
+export {
+  ACCENTS,
+  applyAccent,
+  applyTheme,
+  resolveTheme,
+  type AccentName,
+  type ResolvedTheme,
+  type ThemeMode,
+} from './lib/theme'
 export { usePresence, type Presence } from './lib/usePresence'

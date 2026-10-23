@@ -1,0 +1,388 @@
+//! App settings (SPEC 6): one typed struct, stored as one JSON document in app_settings.
+//! A stored value that no longer fits (an older version, a hand edit) falls back to its own
+//! default — the other settings survive.
+
+pub mod commands;
+
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex, MutexGuard};
+
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+use crate::error::AppResult;
+use crate::library::Library;
+
+/// Row of app_settings that holds the settings
+const STORAGE_KEY: &str = "settings";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    Dark,
+    Light,
+    /// Follows the Windows setting
+    System,
+}
+
+/// Accent presets: each has its own shade for the dark and the light theme (tokens.css)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Accent {
+    Ember,
+    Gold,
+    Lime,
+    Teal,
+    Violet,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    Ru,
+    En,
+}
+
+/// Audio for a file nothing is remembered for
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PreferredAudio {
+    Russian,
+    Original,
+}
+
+/// Subtitles with a Russian dub: none, only signs and inscriptions, or the full ones
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RussianAudioSubtitles {
+    Off,
+    Forced,
+    Full,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SubtitleSize {
+    Small,
+    Medium,
+    Large,
+}
+
+impl SubtitleSize {
+    /// mpv sub-scale
+    pub fn scale(self) -> f64 {
+        match self {
+            SubtitleSize::Small => 0.85,
+            SubtitleSize::Medium => 1.0,
+            SubtitleSize::Large => 1.2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SubtitlePosition {
+    Bottom,
+    Raised,
+    High,
+}
+
+impl SubtitlePosition {
+    /// mpv sub-pos: 100 is the bottom edge of the video
+    pub fn sub_pos(self) -> i64 {
+        match self {
+            SubtitlePosition::Bottom => 100,
+            SubtitlePosition::Raised => 95,
+            SubtitlePosition::High => 90,
+        }
+    }
+}
+
+/// The player's speeds (SPEC 3.1)
+pub const SPEEDS: [f64; 6] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+/// «Считать просмотренной после»
+pub const WATCHED_PERCENTS: [u8; 3] = [85, 90, 95];
+/// More than the player has actions: a bound for a hand-edited database
+const HOTKEYS_MAX: usize = 32;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Settings {
+    // Appearance
+    pub theme: Theme,
+    pub accent: Accent,
+    pub language: Language,
+    // Playback
+    /// Continue a file from where it stopped (SPEC 3.2)
+    pub resume: bool,
+    /// The next episode of the season starts by itself (SPEC 3.3)
+    pub autoplay: bool,
+    pub default_speed: f64,
+    /// 0…100: what a run of Kino starts with
+    pub default_volume: f64,
+    pub hardware_decoding: bool,
+    // Audio and subtitles
+    pub preferred_audio: PreferredAudio,
+    pub russian_audio_subtitles: RussianAudioSubtitles,
+    pub subtitle_size: SubtitleSize,
+    pub subtitle_position: SubtitlePosition,
+    // Library and history
+    /// Off — nothing new is remembered: no positions, viewings or frames
+    pub keep_history: bool,
+    pub watched_percent: u8,
+    // Hotkeys: player action → KeyboardEvent.code, only the remapped ones
+    pub hotkeys: BTreeMap<String, String>,
+    // System
+    /// No sleep and no screen saver while a video plays
+    pub keep_awake: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: Theme::Dark,
+            accent: Accent::Ember,
+            language: Language::Ru,
+            resume: true,
+            autoplay: true,
+            default_speed: 1.0,
+            default_volume: 100.0,
+            hardware_decoding: true,
+            preferred_audio: PreferredAudio::Russian,
+            russian_audio_subtitles: RussianAudioSubtitles::Forced,
+            subtitle_size: SubtitleSize::Medium,
+            subtitle_position: SubtitlePosition::Bottom,
+            keep_history: true,
+            watched_percent: 90,
+            hotkeys: BTreeMap::new(),
+            keep_awake: true,
+        }
+    }
+}
+
+impl Settings {
+    /// Values between the allowed ones snap to the nearest; broken hotkeys are dropped
+    fn normalized(mut self) -> Self {
+        let speed = self.default_speed;
+        self.default_speed = SPEEDS.into_iter().min_by(|a, b| (a - speed).abs().total_cmp(&(b - speed).abs())).unwrap_or(1.0);
+        self.default_volume = if self.default_volume.is_finite() { self.default_volume.clamp(0.0, 100.0).round() } else { 100.0 };
+        if !WATCHED_PERCENTS.contains(&self.watched_percent) {
+            self.watched_percent = Settings::default().watched_percent;
+        }
+        self.hotkeys.retain(|action, code| is_key_name(action) && is_key_name(code));
+        while self.hotkeys.len() > HOTKEYS_MAX {
+            self.hotkeys.pop_last();
+        }
+        self
+    }
+
+    /// Share of the duration after which a file counts as watched
+    pub fn watched_ratio(&self) -> f64 {
+        f64::from(self.watched_percent) / 100.0
+    }
+
+    /// mpv hwdec
+    pub fn hwdec(&self) -> &'static str {
+        if self.hardware_decoding {
+            "auto-safe"
+        } else {
+            "no"
+        }
+    }
+}
+
+/// "togglePause", "KeyF", "ArrowLeft": an action or a KeyboardEvent.code
+fn is_key_name(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 32 && s.chars().all(|ch| ch.is_ascii_alphanumeric())
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SettingsError {
+    #[error("unknown setting: {0}")]
+    Unknown(String),
+    #[error("invalid value of {key}: {message}")]
+    Invalid { key: String, message: String },
+}
+
+fn to_map(settings: &Settings) -> Map<String, Value> {
+    match serde_json::to_value(settings) {
+        Ok(Value::Object(map)) => map,
+        _ => unreachable!("Settings serializes to a JSON object"),
+    }
+}
+
+/// `map` with `key` replaced, if the result is still valid settings
+fn with_value(map: &Map<String, Value>, key: &str, value: &Value) -> Result<Map<String, Value>, serde_json::Error> {
+    let mut candidate = map.clone();
+    candidate.insert(key.to_string(), value.clone());
+    serde_json::from_value::<Settings>(Value::Object(candidate.clone()))?;
+    Ok(candidate)
+}
+
+/// Stored JSON → settings: unknown keys are dropped, a broken value falls back to its default
+pub fn from_stored(json: &str) -> Settings {
+    let stored = match serde_json::from_str::<Value>(json) {
+        Ok(Value::Object(map)) => map,
+        Ok(_) | Err(_) => {
+            eprintln!("[settings] stored settings are not a JSON object, using the defaults");
+            return Settings::default();
+        }
+    };
+    let mut merged = to_map(&Settings::default());
+    for (key, value) in &stored {
+        if !merged.contains_key(key) {
+            continue;
+        }
+        match with_value(&merged, key, value) {
+            Ok(candidate) => merged = candidate,
+            Err(e) => eprintln!("[settings] stored {key} ignored: {e}"),
+        }
+    }
+    serde_json::from_value::<Settings>(Value::Object(merged)).unwrap_or_default().normalized()
+}
+
+/// A change from the renderer: only known keys, every value checked
+pub fn merge(current: &Settings, patch: &Map<String, Value>) -> Result<Settings, SettingsError> {
+    let mut merged = to_map(current);
+    for (key, value) in patch {
+        if !merged.contains_key(key) {
+            return Err(SettingsError::Unknown(key.clone()));
+        }
+        merged = with_value(&merged, key, value).map_err(|e| SettingsError::Invalid { key: key.clone(), message: e.to_string() })?;
+    }
+    Ok(serde_json::from_value::<Settings>(Value::Object(merged)).unwrap_or_default().normalized())
+}
+
+/// The settings of this run; every change is stored at once
+pub struct SettingsStore {
+    library: Arc<Library>,
+    current: Mutex<Settings>,
+}
+
+impl SettingsStore {
+    pub fn load(library: Arc<Library>) -> Self {
+        let current = match library.setting(STORAGE_KEY) {
+            Ok(Some(json)) => from_stored(&json),
+            Ok(None) => Settings::default(),
+            Err(e) => {
+                eprintln!("[settings] load: {e}");
+                Settings::default()
+            }
+        };
+        Self { library, current: Mutex::new(current) }
+    }
+
+    fn lock(&self) -> MutexGuard<'_, Settings> {
+        self.current.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    pub fn get(&self) -> Settings {
+        self.lock().clone()
+    }
+
+    /// One value without cloning the whole settings
+    pub fn read<R>(&self, f: impl FnOnce(&Settings) -> R) -> R {
+        f(&self.lock())
+    }
+
+    /// Applies a change and stores it; returns the settings before and after
+    pub fn update(&self, patch: &Map<String, Value>) -> AppResult<(Settings, Settings)> {
+        let mut current = self.lock();
+        let next = merge(&current, patch)?;
+        self.save(&next)?;
+        Ok((std::mem::replace(&mut *current, next.clone()), next))
+    }
+
+    /// «Сбросить настройки»: everything back to the defaults
+    pub fn reset(&self) -> AppResult<(Settings, Settings)> {
+        let mut current = self.lock();
+        let next = Settings::default();
+        self.save(&next)?;
+        Ok((std::mem::replace(&mut *current, next.clone()), next))
+    }
+
+    fn save(&self, settings: &Settings) -> AppResult<()> {
+        Ok(self.library.set_setting(STORAGE_KEY, &serde_json::to_string(settings)?)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn patch(value: Value) -> Map<String, Value> {
+        match value {
+            Value::Object(map) => map,
+            _ => panic!("a patch is an object"),
+        }
+    }
+
+    #[test]
+    fn defaults_follow_the_spec() {
+        let s = Settings::default();
+        assert_eq!((s.theme, s.language, s.watched_percent), (Theme::Dark, Language::Ru, 90));
+        assert!(s.resume && s.autoplay && s.keep_history && s.keep_awake && s.hardware_decoding);
+        assert_eq!(s.watched_ratio(), 0.9);
+    }
+
+    #[test]
+    fn serialized_names_are_the_renderer_ones() {
+        let map = to_map(&Settings::default());
+        assert_eq!(map["defaultSpeed"], json!(1.0));
+        assert_eq!(map["russianAudioSubtitles"], json!("forced"));
+        assert_eq!(map["hotkeys"], json!({}));
+    }
+
+    #[test]
+    fn a_patch_changes_only_its_keys() {
+        let next = merge(&Settings::default(), &patch(json!({ "theme": "light", "watchedPercent": 85 }))).unwrap();
+        assert_eq!((next.theme, next.watched_percent), (Theme::Light, 85));
+        assert_eq!(next.accent, Accent::Ember);
+    }
+
+    #[test]
+    fn unknown_keys_and_bad_values_are_refused() {
+        let current = Settings::default();
+        assert!(matches!(merge(&current, &patch(json!({ "colour": "red" }))), Err(SettingsError::Unknown(k)) if k == "colour"));
+        assert!(matches!(merge(&current, &patch(json!({ "theme": "pink" }))), Err(SettingsError::Invalid { key, .. }) if key == "theme"));
+        assert!(merge(&current, &patch(json!({ "resume": "yes" }))).is_err());
+    }
+
+    #[test]
+    fn values_snap_to_the_allowed_ones() {
+        let next = merge(
+            &Settings::default(),
+            &patch(json!({ "defaultSpeed": 1.3, "defaultVolume": 250, "watchedPercent": 50, "hotkeys": { "togglePause": "KeyK", "bad key": "Space", "seekBack": "" } })),
+        )
+        .unwrap();
+        assert_eq!(next.default_speed, 1.25);
+        assert_eq!(next.default_volume, 100.0);
+        assert_eq!(next.watched_percent, 90);
+        assert_eq!(next.hotkeys, BTreeMap::from([("togglePause".to_string(), "KeyK".to_string())]));
+    }
+
+    #[test]
+    fn a_broken_stored_value_falls_back_alone() {
+        let s = from_stored(r#"{ "theme": "light", "accent": "neon", "autoplay": false, "removedLongAgo": 1 }"#);
+        assert_eq!(s.theme, Theme::Light);
+        assert_eq!(s.accent, Accent::Ember, "unknown accent → default");
+        assert!(!s.autoplay);
+        assert_eq!(from_stored("not json"), Settings::default());
+    }
+
+    #[test]
+    fn store_keeps_changes_between_runs() {
+        let library = Arc::new(Library::in_memory());
+        let store = SettingsStore::load(library.clone());
+        let (old, new) = store.update(&patch(json!({ "language": "en", "keepAwake": false }))).unwrap();
+        assert_eq!((old.language, new.language), (Language::Ru, Language::En));
+
+        let again = SettingsStore::load(library.clone());
+        assert_eq!(again.get(), new);
+        assert!(!again.read(|s| s.keep_awake));
+        let (_, reset) = again.reset().unwrap();
+        assert_eq!(reset, Settings::default());
+        assert_eq!(SettingsStore::load(library).get(), Settings::default());
+    }
+}

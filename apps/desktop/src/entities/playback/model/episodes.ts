@@ -1,7 +1,6 @@
 import { i18n } from '../../../shared/i18n'
 import { playerIpc, type AutoplayEvent } from '../../../shared/ipc/player'
 import { showOsd } from './osd'
-import { playbackStore } from './playbackStore'
 import { setResumed } from './resume'
 
 const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, { ns: 'player', ...options })
@@ -30,10 +29,4 @@ export function onAutoplayed(event: AutoplayEvent): void {
   setResumed(event.resumedFrom)
   const label = episodeLabel(event.season, event.episode)
   if (label) showOsd(label)
-}
-
-export function toggleAutoplay(): void {
-  const enabled = !playbackStore.get().autoplay
-  playerIpc.setAutoplay(enabled).catch((e: unknown) => console.error('[player] autoplay', e))
-  showOsd(enabled ? t('osd.autoplayOn') : t('osd.autoplayOff'))
 }

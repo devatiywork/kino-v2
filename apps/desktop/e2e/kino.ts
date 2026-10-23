@@ -24,7 +24,6 @@ export interface Snapshot {
   seriesKey: string | null
   hasPrev: boolean
   hasNext: boolean
-  autoplay: boolean
   tracks: { id: number; kind: string; title: string | null; isExternal: boolean }[]
 }
 
@@ -36,6 +35,8 @@ export interface Kino {
   snapshot: () => Promise<Snapshot>
   /** File name of what is playing */
   playing: () => Promise<string | null>
+  /** The settings as the core keeps them (src/shared/ipc/settings.ts) */
+  settings: () => Promise<Record<string, unknown>>
   close: () => Promise<void>
 }
 
@@ -100,6 +101,7 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
     invoke,
     snapshot,
     playing: async () => (await snapshot()).path?.split(/[\\/]/).pop() ?? null,
+    settings: () => invoke<Record<string, unknown>>('settings_get'),
     close: async () => {
       await browser.close().catch((e: unknown) => console.warn('[e2e] disconnect', e))
       child.kill()

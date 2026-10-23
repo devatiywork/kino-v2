@@ -2,18 +2,31 @@ mod db;
 mod error;
 mod library;
 mod player;
+mod settings;
 
 use std::sync::Arc;
 
-use tauri::{Emitter, Manager, RunEvent, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, State, WindowEvent};
 
+use error::AppResult;
 use library::{commands as lc, Library};
 use player::{commands as pc, Player};
+use settings::{commands as sc, SettingsStore};
 
 /// Files passed on the command line (Explorer "Open with", file associations)
 #[tauri::command]
 fn app_launch_files() -> Vec<String> {
     std::env::args().skip(1).filter(|a| !a.starts_with('-')).collect()
+}
+
+/// SPEC 6 «Очистить историю» (the player and the library meet here)
+#[tauri::command]
+fn app_clear_history(app: AppHandle, player: State<'_, Player>) -> AppResult<()> {
+    player.clear_history()?;
+    if let Err(e) = app.emit(lc::CHANGED_EVENT, ()) {
+        eprintln!("[library] emit: {e}");
+    }
+    Ok(())
 }
 
 /// KINO_TEST_MONITOR=1920x1080 (debug builds): the E2E tests open the window on that monitor
@@ -51,6 +64,9 @@ pub fn run() {
             app.asset_protocol_scope().allow_directory(&thumbs, false)?;
             let library = Arc::new(Library::open(&data.join("kino.db"), thumbs)?);
             app.manage(library.clone());
+            let settings = Arc::new(SettingsStore::load(library.clone()));
+            library.set_policy(settings.read(sc::library_policy));
+            app.manage(settings.clone());
 
             // New episodes in the library folders since the last run
             let (handle, rescan) = (app.handle().clone(), library.clone());
@@ -69,7 +85,7 @@ pub fn run() {
             place_for_tests(app.handle(), &mut config)?;
             let window = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
             let size = window.inner_size()?;
-            let player = Player::new(app.handle(), library, window.hwnd()?.0 as isize, size.width, size.height)?;
+            let player = Player::new(app.handle(), library, settings, window.hwnd()?.0 as isize, size.width, size.height)?;
             app.manage(player);
             Ok(())
         })
@@ -82,10 +98,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_launch_files,
+            app_clear_history,
             pc::player_snapshot,
             pc::player_open,
             pc::player_open_neighbor,
-            pc::player_set_autoplay,
             pc::player_stop,
             pc::player_set_paused,
             pc::player_seek,
@@ -106,6 +122,9 @@ pub fn run() {
             lc::library_add_folder,
             lc::library_remove_folder,
             lc::app_reveal_folder,
+            sc::settings_get,
+            sc::settings_update,
+            sc::settings_reset,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kino");

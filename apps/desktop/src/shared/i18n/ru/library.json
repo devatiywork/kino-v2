@@ -1,6 +1,7 @@
 {
   "continue": "Продолжить",
   "continueFrom": "Продолжить с {{time}}",
+  "playFromStart": "Смотреть сначала",
   "unfinished": "Не досмотрено",
   "history": "История",
   "allHistory": "Вся история",

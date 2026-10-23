@@ -24,7 +24,7 @@ describe('темы', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     document.documentElement.removeAttribute('data-theme')
-    document.documentElement.removeAttribute('style')
+    document.documentElement.removeAttribute('data-accent')
   })
 
   it('resolveTheme: явный выбор важнее системы', () => {
@@ -52,10 +52,10 @@ describe('темы', () => {
     expect(document.documentElement.dataset.theme).toBe('dark')
   })
 
-  it('applyAccent задаёт и сбрасывает свой акцент', () => {
-    applyAccent('#2bb3a3')
-    expect(document.documentElement.style.getPropertyValue('--kino-accent-custom')).toBe('#2bb3a3')
-    applyAccent(null)
-    expect(document.documentElement.style.getPropertyValue('--kino-accent-custom')).toBe('')
+  it('applyAccent ставит акцент из набора на корень', () => {
+    applyAccent('teal')
+    expect(document.documentElement.dataset.accent).toBe('teal')
+    applyAccent('ember')
+    expect(document.documentElement.dataset.accent).toBe('ember')
   })
 })

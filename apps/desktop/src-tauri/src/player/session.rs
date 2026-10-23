@@ -43,9 +43,9 @@ pub fn lock(session: &Mutex<Option<Session>>) -> MutexGuard<'_, Option<Session>>
     session.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// Save the position of the current file; false if there is nothing to save
+/// Save the position of the current file; false if there is nothing to save (or the history is off)
 pub fn save(library: &Library, session: &mut Session, state: &PlayerSnapshot) -> bool {
-    if state.path.is_none() || state.idle || (session.view_id.is_none() && state.position < MIN_VIEW_POSITION) {
+    if !library.keeps_history() || state.path.is_none() || state.idle || (session.view_id.is_none() && state.position < MIN_VIEW_POSITION) {
         return false;
     }
     session.last_saved = Instant::now();
@@ -60,6 +60,9 @@ pub fn save(library: &Library, session: &mut Session, state: &PlayerSnapshot) ->
 
 /// Current frame without subtitles → thumbs/<file id>.jpg
 pub fn take_thumb(mpv: &Mpv, library: &Library, session: &mut Session) {
+    if !library.keeps_history() {
+        return;
+    }
     let path = library.thumb_path(session.file_id);
     match mpv.command("screenshot-to-file", &[&path.to_string_lossy(), "video"]) {
         Ok(()) => {

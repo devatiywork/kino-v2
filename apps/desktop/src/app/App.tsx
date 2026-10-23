@@ -5,6 +5,7 @@ import { HomePage } from '../pages/home'
 import { PlaceholderPage } from '../pages/placeholder'
 import { PlayerPage } from '../pages/player'
 import { SeriesPage } from '../pages/series'
+import { SettingsPage } from '../pages/settings'
 import { ShowPage } from '../pages/show'
 import { useScreen, type Screen } from '../shared/lib/router'
 import { AppTitleBar } from '../widgets/app-title-bar'
@@ -33,6 +34,8 @@ function Page({ screen }: { screen: Exclude<Screen, 'player'> }) {
       return <SeriesPage />
     case 'show':
       return <ShowPage />
+    case 'settings':
+      return <SettingsPage />
     default:
       return <PlaceholderPage screen={screen} />
   }

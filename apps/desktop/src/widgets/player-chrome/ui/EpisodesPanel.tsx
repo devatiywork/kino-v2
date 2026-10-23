@@ -1,8 +1,9 @@
-import { cn, IconButton, IconClose, ScrollArea, Switch } from '@kino/ui'
+import { cn, IconButton, IconClose, ScrollArea } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { EpisodeRow, useSeriesDetail } from '../../../entities/library'
-import { toggleAutoplay, usePlayback } from '../../../entities/playback'
+import { usePlayback } from '../../../entities/playback'
 import { useOpenVideo } from '../../../features/open-video'
+import { AutoplaySwitch } from '../../../features/toggle-autoplay'
 
 /** Episodes of the playing season beside the video, with the autoplay switch */
 export function EpisodesPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -11,7 +12,6 @@ export function EpisodesPanel({ open, onClose }: { open: boolean; onClose: () =>
   const seriesKey = usePlayback((s) => s.seriesKey)
   const season = usePlayback((s) => s.season)
   const path = usePlayback((s) => s.path)
-  const autoplay = usePlayback((s) => s.autoplay)
   const detail = useSeriesDetail(open ? seriesKey : null)
   const { openFile } = useOpenVideo()
   const group = detail?.seasons.find((s) => s.season === season) ?? detail?.seasons[0]
@@ -45,7 +45,7 @@ export function EpisodesPanel({ open, onClose }: { open: boolean; onClose: () =>
           {t('autoplay')}
           <span className="text-xs text-fg-3">{t('autoplayHint')}</span>
         </span>
-        <Switch aria-label={t('autoplay')} isSelected={autoplay} onChange={toggleAutoplay} />
+        <AutoplaySwitch />
       </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="px-2 pb-3">
         <ol className="flex flex-col gap-0.5">

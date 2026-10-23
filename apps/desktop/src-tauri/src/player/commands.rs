@@ -23,11 +23,6 @@ pub fn player_open_neighbor(player: State<'_, Player>, step: i32) -> AppResult<O
 }
 
 #[tauri::command]
-pub fn player_set_autoplay(player: State<'_, Player>, enabled: bool) -> AppResult<()> {
-    player.set_autoplay(enabled)
-}
-
-#[tauri::command]
 pub fn player_stop(player: State<'_, Player>) -> AppResult<()> {
     player.stop()
 }

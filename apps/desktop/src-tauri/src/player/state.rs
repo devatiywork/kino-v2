@@ -17,8 +17,6 @@ pub struct PlayerSnapshot {
     /// Neighbouring episodes on disk (N / P, the buttons)
     pub has_prev: bool,
     pub has_next: bool,
-    /// Play the next episode of the season when this one ends (SPEC 3.3)
-    pub autoplay: bool,
     pub duration: Option<f64>,
     pub position: f64,
     pub paused: bool,
@@ -47,7 +45,6 @@ impl Default for PlayerSnapshot {
             episode: None,
             has_prev: false,
             has_next: false,
-            autoplay: true,
             duration: None,
             position: 0.0,
             paused: false,
@@ -115,6 +112,11 @@ pub fn parse_track_id(value: &str) -> Option<i64> {
 }
 
 impl PlayerSnapshot {
+    /// A file is open and the picture moves
+    pub fn is_playing(&self) -> bool {
+        self.path.is_some() && !self.idle && !self.paused && !self.eof
+    }
+
     pub fn apply(&mut self, name: &str, value: Prop) -> Change {
         use Prop::*;
         match (name, value) {

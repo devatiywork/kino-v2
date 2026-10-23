@@ -40,5 +40,8 @@
   "errors": {
     "notVideo": "Not a video file: {{name}}",
     "open": "Could not open: {{message}}"
+  },
+  "actions": {
+    "cancel": "Cancel"
   }
 }

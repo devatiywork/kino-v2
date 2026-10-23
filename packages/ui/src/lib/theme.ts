@@ -25,8 +25,11 @@ export function applyTheme(mode: ThemeMode, root: HTMLElement = document.documen
   return () => media.removeEventListener('change', set)
 }
 
-/** Пользовательский акцентный цвет поверх темы. null — вернуть акцент темы */
-export function applyAccent(color: string | null, root: HTMLElement = document.documentElement): void {
-  if (color) root.style.setProperty('--kino-accent-custom', color)
-  else root.style.removeProperty('--kino-accent-custom')
+/** Набор акцентных цветов: у каждого свой оттенок для тёмной и светлой темы (tokens.css) */
+export const ACCENTS = ['ember', 'gold', 'lime', 'teal', 'violet'] as const
+export type AccentName = (typeof ACCENTS)[number]
+
+/** Акцентный цвет приложения (атрибут data-accent на корне); ember — по умолчанию */
+export function applyAccent(accent: AccentName, root: HTMLElement = document.documentElement): void {
+  root.dataset.accent = accent
 }

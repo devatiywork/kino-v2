@@ -1,31 +1,7 @@
-/** Player actions bound to keys (SPEC 3.1); remapping comes with the settings screen */
-export type PlayerAction =
-  | 'togglePause'
-  | 'seekBack'
-  | 'seekForward'
-  | 'volumeUp'
-  | 'volumeDown'
-  | 'toggleFullscreen'
-  | 'exitFullscreen'
-  | 'toggleMute'
-  | 'toggleSubtitles'
-  | 'nextEpisode'
-  | 'prevEpisode'
+import { DEFAULT_HOTKEYS, keymapOf, type PlayerAction } from '../../../entities/settings'
 
-/** By KeyboardEvent.code — works the same in the Russian layout */
-export const DEFAULT_KEYMAP: Readonly<Record<string, PlayerAction>> = {
-  Space: 'togglePause',
-  ArrowLeft: 'seekBack',
-  ArrowRight: 'seekForward',
-  ArrowUp: 'volumeUp',
-  ArrowDown: 'volumeDown',
-  KeyF: 'toggleFullscreen',
-  Escape: 'exitFullscreen',
-  KeyM: 'toggleMute',
-  KeyS: 'toggleSubtitles',
-  KeyN: 'nextEpisode',
-  KeyP: 'prevEpisode',
-}
+/** code → action with the keys of SPEC 3.1; the settings may remap them */
+export const DEFAULT_KEYMAP: Readonly<Record<string, PlayerAction>> = keymapOf(DEFAULT_HOTKEYS)
 
 /** Inside these the keys belong to the focused widget (lists, menus, text fields) */
 const OWN_KEYS = 'input, textarea, [contenteditable], [role="dialog"], [role="menu"], [role="listbox"]'

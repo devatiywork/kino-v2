@@ -15,6 +15,10 @@ pub enum AppError {
     NotAFolder(String),
     #[error("background task: {0}")]
     Task(String),
+    #[error("settings: {0}")]
+    Settings(#[from] crate::settings::SettingsError),
+    #[error("json: {0}")]
+    Json(#[from] serde_json::Error),
     #[error("{0}")]
     Tauri(#[from] tauri::Error),
 }

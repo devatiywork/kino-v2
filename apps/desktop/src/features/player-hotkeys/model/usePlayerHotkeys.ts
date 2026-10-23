@@ -10,7 +10,8 @@ import {
   toggleSubtitles,
   VOLUME_STEP,
 } from '../../../entities/playback'
-import { resolvePlayerKey, type PlayerAction } from './playerKeymap'
+import { keymapOf, resolveHotkeys, settingsStore, type PlayerAction } from '../../../entities/settings'
+import { resolvePlayerKey } from './playerKeymap'
 
 const RUN: Record<PlayerAction, () => void> = {
   togglePause,
@@ -37,7 +38,8 @@ export function usePlayerHotkeys(enabled = true): void {
   useEffect(() => {
     if (!enabled) return
     const onKeyDown = (e: KeyboardEvent) => {
-      const action = resolvePlayerKey(e)
+      // The keys of the settings at the moment of the press: a remap works at once
+      const action = resolvePlayerKey(e, keymapOf(resolveHotkeys(settingsStore.get().hotkeys)))
       if (!action) return
       // Escape outside fullscreen is not ours
       if (action === 'exitFullscreen' && !windowStore.get().fullscreen) return

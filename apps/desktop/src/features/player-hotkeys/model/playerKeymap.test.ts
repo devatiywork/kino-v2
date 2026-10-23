@@ -53,3 +53,13 @@ describe('resolvePlayerKey', () => {
     expect(resolvePlayerKey(key('Space', { target: slider }))).toBe('togglePause')
   })
 })
+
+describe('resolvePlayerKey с переназначенными клавишами', () => {
+  it('новая клавиша работает, старая — уже нет', async () => {
+    const { keymapOf, resolveHotkeys } = await import('../../../entities/settings')
+    const keymap = keymapOf(resolveHotkeys({ togglePause: 'KeyK' }))
+    expect(resolvePlayerKey(key('KeyK'), keymap)).toBe('togglePause')
+    expect(resolvePlayerKey(key('Space'), keymap)).toBeNull()
+    expect(resolvePlayerKey(key('Escape'), keymap)).toBe('exitFullscreen')
+  })
+})

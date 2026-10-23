@@ -1,2 +1,2 @@
-export { DEFAULT_KEYMAP, resolvePlayerKey, type PlayerAction } from './model/playerKeymap'
+export { DEFAULT_KEYMAP, resolvePlayerKey } from './model/playerKeymap'
 export { usePlayerHotkeys } from './model/usePlayerHotkeys'

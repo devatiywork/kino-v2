@@ -62,40 +62,55 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ```
 apps/desktop/          — Tauri app (@kino/desktop)
   src/                 — React renderer, Feature-Sliced Design:
-    app/               — entry (main.tsx), App (screen switch, drop overlay), startup sync and notices, styles
+    app/               — entry (main.tsx: settings loaded before the first render), App (screen switch, drop overlay),
+                         startup sync and notices, appearance (theme, accent, language follow the settings), styles
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, series (list + folders),
-                         show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner), placeholder
+                         show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
+                         settings (side menu with scroll spy, sections: appearance, playback, tracks, library, hotkeys,
+                         system), placeholder
     widgets/           — app-title-bar, player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list
-    features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys
+    features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
+                         toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings
     entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
+                         settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
+                         rebind with swap, key labels, useHotkeyLabel),
                          library (store: continue/history/series/folders, useSeriesDetail, labels, day grouping, Thumb,
                          ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
-                         window, app), lib/ (store, router, media, time), i18n/ (ru, en: common, player, library)
+                         settings, window, app), lib/ (store, router, media, time), i18n/ (ru, en: common, player, library,
+                         settings)
     test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge), track and library fixtures
   e2e/                 — Playwright: kino.ts (launches kino-desktop.exe, connects over CDP, `launch` fixture), player/history/
-                         series scenarios, global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
+                         series/settings scenarios, global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
                          templates, media/ — tiny generated clips: a series of 2 seasons and a film)
   src-tauri/           — Rust core:
     src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
-    src/library/       — Library (folders, positions, viewings, continue watching, history, series, settings, track memory),
+    src/settings/      — Settings (typed, SPEC 6; one JSON row in app_settings, a broken value falls back alone), SettingsStore,
+                         commands (get / update with a partial patch / reset → settings://changed; applied at once)
+    src/library/       — Library (folders, positions, viewings, continue watching, history, clear history, series, key-value
+                         storage, track memory; Policy from the settings: keep history, watched threshold),
                          episode (S02E05 / 2x05 / «Серия 5» → series key and folder), scan (video files, natural order),
                          series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title), commands
-    src/player/        — Player (libmpv), video_host (child HWND), events (mpv event thread → player://state,
-                         player://position, player://notice, player://autoplay; registers files, applies track memory, scans
-                         the series folder of an opened episode, autoplays the next episode of the season), session (saves the
-                         position, takes frames), state (snapshot, pure + tested), tracks (track-list parsing), commands
+    src/player/        — Player (libmpv; apply_settings, clear_history), video_host (child HWND), events (mpv event thread →
+                         player://state, player://position, player://notice, player://autoplay; registers files, chooses tracks:
+                         series memory first, then track_defaults; scans the series folder of an opened episode, autoplays the
+                         next episode of the season), session (saves the position, takes frames), state (snapshot, pure +
+                         tested), tracks (track-list parsing), track_defaults (preferred audio, subtitles with a Russian dub —
+                         pure), keep_awake (Windows power request while playing), commands
+    src/lib.rs         — setup (data dir, library, settings, main window from the config, player), app_clear_history
     later              — scanner, torrent (librqbit, archive, categories), trackers (isolated webview,
                          download/magnet interception), tray
   data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol)
 packages/ui/           — @kino/ui, our UI library
-  src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
+  src/styles/          — tokens.css (single source of design tokens, dark + light; accent presets ember/gold/lime/teal/violet
+                         with a shade per theme), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, Slider, Select, ListBox, Popover, PopoverButton, Kbd,
+  src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
+                         PopoverButton, Kbd, KeyRecorder,
                          ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, Tabs, Tooltip (useTooltipFor),
                          MenuButton, ContextMenu, Dialog/Modal, ConfirmDialog, ToastProvider/useToast
-  src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence
+  src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, ACCENTS, applyAccent), usePresence
   playground/          — showcase of every component in every state
 design/prototype.html  — interactive HTML prototype, the design reference
 spikes/tauri-mpv/      — throwaway spike: libmpv in a child HWND under a transparent WebView2 (README = findings)
@@ -133,6 +148,7 @@ vendor/libmpv/         — libmpv-2.dll, mpv.lib, headers (gitignored, produced 
 - IPC calls only through `apps/desktop/src/shared/ipc/` — typed wrappers over Tauri commands
 - Track/subtitle switching via mpv properties — never reload video
 - Never carry a track index between files — match by language and title only
+- A setting lives in `src-tauri/src/settings/mod.rs` (with its default) and its mirror `src/shared/ipc/settings.ts`; it applies at once, there is no «Save»
 - Remote pages (trackers) never get Tauri IPC access: capabilities are granted to the main window only
 - Player and torrent modules do not import each other; they meet only in the app layer and through the optional file↔torrent link
 - A torrent record is never lost implicitly: removing from downloads or deleting files keeps the archive entry; only "delete from archive" removes it, with confirmation

@@ -30,8 +30,6 @@ export interface PlayerSnapshot {
   /** Neighbouring episodes on disk (N / P) */
   hasPrev: boolean
   hasNext: boolean
-  /** The next episode of the season starts by itself */
-  autoplay: boolean
   duration: number | null
   position: number
   paused: boolean
@@ -77,7 +75,6 @@ export const playerIpc = {
   open: (path: string) => invoke<OpenResult>('player_open', { path }),
   /** −1 previous, +1 next episode of the open one; null when there is none */
   openNeighbor: (step: -1 | 1) => invoke<OpenResult | null>('player_open_neighbor', { step }),
-  setAutoplay: (enabled: boolean) => invoke<void>('player_set_autoplay', { enabled }),
   stop: () => invoke<void>('player_stop'),
   setPaused: (paused: boolean) => invoke<void>('player_set_paused', { paused }),
   seek: (seconds: number, mode: SeekMode) => invoke<void>('player_seek', { seconds, mode }),

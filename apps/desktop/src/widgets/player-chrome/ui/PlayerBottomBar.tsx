@@ -13,6 +13,7 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { openNeighborEpisode, SEEK_STEP, seekBy, togglePause, usePlayback } from '../../../entities/playback'
+import { useHotkeyLabel } from '../../../entities/settings'
 import { FullscreenButton } from '../../../features/fullscreen'
 import { SpeedButton } from '../../../features/playback-speed'
 import { SeekBar } from '../../../features/seek'
@@ -44,6 +45,17 @@ interface PlayerBottomBarProps {
   onToggleEpisodes: () => void
 }
 
+/** Keys in the buttons' tooltips, as remapped in the settings */
+function useButtonKeys() {
+  return {
+    pause: useHotkeyLabel('togglePause'),
+    prev: useHotkeyLabel('prevEpisode'),
+    back: useHotkeyLabel('seekBack'),
+    forward: useHotkeyLabel('seekForward'),
+    next: useHotkeyLabel('nextEpisode'),
+  }
+}
+
 /** Bottom controls over the video: progress, times, playback, episodes and tracks */
 export function PlayerBottomBar({ hidden, onMenuOpenChange, episodesOpen, onToggleEpisodes }: PlayerBottomBarProps) {
   const { t } = useTranslation('player')
@@ -51,6 +63,7 @@ export function PlayerBottomBar({ hidden, onMenuOpenChange, episodesOpen, onTogg
   const isEpisode = usePlayback((s) => s.seriesKey != null)
   const hasPrev = usePlayback((s) => s.hasPrev)
   const hasNext = usePlayback((s) => s.hasNext)
+  const keys = useButtonKeys()
 
   return (
     <div
@@ -66,22 +79,22 @@ export function PlayerBottomBar({ hidden, onMenuOpenChange, episodesOpen, onTogg
       <Times />
       <div className="mt-1.5 flex items-center gap-1.5">
         <div className="flex items-center gap-0.5">
-          <IconButton label={paused ? t('play') : t('pause')} variant="solid" size="xl" shortcut={t('spaceKey')} onPress={togglePause}>
+          <IconButton label={paused ? t('play') : t('pause')} variant="solid" size="xl" shortcut={keys.pause} onPress={togglePause}>
             {paused ? <IconPlay size={22} /> : <IconPause size={22} />}
           </IconButton>
           {isEpisode ? (
-            <IconButton label={t('prevEpisode')} variant="overlay" size="lg" shortcut="P" isDisabled={!hasPrev} onPress={() => void openNeighborEpisode(-1)}>
+            <IconButton label={t('prevEpisode')} variant="overlay" size="lg" shortcut={keys.prev} isDisabled={!hasPrev} onPress={() => void openNeighborEpisode(-1)}>
               <IconPrevious size={22} />
             </IconButton>
           ) : null}
-          <IconButton label={t('back10')} variant="overlay" size="lg" shortcut="←" onPress={() => seekBy(-SEEK_STEP)}>
+          <IconButton label={t('back10')} variant="overlay" size="lg" shortcut={keys.back} onPress={() => seekBy(-SEEK_STEP)}>
             <IconBack10 size={23} />
           </IconButton>
-          <IconButton label={t('forward10')} variant="overlay" size="lg" shortcut="→" onPress={() => seekBy(SEEK_STEP)}>
+          <IconButton label={t('forward10')} variant="overlay" size="lg" shortcut={keys.forward} onPress={() => seekBy(SEEK_STEP)}>
             <IconForward10 size={23} />
           </IconButton>
           {isEpisode ? (
-            <IconButton label={t('nextEpisode')} variant="overlay" size="lg" shortcut="N" isDisabled={!hasNext} onPress={() => void openNeighborEpisode(1)}>
+            <IconButton label={t('nextEpisode')} variant="overlay" size="lg" shortcut={keys.next} isDisabled={!hasNext} onPress={() => void openNeighborEpisode(1)}>
               <IconNext size={22} />
             </IconButton>
           ) : null}

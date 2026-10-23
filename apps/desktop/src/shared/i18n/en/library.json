@@ -1,6 +1,7 @@
 {
   "continue": "Continue",
   "continueFrom": "Continue from {{time}}",
+  "playFromStart": "Watch from the start",
   "unfinished": "Unfinished",
   "history": "History",
   "allHistory": "All history",

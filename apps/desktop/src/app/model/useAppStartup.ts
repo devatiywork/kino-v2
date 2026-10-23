@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { startWindowSync } from '../../entities/app-window'
 import { startLibrarySync } from '../../entities/library'
 import { startPlaybackSync } from '../../entities/playback'
+import { startSettingsSync } from '../../entities/settings'
 import { useAddFolder } from '../../features/library-folders'
 import { useOpenVideo } from '../../features/open-video'
 import { appIpc } from '../../shared/ipc/app'
@@ -34,6 +35,7 @@ export function useAppStartup(): { dropping: boolean } {
     const stopPlayback = startPlaybackSync()
     const stopWindow = startWindowSync()
     const stopLibrary = startLibrarySync()
+    const stopSettings = startSettingsSync()
     if (!launchHandled) {
       // Once per process: StrictMode runs this effect twice in development
       launchHandled = true
@@ -49,6 +51,7 @@ export function useAppStartup(): { dropping: boolean } {
       stopPlayback()
       stopWindow()
       stopLibrary()
+      stopSettings()
     }
   }, [])
 
