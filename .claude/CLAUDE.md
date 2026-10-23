@@ -3,8 +3,9 @@
 Before any work, complete these steps in order:
 
 1. Read this entire file fully
-2. Read all changelogs in `.claude/features/` — understand current project state and last version
-3. Open the design reference `design/prototype.html` when touching UI
+2. Read `.claude/SPEC.md` — what the app must do (section 9 lists proposals that are NOT approved yet)
+3. Read all changelogs in `.claude/features/` — understand current project state and last version
+4. Open the design reference `design/prototype.html` when touching UI
 
 Do not begin any task until all steps above are complete.
 
@@ -15,7 +16,12 @@ All responses visible to the user — including reasoning, explanations, comment
 # Project Overview
 
 **Kino 2** — rewrite of the Kino desktop video player (Electron → Tauri). Windows-first.
-Same functionality as Kino 1 (any format, instant audio/subtitle switching, playlist, autoplay, track memory) plus a home screen with watch history: which series, which episode, which second.
+One window, two independent modules:
+
+- **Player** — same functionality as Kino 1 (any format, instant audio/subtitle switching, playlist, autoplay, track memory) plus a home screen with watch history: which series, which episode, which second.
+- **Torrents** — a general-purpose BitTorrent client (series, games, programs — anything) with a **permanent archive** of every torrent ever added, grouped by user categories, so anything can be downloaded again in one click.
+
+The player never depends on the torrent module. The only link is optional: "this video file came from that torrent". See `.claude/SPEC.md`.
 
 Visual direction: **«Проектор»** — warm near-black, amber accent, Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
 Themes: dark (default), light, system. The video area and controls over video are always dark (`data-theme="dark"` scope).
@@ -24,7 +30,9 @@ Themes: dark (default), light, system. The video area and controls over video ar
 
 - Tauri 2 (Rust ≥ 1.90) — app shell, file system, single instance, file associations
 - libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2 (spike first, fallback: external mpv.exe + JSON IPC)
-- SQLite via `rusqlite` — history, positions, per-series track preferences
+- `librqbit` — BitTorrent engine in the Rust core (torrent module)
+- SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive with `.torrent` blobs, files, download state)
+- Tauri plugins: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video), tray, notifications
 - React 19 + TypeScript 7 + Vite 8
 - Tailwind CSS v4 — only through design tokens, default palette disabled
 - react-aria / react-stately — accessible behavior for our own components (no native widgets)
@@ -46,7 +54,8 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ```
 apps/desktop/          — Tauri app (not created yet)
   src/                 — React renderer, Feature-Sliced Design (app, pages, widgets, features, entities, shared)
-  src-tauri/           — Rust core: player (libmpv), library (SQLite), scanner, commands, window
+  src-tauri/           — Rust core: player (libmpv), library (SQLite, player schema), scanner,
+                         torrent (librqbit, archive, categories; torrent schema), commands, window, tray
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
@@ -87,6 +96,8 @@ design/prototype.html  — interactive HTML prototype, the design reference
 - IPC calls only through `apps/desktop/src/shared/ipc/` — typed wrappers over Tauri commands
 - Track/subtitle switching via mpv properties — never reload video
 - Never carry a track index between files — match by language and title only
+- Player and torrent modules do not import each other; they meet only in the app layer and through the optional file↔torrent link
+- A torrent record is never lost implicitly: removing from downloads or deleting files keeps the archive entry; only "delete from archive" removes it, with confirmation
 - Keep components under 150 lines — extract logic into hooks
 - FSD layer rule: each layer imports only from layers below
 
@@ -96,11 +107,12 @@ Every feature must be covered before it is considered complete:
 
 - **Unit** — business logic in isolation (TS: Vitest; Rust: `cargo test`)
 - **Integration** — IPC bridge, player service, module interactions with mocks
-- **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles)
+- **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles; add torrent with category, remove from downloads keeps archive, download again)
 
 ## Out of Scope
 
 - No online streaming or YouTube/Twitch playback
+- No searching for torrents on trackers — Kino only keeps what the user added
 - No built-in codec or driver installation
 - No cloud sync or remote libraries
 - No mobile or web builds — desktop only

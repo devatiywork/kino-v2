@@ -1,8 +1,8 @@
 {
   "name": "kino",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
-  "description": "Kino — быстрый видеоплеер для Windows на Tauri и mpv",
+  "description": "Kino — видеоплеер и торрент-клиент для Windows на Tauri, mpv и librqbit",
   "license": "MIT",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
