@@ -10,8 +10,11 @@ import {
   IconMore,
   IconPin,
   IconPlay,
+  IconSubtitles,
   IconTrash,
+  ListBox,
   MenuButton,
+  PopoverButton,
   useToast,
 } from '../../src'
 import { Demo } from './Demo'
@@ -23,10 +26,17 @@ const EPISODE_ACTIONS = [
   { id: 'remove', label: 'Убрать из истории', icon: <IconTrash size={16} />, tone: 'danger' as const, separatorBefore: true },
 ]
 
+const DUBS = [
+  { id: 'goblin', label: 'AVO Goblin', description: 'RU · AC3 5.1' },
+  { id: 'novamedia', label: 'MVO Novamedia', description: 'RU · AC3 5.1' },
+  { id: 'english', label: 'English', description: 'EN · AC3 5.1' },
+]
+
 export function OverlaysSection() {
   const toast = useToast()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [lastAction, setLastAction] = useState('—')
+  const [dub, setDub] = useState('goblin')
 
   return (
     <>
@@ -51,6 +61,28 @@ export function OverlaysSection() {
         >
           Правый клик здесь — своё контекстное меню
         </ContextMenu>
+      </Demo>
+      <Demo title={`Кнопка со всплывающим окном · озвучка: ${dub}`}>
+        <PopoverButton
+          label="Озвучка и субтитры"
+          icon={<IconSubtitles />}
+          placement="bottom start"
+          popoverClassName="w-72 p-2"
+          content={(close) => (
+            <ListBox
+              aria-label="Озвучка"
+              items={DUBS}
+              selectedKey={dub}
+              onSelectionChange={(key) => {
+                setDub(String(key))
+                close()
+              }}
+            />
+          )}
+        />
+        <PopoverButton label="Скорость" variant="outline" placement="bottom start" content={<p className="p-3 text-sm text-fg-2">Любое содержимое</p>}>
+          1.0×
+        </PopoverButton>
       </Demo>
       <Demo title="Подтверждение вместо window.confirm">
         <Button variant="danger" icon={<IconTrash size={16} />} onPress={() => setConfirmOpen(true)}>

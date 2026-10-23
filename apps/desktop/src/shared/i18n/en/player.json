@@ -1,0 +1,34 @@
+{
+  "back": "Back",
+  "play": "Play",
+  "pause": "Pause",
+  "spaceKey": "Space",
+  "back10": "Back 10 seconds",
+  "forward10": "Forward 10 seconds",
+  "mute": "Mute",
+  "unmute": "Unmute",
+  "volume": "Volume",
+  "position": "Playback position",
+  "fullscreen": "Fullscreen",
+  "exitFullscreen": "Exit fullscreen",
+  "speed": "Speed",
+  "tracks": {
+    "button": "Audio and subtitles",
+    "audio": "Audio",
+    "subtitles": "Subtitles",
+    "off": "Off",
+    "noAudio": "No sound",
+    "external": "external",
+    "unknown": "Track {{id}}"
+  },
+  "osd": {
+    "volume": "Volume {{value}}",
+    "muted": "Muted",
+    "speed": "Speed {{value}}×",
+    "subtitlesOn": "Subtitles on",
+    "subtitlesOff": "Subtitles off",
+    "audio": "Audio: {{name}}",
+    "subtitle": "Subtitles: {{name}}"
+  },
+  "loading": "Loading…"
+}

@@ -1,0 +1,10 @@
+@import '@kino/ui/styles.css';
+@source '../../';
+
+@layer base {
+  /* Player screen: the page is see-through, mpv's video window lies under the WebView */
+  html[data-video],
+  html[data-video] body {
+    background: transparent;
+  }
+}

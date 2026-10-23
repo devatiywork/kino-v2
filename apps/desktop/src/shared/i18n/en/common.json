@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "label": "Sections",
+    "home": "Home",
+    "series": "Series",
+    "history": "History",
+    "downloads": "Downloads",
+    "settings": "Settings"
+  },
+  "open": {
+    "button": "Open",
+    "dialogTitle": "Open video",
+    "filterName": "Video"
+  },
+  "welcome": {
+    "title": "Open a video.",
+    "titleMuted": "Kino remembers the episode and the second where you stopped.",
+    "drop": "Drop a video file here",
+    "openFile": "Open file",
+    "dropHere": "Release to open",
+    "tips": {
+      "seasons": {
+        "title": "Seasons sort themselves",
+        "text": "By file names: S02E05, 2x05, “Episode 5”. Natural order — 2 comes before 10."
+      },
+      "tracks": {
+        "title": "Audio is remembered per series",
+        "text": "Pick a dub once — the next episodes use it. External .ass/.srt are found too."
+      },
+      "resume": {
+        "title": "Continue in one click",
+        "text": "Home shows what you watched, which episode and the second you stopped at."
+      }
+    }
+  },
+  "placeholder": {
+    "soon": "This section comes in a later stage",
+    "back": "Home"
+  },
+  "errors": {
+    "notVideo": "Not a video file: {{name}}",
+    "open": "Could not open: {{message}}"
+  }
+}

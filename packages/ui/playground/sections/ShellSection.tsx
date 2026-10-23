@@ -9,6 +9,7 @@ import {
   SearchField,
   Tabs,
   TitleBar,
+  TitleBarNav,
   TitleBarSpacer,
   WindowControls,
 } from '../../src'
@@ -19,9 +20,19 @@ const SEASONS = [
   { id: 's2', label: 'Сезон 2', count: 8 },
 ]
 
+const NAV = [
+  { id: 'home', label: 'Главная' },
+  { id: 'series', label: 'Сериалы' },
+  { id: 'history', label: 'История' },
+  { id: 'downloads', label: 'Загрузки', badge: 2 },
+] as const
+
+type Section = (typeof NAV)[number]['id']
+
 export function ShellSection() {
   const [maximized, setMaximized] = useState(false)
   const [query, setQuery] = useState('')
+  const [section, setSection] = useState<Section>('home')
 
   return (
     <>
@@ -33,13 +44,14 @@ export function ShellSection() {
             }
           >
             <Logo />
+            <TitleBarNav label="Разделы" items={NAV} current={section} onNavigate={setSection} />
             <SearchField
               label="Поиск"
               placeholder="Поиск по истории и папкам"
               shortcut="Ctrl K"
               value={query}
               onChange={setQuery}
-              className="ml-2 w-72"
+              className="ml-2 w-60"
             />
             <TitleBarSpacer />
             <Button variant="primary" icon={<IconFileAdd size={16} />}>

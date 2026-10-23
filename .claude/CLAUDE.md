@@ -48,6 +48,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ## Commands
 
 - `bun install` — install dependencies
+- `bun run dev` — the app in dev mode (Vite on http://127.0.0.1:5181 + Tauri/Rust core)
 - `bun run ui` — UI library showcase on http://127.0.0.1:5180
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
@@ -57,17 +58,26 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ## Architecture
 
 ```
-apps/desktop/          — Tauri app (not created yet)
-  src/                 — React renderer, Feature-Sliced Design (app, pages, widgets, features, entities, shared)
-  src-tauri/           — Rust core: player (libmpv), library (SQLite, player schema), scanner,
-                         torrent (librqbit, archive, categories; torrent schema), trackers (isolated webview,
-                         download/magnet interception), commands, window, tray
+apps/desktop/          — Tauri app (@kino/desktop)
+  src/                 — React renderer, Feature-Sliced Design:
+    app/               — entry (main.tsx), App (screen switch, drop overlay), startup sync, styles
+    pages/             — home, player (+ useVideoLayer, useSubtitleLift), placeholder
+    widgets/           — app-title-bar, player-chrome (top bar, bottom controls)
+    features/          — open-video, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys
+    entities/          — playback (store mirrored from the core, actions, OSD, track labels), app-window
+    shared/            — ipc/ (typed Tauri wrappers: player, window, app), lib/ (store, router, media, time), i18n/ (ru, en)
+    test/              — Vitest setup, Tauri bridge mock, track fixtures
+  src-tauri/           — Rust core:
+    src/player/        — Player (libmpv), video_host (child HWND), events (mpv event thread → player://state,
+                         player://position), state (snapshot, pure + tested), tracks (track-list parsing), commands
+    later              — library (SQLite, player schema), scanner, torrent (librqbit, archive, categories),
+                         trackers (isolated webview, download/magnet interception), tray
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, Kbd, ScrollArea, Logo,
-                         TitleBar, WindowControls, SearchField, Tabs, Tooltip (useTooltipFor), MenuButton, ContextMenu,
-                         Dialog/Modal, ConfirmDialog, ToastProvider/useToast
+  src/components/      — Button, IconButton, Switch, SegmentedControl, Slider, Select, ListBox, Popover, PopoverButton, Kbd,
+                         ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, Tabs, Tooltip (useTooltipFor),
+                         MenuButton, ContextMenu, Dialog/Modal, ConfirmDialog, ToastProvider/useToast
   src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, applyAccent), usePresence
   playground/          — showcase of every component in every state
 design/prototype.html  — interactive HTML prototype, the design reference
