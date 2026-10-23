@@ -17,6 +17,9 @@
   --proto-bg:#161616; --proto-line:#2A2A2A; --proto-text:#E6E6E6; --proto-dim:#9A9A9A; --proto-on:#FFFFFF; --proto-active:#303030;
   --win-close:#C42B1C; --win-close-text:#FFFFFF;
   --scrim-video:rgba(0,0,0,.78);
+  --modal-scrim:rgba(0,0,0,.55);
+  /* заглушка сайта трекера во встроенном окне — у сайта свои цвета */
+  --site-bg:#f2f1ee; --site-fg:#202020; --site-head:#2e4a68; --site-th:#eceae5; --site-line:#d9d7d1; --site-link:#1f5fb4; --site-green:#1f8a3e;
   --shadow-pop:0 18px 50px rgba(0,0,0,.55);
 }
 [data-theme="projector"]{
@@ -29,7 +32,7 @@
   --r-s:6px; --r-m:10px; --r-l:14px; --r-xl:18px; --r-round:50%;
   --f-display:'Unbounded',system-ui,sans-serif; --f-ui:'Golos Text',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
   --display-w:600; --display-t:-.03em;
-  --danger:#F2555A;
+  --danger:#F2555A; --on-danger:#1A0506;
 }
 [data-theme="cutroom"]{
   --bg:#0B0C0E; --panel:#111317; --raise:#191C21; --raise-2:#23272E; --line:#1D2026; --line-2:#2A2E35;
@@ -41,7 +44,7 @@
   --r-s:2px; --r-m:3px; --r-l:4px; --r-xl:6px; --r-round:2px;
   --f-display:'Onest',system-ui,sans-serif; --f-ui:'Onest',system-ui,sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,monospace;
   --display-w:700; --display-t:-.02em;
-  --danger:#FF5C5C;
+  --danger:#FF5C5C; --on-danger:#140404;
 }
 :root{
   --accent-hover:color-mix(in oklab, var(--accent), white 16%);
@@ -443,6 +446,211 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
 .gtoast{position:absolute;right:20px;bottom:20px;z-index:60;max-width:420px;padding:12px 16px;border-radius:var(--r-l);background:var(--raise);border:1px solid var(--line-2);box-shadow:var(--shadow-pop);font-size:14px;opacity:0;transform:translateY(-8px);transition:opacity .2s,transform .2s;pointer-events:none}
 .gtoast.show{opacity:1;transform:none}
 
+/* ---------- Загрузки: навигация и заголовок ---------- */
+.nav button{display:inline-flex;align-items:center;white-space:nowrap}
+.nav-badge{display:inline-block;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font:600 11px/18px var(--f-mono);text-align:center;vertical-align:1px}
+.tb-speed{display:none;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;height:28px;padding:0 10px;border:0;border-radius:var(--r-s);background:var(--hover);color:var(--text-2);font-family:var(--f-mono);font-size:12px}
+.tb-speed.show{display:inline-flex}
+.tb-speed:hover{background:var(--hover-2);color:var(--text)}
+.tb-speed i{color:var(--accent)}
+
+/* ---------- Загрузки: экран ---------- */
+.dl{display:flex;flex-direction:column;height:100%}
+.dl-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:18px 28px 12px}
+.tabs .n{margin-left:6px;font-family:var(--f-mono);font-size:11px;color:var(--text-3);font-weight:400}
+.dl-stats{display:flex;gap:14px;font-family:var(--f-mono);font-size:12px;color:var(--text-3)}
+.dl-stats b{color:var(--text);font-weight:500}
+.dl-stats i{color:var(--accent);vertical-align:-3px}
+.catbar{display:flex;gap:6px;flex-wrap:wrap;padding:0 28px 12px}
+.catbar[hidden]{display:none}
+.catchip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border:1px solid var(--line-2);border-radius:999px;background:transparent;color:var(--text-2);font-size:13px}
+.catchip:hover{background:var(--hover);color:var(--text)}
+.catchip[aria-pressed="true"]{background:var(--accent-soft);border-color:color-mix(in oklab,var(--accent) 45%,transparent);color:var(--accent-text);font-weight:600}
+.catchip .n{font-family:var(--f-mono);font-size:11px;color:var(--text-3);font-weight:400}
+.catchip.add{border-style:dashed}
+.dl-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.dl-pane{flex:1;min-height:0;overflow:auto;padding:0 28px 20px;display:none;scrollbar-color:var(--raise-2) transparent}
+.dl-pane.active{display:block}
+.dl-pane.trk-pane{padding:0;overflow:hidden}
+.dl-pane.trk-pane.active{display:flex}
+.empty-dl{padding:60px 20px;text-align:center;color:var(--text-3);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:12px}
+
+.cat-ico{width:40px;height:40px;flex-shrink:0;border-radius:var(--r-m);display:grid;place-items:center;background:var(--raise);color:var(--text-2)}
+.trow{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(160px,240px) 104px auto;align-items:center;gap:16px;padding:12px 14px;border:1px solid transparent;border-radius:var(--r-l)}
+.trow:hover{background:var(--panel)}
+.trow.sel{background:var(--panel);border-color:var(--line-2)}
+.t-main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.t-name{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-sub{display:flex;gap:10px;font-size:12px;color:var(--text-3);white-space:nowrap;overflow:hidden}
+.t-prog{display:flex;flex-direction:column;gap:6px;min-width:0}
+.tbar{height:5px;border-radius:3px;background:var(--track);overflow:hidden}
+.tbar>span{display:block;height:100%;background:var(--accent);transition:width .9s linear}
+.tbar.seed>span{background:var(--text-2)}
+.tbar.paused>span{background:var(--text-3)}
+.t-state{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-2)}
+.t-state .mono{color:var(--text)}
+.t-speed{display:flex;flex-direction:column;gap:2px;align-items:flex-end;font-family:var(--f-mono);font-size:12px;color:var(--text-2);white-space:nowrap}
+.t-speed .dn{color:var(--text)}
+.t-actions{display:flex;align-items:center;gap:4px}
+.t-actions .btn{height:32px;padding:0 12px;font-size:13px}
+.state-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:var(--r-s);background:var(--hover-2);color:var(--text-2);font-size:11.5px;font-weight:600;white-space:nowrap}
+.state-badge.down{background:var(--accent-soft);color:var(--accent-text)}
+.state-badge.gone{background:transparent;border:1px dashed var(--line-2);color:var(--text-3);font-weight:500}
+
+.dl-detail{display:none;flex-direction:column;height:250px;flex-shrink:0;border-top:1px solid var(--line);background:var(--panel)}
+.dl-detail.show{display:flex}
+.dd-head{display:flex;align-items:center;gap:12px;padding:10px 20px 0}
+.dd-head b{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2);font-weight:500}
+.dd-body{flex:1;min-height:0;overflow:auto;padding:8px 20px 14px;scrollbar-color:var(--raise-2) transparent}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 84px 150px;gap:14px;align-items:center;padding:6px 8px;border-radius:var(--r-s);font-size:13px}
+.frow:hover{background:var(--hover)}
+.frow .mono{font-size:12px;color:var(--text-2);text-align:right}
+.frow .tbar{height:4px}
+.kv{display:grid;grid-template-columns:170px minmax(0,1fr);gap:9px 16px;margin:6px 0;font-size:13px}
+.kv dt{color:var(--text-3)}
+.kv dd{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.cbx{display:flex;align-items:center;gap:10px;min-width:0;padding:0;border:0;background:transparent;color:var(--text);font-size:13px;text-align:left}
+.cbx-box{width:18px;height:18px;flex-shrink:0;display:grid;place-items:center;border:1.5px solid var(--line-2);border-radius:5px;color:transparent;transition:background .15s,border-color .15s}
+.cbx[aria-checked="true"] .cbx-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cbx[aria-checked="mixed"] .cbx-box{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.cbx-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-theme="cutroom"] .cbx-box{border-radius:1px}
+
+/* ---------- Архив ---------- */
+.arch-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 6px}
+.arch-tools .search{flex:1 1 280px;max-width:420px;margin:0}
+.arch-sum{font-size:12.5px;color:var(--text-3);display:flex;gap:6px;align-items:center;padding:4px 2px}
+.arch-group{padding:18px 14px 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+[data-theme="cutroom"] .arch-group{font-family:var(--f-mono);font-weight:500;letter-spacing:.14em}
+.arow{display:grid;grid-template-columns:40px minmax(0,1fr) 150px 130px auto;align-items:center;gap:16px;padding:10px 14px;border-radius:var(--r-l)}
+.arow:hover{background:var(--panel)}
+.arow.flash{animation:flash 1.2s ease-out}
+.src-link{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:0;border:0;background:none;color:var(--text-3);font-size:12px;font-family:var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-link:hover{color:var(--accent-text)}
+.src-link.none{font-family:var(--f-ui)}
+
+/* ---------- Трекеры ---------- */
+.trk{display:flex;flex:1;min-width:0;min-height:0}
+.trk-side{width:224px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;padding:12px 10px;border-right:1px solid var(--line)}
+.trk-side-h{padding:4px 10px 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.trk-bm{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border:0;border-radius:var(--r-m);background:transparent;color:var(--text-2);font-size:14px;text-align:left}
+.trk-bm:hover{background:var(--hover);color:var(--text)}
+.trk-bm[aria-current="true"]{background:var(--raise);color:var(--text);font-weight:600}
+.trk-bm span:last-child{display:flex;flex-direction:column;min-width:0}
+.trk-bm small{font-family:var(--f-mono);font-size:11px;color:var(--text-3);font-weight:400}
+.favi{width:26px;height:26px;flex-shrink:0;display:grid;place-items:center;border-radius:7px;font:700 12px var(--f-mono);color:#fff}
+.trk-note{margin:auto 6px 4px;padding:12px;border-radius:var(--r-m);background:var(--hover);font-size:12px;line-height:1.45;color:var(--text-3)}
+.trk-note i{color:var(--accent);vertical-align:-3px;margin-right:4px}
+.trk-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.trk-bar{display:flex;align-items:center;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.trk-bar .ibtn{width:34px;height:34px}
+.trk-bar .ibtn[aria-disabled="true"]{opacity:.35;pointer-events:none}
+.addr{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r-m);background:var(--panel);font-family:var(--f-mono);font-size:12px;color:var(--text-3);white-space:nowrap;overflow:hidden}
+.addr b{color:var(--text);font-weight:500}
+.addr i{color:var(--text-3)}
+.iso{display:inline-flex;align-items:center;gap:6px;padding:0 8px;font-size:12px;color:var(--text-3);white-space:nowrap}
+.trk-page{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:var(--site-bg);color:var(--site-fg)}
+#sitePage{flex:1;min-height:0;overflow:auto}
+.intercept{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line-2);color:var(--text);font-size:13px;box-shadow:var(--shadow-pop);transform:translateY(-110%);transition:transform .2s ease-out}
+.intercept.show{transform:none}
+.intercept i{color:var(--accent)}
+/* Заглушка сайта трекера: у сайта свои цвета, это «контент», а не интерфейс Kino */
+.site{font-family:system-ui,'Segoe UI',sans-serif;font-size:13px;line-height:1.45;min-height:100%}
+.site-top{display:flex;align-items:center;gap:14px;padding:12px 22px;background:var(--site-head);color:#fff}
+.site-top b{font-size:15px}
+.site-top small{opacity:.7}
+.site-wrap{max-width:980px;margin:0 auto;padding:18px 22px 40px}
+.site-search{display:flex;gap:8px;margin-bottom:14px}
+.site-search span{flex:1;height:32px;display:flex;align-items:center;padding:0 10px;background:#fff;border:1px solid var(--site-line);border-radius:3px;color:#333}
+.site-search em{height:32px;display:flex;align-items:center;padding:0 14px;border-radius:3px;background:var(--site-head);color:#fff;font-style:normal}
+.site-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--site-line)}
+.site-table th{padding:8px 10px;text-align:left;font-weight:600;font-size:12px;background:var(--site-th);border-bottom:1px solid var(--site-line)}
+.site-table td{padding:9px 10px;border-bottom:1px solid var(--site-line);vertical-align:middle}
+.site-table .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.site a,.site .lnk{color:var(--site-link);text-decoration:none;cursor:pointer;background:none;border:0;padding:0;font:inherit;text-align:left}
+.site a:hover,.site .lnk:hover{text-decoration:underline}
+.site .seeds{color:var(--site-green);font-weight:600}
+.site .dl-ico{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:3px;border:1px solid var(--site-line);background:#fff;color:var(--site-link);cursor:pointer}
+.site .dl-ico:hover{background:var(--site-th)}
+.site-topic h1{font-size:19px;margin:0 0 10px;font-weight:600;color:#1d1d1d}
+.site-box{background:#fff;border:1px solid var(--site-line);border-radius:3px;padding:16px 18px;margin-bottom:12px}
+.site-meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:#555;margin-bottom:12px}
+.site-bars span{display:block;height:9px;margin:8px 0;border-radius:2px;background:#e4e3df}
+.site-dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.site-dl button{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:3px;border:1px solid var(--site-line);background:#fff;color:var(--site-link);font:600 13px system-ui,'Segoe UI',sans-serif;cursor:pointer}
+.site-dl button.main{background:var(--site-head);color:#fff;border-color:var(--site-head)}
+.site-crumbs{font-size:12px;color:#666;margin-bottom:10px}
+
+/* ---------- Окна поверх: добавление торрента, подтверждения, формы ---------- */
+.modal{position:absolute;inset:0;z-index:70;display:none;place-items:center;padding:24px;background:var(--modal-scrim)}
+.modal.open{display:grid;animation:fadeIn .2s ease-out}
+.modal-card{width:min(940px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r-xl);box-shadow:var(--shadow-pop);animation:popIn .18s ease-out both}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.985)}}
+@keyframes fadeIn{from{opacity:0}}
+.modal-head{display:flex;align-items:center;gap:12px;padding:18px 18px 10px 22px}
+.modal-head h2{margin:0;font-family:var(--f-display);font-weight:var(--display-w);font-size:18px}
+[data-theme="cutroom"] .modal-head h2{font-family:var(--f-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.src-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:var(--r-s);background:var(--hover-2);color:var(--text-2);font-size:12px}
+.src-chip i{color:var(--accent)}
+.dup{display:none;align-items:center;gap:14px;margin:0 22px 8px;padding:12px 14px;border-radius:var(--r-l);background:var(--accent-soft);border:1px solid color-mix(in oklab,var(--accent) 35%,transparent);font-size:13.5px}
+.dup.show{display:flex}
+.dup i{color:var(--accent)}
+.dup b{font-weight:600}
+.dup span{flex:1;min-width:0}
+.add-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;min-height:0;padding:6px 22px 14px;overflow:auto}
+.add-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.fld{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--text-3)}
+.fld input{height:36px;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r-m);background:var(--bg);color:var(--text);font-size:14px;outline:none}
+.fld input:focus{border-color:var(--accent)}
+.fld[hidden]{display:none}
+.fld input.mono{font-family:var(--f-mono);font-size:12.5px}
+.fld-meta{font-family:var(--f-mono);font-size:12px;color:var(--text-3)}
+.cat-pick{display:flex;flex-wrap:wrap;gap:8px}
+.cat-opt{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px 0 10px;border:1px solid var(--line-2);border-radius:var(--r-m);background:var(--bg);color:var(--text-2);font-size:14px}
+.cat-opt:hover{color:var(--text);border-color:var(--text-3)}
+.cat-opt[aria-checked="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--text);font-weight:600}
+.cat-opt[aria-checked="true"] i{color:var(--accent)}
+.cat-opt.new{border-style:dashed}
+.newcat{display:none;flex-direction:column;gap:10px;padding:12px;border:1px dashed var(--line-2);border-radius:var(--r-m);background:var(--bg)}
+.newcat.show{display:flex}
+.newcat .row{display:flex;gap:8px;justify-content:flex-end}
+.newcat .fld input{background:var(--panel)}
+.path-row{display:flex;align-items:center;gap:10px;height:38px;padding:0 4px 0 12px;border:1px solid var(--line-2);border-radius:var(--r-m);background:var(--bg);font-family:var(--f-mono);font-size:12.5px;color:var(--text)}
+.path-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path-row i{color:var(--text-3)}
+.path-row .btn{height:30px;padding:0 10px;font-size:12.5px}
+.opt-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--text)}
+.add-files{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);border-radius:var(--r-l);background:var(--bg)}
+.files-head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.files-head .mono{font-size:12px;color:var(--text-3)}
+.files-list{list-style:none;margin:0;padding:6px;overflow:auto;max-height:330px;scrollbar-color:var(--raise-2) transparent}
+.files-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:7px 8px;border-radius:var(--r-s)}
+.files-list li:hover{background:var(--hover)}
+.files-list .mono{font-size:12px;color:var(--text-3)}
+.files-wait{padding:34px 18px;text-align:center;font-size:13px;line-height:1.5;color:var(--text-3)}
+.modal-foot{display:flex;align-items:center;gap:10px;padding:14px 22px 18px;border-top:1px solid var(--line)}
+.modal-foot .hint{flex:1;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-3)}
+.modal-foot .hint i{color:var(--accent)}
+.mini-card{width:min(440px,100%);padding:22px;gap:12px}
+.mini-card h2{margin:0;font-family:var(--f-display);font-weight:var(--display-w);font-size:17px}
+.mini-card p{margin:0;font-size:14px;line-height:1.5;color:var(--text-2)}
+.mini-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.btn-destructive{background:var(--danger);color:var(--on-danger);font-weight:600}
+.btn-destructive:hover{background:color-mix(in oklab,var(--danger),white 10%)}
+
+/* ---------- Меню действий ---------- */
+.menu{position:fixed;z-index:90;display:none;min-width:236px;padding:5px;border:1px solid var(--glass-line);border-radius:var(--r-l);background:var(--glass);box-shadow:var(--shadow-pop);backdrop-filter:blur(14px)}
+.menu.open{display:block;animation:popIn .15s ease-out}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:0 10px;border:0;border-radius:var(--r-m);background:transparent;color:var(--text);font-size:13.5px;text-align:left}
+.menu button:hover,.menu button:focus-visible{background:var(--hover-2);outline:none}
+.menu button i{color:var(--text-2)}
+.menu button.danger,.menu button.danger i{color:var(--danger)}
+.menu button[aria-checked="true"]{color:var(--accent-text);font-weight:600}
+.menu button[aria-checked="true"] i{color:var(--accent)}
+.menu hr{height:1px;margin:4px 8px;border:0;background:var(--line-2)}
+.menu .m-label{padding:6px 10px 2px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+
 /* ---------- панель прототипа (не часть дизайна) ---------- */
 .proto{width:236px;flex-shrink:0;max-height:calc(100vh - 48px);overflow:auto;background:var(--proto-bg);border:1px solid var(--proto-line);border-radius:12px;padding:14px;font-family:system-ui,'Segoe UI',sans-serif;color:var(--proto-text);font-size:13px;display:flex;flex-direction:column;gap:3px}
 .proto-title{font-weight:700;font-size:14px;margin-bottom:2px}
@@ -476,6 +684,13 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
     <button data-proto-state="tracks">Озвучка и субтитры</button>
     <button data-proto-state="end">Конец серии → «Далее»</button>
     <button data-proto-state="eps">Список серий</button>
+    <h4>Торренты</h4>
+    <button data-proto-go="downloads">Загрузки</button>
+    <button data-proto-go="archive">Архив</button>
+    <button data-proto-go="trackers">Трекеры</button>
+    <button data-proto-torrent="add">Добавление торрента</button>
+    <button data-proto-torrent="dup">Добавление: уже в архиве</button>
+    <button data-proto-torrent="magnet">Добавление magnet-ссылки</button>
     <h4>Направление</h4>
     <button data-proto-theme="projector">А · «Проектор»</button>
     <button data-proto-theme="cutroom">Б · «Монтажная»</button>
@@ -498,7 +713,9 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
         <button data-go="home" data-nav="home">Главная</button>
         <button data-go="series" data-nav="series">Сериалы</button>
         <button data-go="history" data-nav="history">История</button>
+        <button data-go="downloads" data-nav="downloads">Загрузки<span class="nav-badge" id="dlBadge"></span></button>
       </nav>
+      <button class="tb-speed" id="tbSpeed" data-go="downloads" aria-label="Скорость загрузки, открыть загрузки"></button>
       <label class="search">
         <i data-icon="search" data-size="16"></i>
         <span class="sr">Поиск</span>
@@ -651,6 +868,71 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
         </div>
       </section>
 
+      <!-- ===================== ЗАГРУЗКИ ===================== -->
+      <section class="screen" data-screen="downloads" aria-label="Загрузки">
+        <div class="dl">
+          <div class="dl-head">
+            <div class="tabs" role="tablist" aria-label="Разделы загрузок">
+              <button role="tab" data-dltab="active" aria-selected="true">Загрузки<span class="n" id="cntActive"></span></button>
+              <button role="tab" data-dltab="archive" aria-selected="false">Архив<span class="n" id="cntArchive"></span></button>
+              <button role="tab" data-dltab="trackers" aria-selected="false">Трекеры</button>
+            </div>
+            <div class="dl-stats" id="dlStats"></div>
+            <span class="spacer"></span>
+            <button class="ibtn" id="pauseAll" aria-label="Пауза всех загрузок"><i data-icon="pause" data-size="17"></i></button>
+            <button class="btn btn-line" id="addMagnetBtn"><i data-icon="magnet" data-size="16"></i>Magnet-ссылка</button>
+            <button class="btn btn-primary" id="addTorrentBtn"><i data-icon="plus" data-size="16"></i>Добавить торрент</button>
+          </div>
+          <div class="catbar" id="catbar" aria-label="Категории"></div>
+          <div class="dl-body">
+            <div class="dl-pane" data-pane="active"><div id="dlList"></div></div>
+            <div class="dl-detail" id="dlDetail" aria-label="Подробности торрента"></div>
+            <div class="dl-pane" data-pane="archive">
+              <div class="arch-tools">
+                <label class="search">
+                  <i data-icon="search" data-size="16"></i>
+                  <span class="sr">Поиск по архиву</span>
+                  <input id="archSearch" type="search" placeholder="Поиск по названию и файлам" autocomplete="off">
+                </label>
+                <div class="segc" role="radiogroup" aria-label="Сортировка" id="archSort">
+                  <button role="radio" data-v="date" aria-checked="true">Новые сначала</button>
+                  <button role="radio" data-v="name" aria-checked="false">По имени</button>
+                </div>
+                <span class="spacer"></span>
+                <button class="btn btn-line" id="archImport"><i data-icon="upload" data-size="15"></i>Импорт</button>
+                <button class="btn btn-line" id="archExport"><i data-icon="archive" data-size="15"></i>Резервная копия</button>
+              </div>
+              <div class="arch-sum" id="archSum"></div>
+              <div id="archList"></div>
+            </div>
+            <div class="dl-pane trk-pane" data-pane="trackers">
+              <div class="trk">
+                <nav class="trk-side" aria-label="Закладки трекеров">
+                  <div class="trk-side-h">Закладки</div>
+                  <div id="bmList"></div>
+                  <button class="trk-bm" id="addBookmark"><span class="favi" style="background:var(--raise-2);color:var(--text-2)"><i data-icon="plus" data-size="15"></i></span><span>Добавить трекер</span></button>
+                  <p class="trk-note"><i data-icon="lock" data-size="14"></i>Вход и капча — как в обычном браузере. Скачанные <b>.torrent</b> и magnet-ссылки Kino перехватывает сам и сохраняет в архив вместе со ссылкой на раздачу.</p>
+                </nav>
+                <div class="trk-main">
+                  <div class="trk-bar">
+                    <button class="ibtn" id="trkBack" aria-label="Назад"><i data-icon="back" data-size="17"></i></button>
+                    <button class="ibtn" id="trkFwd" aria-label="Вперёд"><i data-icon="arrowR" data-size="17"></i></button>
+                    <button class="ibtn" id="trkReload" aria-label="Обновить страницу"><i data-icon="refresh" data-size="17"></i></button>
+                    <div class="addr" id="trkAddr"><i data-icon="lock" data-size="13"></i><span id="trkUrl"></span></div>
+                    <span class="iso"><i data-icon="lock" data-size="14"></i>Изолировано от Kino</span>
+                    <button class="ibtn" id="trkExternal" aria-label="Открыть в браузере"><i data-icon="external" data-size="17"></i></button>
+                  </div>
+                  <div class="trk-page" id="trkPage">
+                    <div class="intercept" id="intercept" role="status"></div>
+                    <div id="sitePage"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ===================== НАСТРОЙКИ ===================== -->
       <section class="screen" data-screen="settings" aria-label="Настройки">
         <div class="settings">
@@ -733,8 +1015,72 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
       </section>
     </div>
 
-    <div class="drop" id="drop"><div><i data-icon="upload" data-size="40"></i>Отпустите — откроем и разложим по сериям</div></div>
+    <div class="drop" id="drop"><div><i data-icon="upload" data-size="40"></i>Отпустите — видео откроем, .torrent добавим в загрузки</div></div>
     <div class="gtoast" id="gtoast" role="status"></div>
+
+    <!-- ===================== ДОБАВЛЕНИЕ ТОРРЕНТА ===================== -->
+    <div class="modal" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 id="addTitle">Добавить торрент</h2>
+          <span class="src-chip" id="addFrom"></span>
+          <span class="spacer"></span>
+          <button class="ibtn" data-close-modal aria-label="Закрыть"><i data-icon="x" data-size="17"></i></button>
+        </div>
+        <div class="dup" id="addDup"></div>
+        <div class="add-grid">
+          <div class="add-main">
+            <label class="fld" id="addMagnetFld"><span>Magnet-ссылка</span><input id="addMagnet" class="mono" placeholder="magnet:?xt=urn:btih:…" autocomplete="off"></label>
+            <label class="fld"><span>Название</span><input id="addName" autocomplete="off"></label>
+            <div class="fld-meta" id="addMeta"></div>
+            <div class="fld">
+              <span>Категория</span>
+              <div class="cat-pick" role="radiogroup" aria-label="Категория" id="addCats"></div>
+            </div>
+            <div class="newcat" id="newCat">
+              <label class="fld"><span>Название категории</span><input id="newCatName" placeholder="Например, Фильмы" autocomplete="off"></label>
+              <label class="fld"><span>Папка по умолчанию</span><input id="newCatPath" class="mono" autocomplete="off"></label>
+              <div class="row"><button class="btn btn-ghost" id="newCatCancel">Отмена</button><button class="btn btn-primary" id="newCatSave">Создать категорию</button></div>
+            </div>
+            <div class="fld">
+              <span>Папка</span>
+              <div class="path-row"><i data-icon="folder" data-size="15"></i><span id="addPath"></span><button class="btn btn-ghost" id="addPathBtn">Изменить</button></div>
+            </div>
+            <label class="fld"><span>Страница раздачи</span><input id="addSource" class="mono" placeholder="Необязательно — но через год пригодится" autocomplete="off"></label>
+            <div class="opt-row"><span>Начать сразу</span><button class="switch" role="switch" aria-checked="true" id="addStart"><span class="sr">Начать сразу</span></button></div>
+          </div>
+          <div class="add-files">
+            <div class="files-head">
+              <button class="cbx" role="checkbox" aria-checked="true" id="addAll"><span class="cbx-box"><i data-icon="check" data-size="13"></i></span><span>Файлы</span></button>
+              <span class="spacer"></span>
+              <span class="mono" id="addSel"></span>
+            </div>
+            <ul class="files-list" id="addFiles"></ul>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span class="hint"><i data-icon="archive" data-size="15"></i>Торрент останется в архиве, даже если потом удалить файлы</span>
+          <button class="btn btn-ghost" data-close-modal>Отмена</button>
+          <button class="btn btn-primary" id="addConfirm">Добавить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ПОДТВЕРЖДЕНИЕ И КОРОТКИЕ ФОРМЫ ===================== -->
+    <div class="modal" id="miniModal" role="dialog" aria-modal="true" aria-labelledby="miniTitle">
+      <div class="modal-card mini-card">
+        <h2 id="miniTitle"></h2>
+        <p id="miniText"></p>
+        <div id="miniFields" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div class="mini-actions">
+          <button class="btn btn-ghost" id="miniCancel">Отмена</button>
+          <button class="btn btn-primary" id="miniOk"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu" id="menu" role="menu"></div>
+    <input type="file" id="torrentInput" accept=".torrent" multiple hidden>
     <input type="file" id="fileInput" accept="video/*,.mkv,.avi,.ts,.m2ts" multiple hidden>
     <input type="file" id="folderInput" webkitdirectory multiple hidden>
   </div>
@@ -782,7 +1128,21 @@ const ICONS = {
   link:'<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>',
   keyboard:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7.5 14h9"/>',
   win:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8.5h18"/>',
-  x:'<path d="M6 6l12 12M18 6L6 18"/>'
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  down:'<path d="M12 4v14M6.5 12.5L12 18l5.5-5.5"/>',
+  up:'<path d="M12 20V6M6.5 11.5L12 6l5.5 5.5"/>',
+  magnet:'<path d="M6 4h4v8a2 2 0 0 0 4 0V4h4v8a6 6 0 0 1-12 0z"/><path d="M6 8h4M14 8h4"/>',
+  refresh:'<path d="M19.5 12a7.5 7.5 0 1 1-2.4-5.5"/><path d="M19.5 4.5v4h-4"/>',
+  external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
+  archive:'<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/>',
+  tv:'<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  game:'<path d="M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3.5 3.5 0 0 1-6.4 2L14 14.5h-4l-.6 1A3.5 3.5 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8z"/><path d="M8 10.5v3M6.5 12h3M15.5 11.5h.01M17.5 13h.01"/>',
+  app:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M16.5 13v7M13 16.5h7"/>',
+  tag:'<path d="M3.5 12.4V4.5a1 1 0 0 1 1-1h7.9l8.1 8.1-9 9z"/><path d="M8 8h.01"/>',
+  more:'<path d="M5.5 12h.01M12 12h.01M18.5 12h.01" stroke-width="2.8"/>',
+  lock:'<rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>',
+  edit:'<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
 };
 function icon(name, size){
   size = size || 20;
@@ -883,6 +1243,9 @@ const win = $('#win');
 let currentScreen = 'home', seriesId = 'pm';
 function go(screen){
   if (screen === 'back') { leavePlayer(); screen = prevScreen || 'home'; }
+  const requested = screen;
+  closeMenu();
+  if (DL_TABS[screen]) { if (screen !== 'downloads') dlState.tab = DL_TABS[screen]; screen = 'downloads'; }
   if (screen === 'history') { go('home'); const h = $('.history'); if (h) { h.scrollIntoView({ block:'nearest' }); h.classList.remove('flash'); void h.offsetWidth; h.classList.add('flash'); } setNav('history'); return; }
   if (currentScreen === 'player' && screen !== 'player') leavePlayer();
   if (screen !== 'player') prevScreen = screen;
@@ -891,8 +1254,10 @@ function go(screen){
   $$('.screen').forEach((s) => s.classList.toggle('active', s.dataset.screen === screen));
   if (screen === 'home') renderHome();
   if (screen === 'series') renderSeries();
+  if (screen === 'downloads') renderDownloads();
   setNav(screen);
-  $$('[data-proto-go]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoGo === screen)));
+  $$('[data-proto-go]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoGo === requested)));
+  updateGlobal();
 }
 let prevScreen = 'home';
 function setNav(key){ $$('.nav [data-nav]').forEach((b) => { if (b.dataset.nav === key) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); }
@@ -1349,7 +1714,10 @@ $('#themeSeg').addEventListener('click', (e) => { const b = e.target.closest('[d
 $('#introSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) settings.intro = b.dataset.v; });
 $('#setAutoplay').addEventListener('click', () => { P.autoplay = $('#setAutoplay').getAttribute('aria-checked') !== 'true'; $('#autoSw').setAttribute('aria-checked', String(P.autoplay)); });
 $('#defVol').addEventListener('input', (e) => { $('#defVolVal').textContent = e.target.value + '%'; });
-$('#clearHistory').addEventListener('click', () => { if (confirm('Очистить историю просмотра? Позиции и запомненные дорожки удалятся.')) { HISTORY = []; toast('История очищена'); } });
+$('#clearHistory').addEventListener('click', async () => {
+  const ok = await confirmModal({ title:'Очистить историю?', text:'Позиции просмотра и запомненные дорожки удалятся. Файлы на диске и архив торрентов останутся.', ok:'Очистить', danger:true });
+  if (ok) { HISTORY = []; toast('История очищена'); }
+});
 $('#folders').innerHTML = SHOWS.filter((s) => s.kind === 'series').map((s) => '<div class="folder-row">' + icon('folder', 15) + '<span>' + esc(s.folder) + '</span><button class="ibtn" style="width:28px;height:28px" aria-label="Убрать папку">' + icon('x', 14) + '</button></div>').join('');
 const HOTKEYS = [['Пауза / воспроизведение', 'Пробел'], ['Вперёд на 10 с', '→'], ['Назад на 10 с', '←'], ['Громкость +', '↑'], ['Громкость −', '↓'], ['Во весь экран', 'F'], ['Следующая серия', 'N'], ['Предыдущая серия', 'P'], ['Субтитры вкл/выкл', 'S'], ['Следующая озвучка', 'A'], ['Сдвиг субтитров −/+ 0,1 с', 'Z / X'], ['Скорость −/+', '[ / ]'], ['Без звука', 'M']];
 $('#hkTable').innerHTML = HOTKEYS.map((h) => '<tr><td>' + h[0] + '</td><td><button class="hk-key">' + h[1] + '</button></td></tr>').join('');
@@ -1362,10 +1730,589 @@ $('.screen[data-screen="settings"]').addEventListener('scroll', function () {
 });
 
 /* =====================================================================
+   Торренты: категории, загрузки, архив, трекеры
+   ===================================================================== */
+const GB = 1024 ** 3, MB = 1024 ** 2;
+const PROTO_SPEEDUP = 12; // в прототипе закачка идёт быстрее, чтобы было видно движение
+let CATS = [
+  { id:'series', name:'Сериалы', icon:'tv', path:'D:\\Сериалы' },
+  { id:'games', name:'Игры', icon:'game', path:'D:\\Игры' },
+  { id:'apps', name:'Программы', icon:'app', path:'D:\\Программы' }
+];
+const NO_CAT = { id:'none', name:'Без категории', icon:'tag', path:'D:\\Загрузки' };
+const catOf = (id) => CATS.find((c) => c.id === id) || NO_CAT;
+const nf1 = new Intl.NumberFormat('ru', { minimumFractionDigits:1, maximumFractionDigits:1 });
+const nf2 = new Intl.NumberFormat('ru', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const dfmt = new Intl.DateTimeFormat('ru', { day:'numeric', month:'short', year:'numeric' });
+const mfmt = new Intl.DateTimeFormat('ru', { month:'long', year:'numeric' });
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+function plural(n, one, few, many){ const a = n % 10, b = n % 100; if (a === 1 && b !== 11) return one; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return few; return many; }
+const filesWord = (n) => n + ' ' + plural(n, 'файл', 'файла', 'файлов');
+function fmtSize(b){ if (b >= GB) return nf1.format(b / GB) + ' ГБ'; if (b >= MB) return Math.round(b / MB) + ' МБ'; return Math.max(1, Math.round(b / 1024)) + ' КБ'; }
+function fmtRate(b){ return b >= MB ? nf1.format(b / MB) + ' МБ/с' : Math.round(b / 1024) + ' КБ/с'; }
+function fmtEta(s){ if (!isFinite(s)) return '∞'; const m = Math.max(1, Math.ceil(s / 60)); return m >= 60 ? Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин' : m + ' мин'; }
+function fmtDate(d){ return dfmt.format(new Date(d)).replace(' г.', ''); }
+function hostOf(u){ try { return new URL(u).host; } catch (err) { return ''; } }
+function fakeHash(s){ let h = 0x811c9dc5, out = ''; for (let k = 0; k < 5; k++) { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i) + k; h = Math.imul(h, 16777619) >>> 0; } out += h.toString(16).padStart(8, '0'); } return out; }
+function seriesFiles(pattern, n, total){ const a = []; for (let i = 1; i <= n; i++) a.push({ name:pattern.replace('{e}', pad(i)), size:Math.round(total / n * (0.9 + ((i * 37) % 20) / 100)), on:true }); return a; }
+function mkTorrent(o){
+  const t = Object.assign({ state:'archived', progress:1, down:0, up:0, seeds:0, peers:0, ratio:0, filesGone:false, source:'', added:'2026-10-01', completed:null, magnetOnly:false, play:null }, o);
+  t.hash = t.hash || fakeHash(t.name);
+  t.size = t.files.reduce((s, f) => s + f.size, 0);
+  t.path = t.path || catOf(t.cat).path;
+  return t;
+}
+
+let TORRENTS = [
+  mkTorrent({ id:'t1', name:'Peacemaker.S02.2160p.AMZN.WEB-DL.SDR.H.265', cat:'series', state:'down', progress:0.62, down:18.2 * MB, up:0.4 * MB, seeds:154, peers:23, ratio:0.08, added:'2026-10-21', play:'pm',
+    source:'https://rutracker.org/forum/viewtopic.php?t=6612345', files:seriesFiles('Peacemaker.S02E{e}.2160p.AMZN.WEB-DL.SDR.H.265.mkv', 8, 41.2 * GB) }),
+  mkTorrent({ id:'t2', name:'Ubuntu 26.04 LTS Desktop amd64', cat:'apps', state:'seed', up:0.8 * MB, seeds:812, peers:64, ratio:2.31, added:'2026-10-18', completed:'2026-10-18',
+    source:'https://ubuntu.com/download/alternative-downloads', files:[{ name:'ubuntu-26.04-desktop-amd64.iso', size:6.1 * GB, on:true }] }),
+  mkTorrent({ id:'t3', name:'0 A.D. Alpha 27 «Agni»', cat:'games', state:'paused', progress:0.34, seeds:41, peers:6, added:'2026-10-20',
+    source:'https://rutor.info/torrent/1048577', files:[{ name:'0ad-0.27.0-win64.exe', size:2.9 * GB, on:true }, { name:'0ad-0.27.0-mods.zip', size:0.5 * GB, on:true }] }),
+  mkTorrent({ id:'t4', name:'Kusuriya no Hitorigoto S2 [1080p]', cat:'series', state:'queued', progress:0, seeds:96, peers:11, added:'2026-10-22',
+    source:'https://rutracker.org/forum/viewtopic.php?t=6587001', files:seriesFiles('Kusuriya no Hitorigoto - S02E{e} [1080p].mkv', 24, 28.7 * GB) }),
+  mkTorrent({ id:'a1', name:'Severance.S02.1080p.ATVP.WEB-DL.DDP5.1.H.264', cat:'series', filesGone:true, added:'2026-03-02', completed:'2026-03-02', ratio:1.12,
+    source:'https://rutracker.org/forum/viewtopic.php?t=6593218', files:seriesFiles('Severance.S02E{e}.1080p.ATVP.WEB-DL.DDP5.1.H.264.mkv', 10, 34.8 * GB) }),
+  mkTorrent({ id:'a2', name:'Shogun.S01.2160p.DSNP.WEB-DL.DV.HDR.H.265', cat:'series', added:'2026-09-28', completed:'2026-09-28', ratio:0.74,
+    source:'https://rutracker.org/forum/viewtopic.php?t=6501144', files:seriesFiles('Shogun.S01E{e}.2160p.DSNP.WEB-DL.DV.HDR.H.265.mkv', 10, 58.3 * GB) }),
+  mkTorrent({ id:'a3', name:'SuperTuxKart 1.5', cat:'games', filesGone:true, added:'2026-01-14', completed:'2026-01-14', ratio:3.4,
+    source:'https://rutor.info/torrent/1001234', files:[{ name:'SuperTuxKart-1.5-installer-x86_64.exe', size:0.86 * GB, on:true }] }),
+  mkTorrent({ id:'a4', name:'Blender 4.5.3 LTS', cat:'apps', added:'2026-09-03', completed:'2026-09-03', ratio:1.0,
+    files:[{ name:'blender-4.5.3-windows-x64.msi', size:0.36 * GB, on:true }] }),
+  mkTorrent({ id:'a5', name:'Dune.Part.Two.2024.2160p.UHD.BluRay.REMUX.HDR.HEVC', cat:'none', filesGone:true, magnetOnly:true, added:'2025-12-20', completed:'2025-12-21', ratio:0.5,
+    files:[{ name:'Dune.Part.Two.2024.2160p.UHD.BluRay.REMUX.HDR.HEVC.mkv', size:71.4 * GB, on:true }] })
+];
+const ACTIVE_STATES = new Set(['down', 'seed', 'paused', 'queued']);
+const isActive = (t) => ACTIVE_STATES.has(t.state);
+const byTid = (id) => TORRENTS.find((t) => t.id === id);
+const DL_TABS = { downloads:'active', archive:'archive', trackers:'trackers' };
+const dlState = { tab:'active', cat:'all', sel:'t1', detailTab:'files', q:'', sort:'date', lastCat:'series' };
+
+function stateInfo(t){
+  if (t.state === 'down') return { label:'Загрузка', cls:'down' };
+  if (t.state === 'seed') return { label:'Раздача', cls:'' };
+  if (t.state === 'paused') return { label:'Пауза', cls:'' };
+  if (t.state === 'queued') return { label:'В очереди', cls:'' };
+  return t.filesGone ? { label:'Файлы удалены', cls:'gone' } : { label:'Файлы на диске', cls:'' };
+}
+const selectedSize = (t) => t.files.filter((f) => f.on).reduce((s, f) => s + f.size, 0) || t.size;
+
+/* ---------- экран и вкладки ---------- */
+function renderDownloads(){
+  $$('[data-dltab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.dltab === dlState.tab)));
+  $$('.dl-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === dlState.tab));
+  $('#catbar').hidden = dlState.tab === 'trackers';
+  $('#cntActive').textContent = TORRENTS.filter(isActive).length;
+  $('#cntArchive').textContent = TORRENTS.length;
+  if (dlState.tab !== 'trackers') renderCatbar();
+  if (dlState.tab === 'active') renderActive();
+  if (dlState.tab === 'archive') renderArchive();
+  if (dlState.tab === 'trackers') renderTrackers();
+  renderDetail();
+  updateGlobal();
+}
+function renderCatbar(){
+  const list = dlState.tab === 'active' ? TORRENTS.filter(isActive) : TORRENTS;
+  const count = (id) => list.filter((t) => id === 'all' || catOf(t.cat).id === id).length;
+  const cats = [{ id:'all', name:'Все' }].concat(CATS);
+  if (count('none') || dlState.cat === 'none') cats.push(NO_CAT);
+  $('#catbar').innerHTML = cats.map((c) => '<button class="catchip" data-cat="' + c.id + '" aria-pressed="' + (dlState.cat === c.id) + '">' + (c.icon ? icon(c.icon, 15) : '') + esc(c.name) + '<span class="n">' + count(c.id) + '</span></button>').join('') +
+    '<button class="catchip add" id="catAdd">' + icon('plus', 14) + 'Категория</button>';
+}
+
+/* ---------- Загрузки ---------- */
+function speedHTML(t){
+  const dn = t.state === 'down' ? fmtRate(t.down) : '—';
+  const up = t.state === 'down' || t.state === 'seed' ? fmtRate(t.up) : '—';
+  return '<span class="dn">' + icon('down', 12) + ' ' + dn + '</span><span>' + icon('up', 12) + ' ' + up + '</span>';
+}
+function pctText(t){
+  if (t.state === 'seed') return 'рейтинг ' + nf2.format(t.ratio);
+  const pct = Math.floor(t.progress * 100) + '%';
+  return t.state === 'down' ? pct + ' · ещё ' + fmtEta((1 - t.progress) * selectedSize(t) / Math.max(1, t.down * PROTO_SPEEDUP)) : pct;
+}
+function rowHTML(t){
+  const c = catOf(t.cat), st = stateInfo(t);
+  const barCls = t.state === 'seed' ? 'seed' : (t.state === 'paused' || t.state === 'queued' ? 'paused' : '');
+  const canWatch = t.play && t.progress > 0.2;
+  const running = t.state !== 'paused';
+  return '<div class="trow' + (dlState.sel === t.id ? ' sel' : '') + '" data-tid="' + t.id + '">' +
+    '<span class="cat-ico" aria-hidden="true">' + icon(c.icon, 19) + '</span>' +
+    '<div class="t-main"><span class="t-name">' + esc(t.name) + '</span><span class="t-sub"><span>' + esc(c.name) + '</span><span>' + filesWord(t.files.length) + '</span><span>' + fmtSize(t.size) + '</span><span>сиды ' + t.seeds + ' · пиры ' + t.peers + '</span></span></div>' +
+    '<div class="t-prog"><div class="tbar ' + barCls + '"><span data-p="' + t.id + '" style="width:' + (t.progress * 100) + '%"></span></div>' +
+      '<div class="t-state"><span class="state-badge ' + st.cls + '">' + st.label + '</span><span class="mono" data-pct="' + t.id + '">' + pctText(t) + '</span></div></div>' +
+    '<div class="t-speed" data-spd="' + t.id + '">' + speedHTML(t) + '</div>' +
+    '<div class="t-actions">' + (canWatch ? '<button class="btn btn-ghost" data-act="watch">' + icon('play', 14) + 'Смотреть</button>' : '') +
+      '<button class="ibtn" data-act="toggle" aria-label="' + (running ? 'Пауза' : 'Продолжить') + '">' + icon(running ? 'pause' : 'play', 17) + '</button>' +
+      '<button class="ibtn" data-act="menu" aria-label="Действия с торрентом">' + icon('more', 18) + '</button></div></div>';
+}
+function renderActive(){
+  const list = TORRENTS.filter(isActive).filter((t) => dlState.cat === 'all' || catOf(t.cat).id === dlState.cat);
+  $('#dlList').innerHTML = list.length ? list.map(rowHTML).join('')
+    : '<div class="empty-dl">' + icon('down', 28) + '<span>Сейчас ничего не качается.</span><span>Добавьте торрент или найдите раздачу во вкладке «Трекеры».</span></div>';
+}
+const selTorrent = () => { const t = byTid(dlState.sel); return t && isActive(t) && dlState.tab === 'active' ? t : null; };
+function fileProgress(t, i){ if (!t.files[i].on) return 0; return Math.max(0, Math.min(1, t.progress * t.files.length - i)); }
+function renderDetail(){
+  const t = selTorrent(), d = $('#dlDetail');
+  d.classList.toggle('show', !!t);
+  if (!t) return;
+  const tabs = '<div class="tabs" role="tablist" aria-label="Подробности"><button role="tab" data-dtab="files" aria-selected="' + (dlState.detailTab === 'files') + '">Файлы<span class="n">' + t.files.length + '</span></button><button role="tab" data-dtab="info" aria-selected="' + (dlState.detailTab === 'info') + '">Сведения</button></div>';
+  const body = dlState.detailTab === 'files'
+    ? t.files.map((f, i) => '<div class="frow"><button class="cbx" role="checkbox" aria-checked="' + f.on + '" data-file="' + i + '"><span class="cbx-box">' + icon('check', 13) + '</span><span class="cbx-name">' + esc(f.name) + '</span></button><span class="mono">' + fmtSize(f.size) + '</span><div class="tbar"><span data-fp="' + i + '" style="width:' + (fileProgress(t, i) * 100) + '%"></span></div></div>').join('')
+    : '<dl class="kv"><dt>Хеш</dt><dd class="mono">' + t.hash + '</dd><dt>Папка</dt><dd class="mono">' + esc(t.path) + '</dd><dt>Категория</dt><dd>' + esc(catOf(t.cat).name) + '</dd><dt>Добавлен</dt><dd>' + fmtDate(t.added) + '</dd>' +
+      '<dt>Страница раздачи</dt><dd>' + (t.source ? '<button class="src-link" data-src="' + t.id + '">' + icon('external', 13) + esc(t.source) + '</button>' : '—') + '</dd>' +
+      '<dt>Отдано</dt><dd class="mono">' + fmtSize(t.size * t.ratio) + ' · рейтинг ' + nf2.format(t.ratio) + '</dd></dl>';
+  d.innerHTML = '<div class="dd-head">' + tabs + '<b>' + esc(t.name) + '</b><button class="ibtn" data-act="close-detail" aria-label="Скрыть подробности">' + icon('x', 15) + '</button></div><div class="dd-body">' + body + '</div>';
+}
+
+/* ---------- Архив ---------- */
+function archRowHTML(t){
+  const c = catOf(t.cat), st = stateInfo(t);
+  const action = isActive(t) ? '<button class="btn btn-ghost" data-act="goto">В загрузках' + icon('arrowR', 14) + '</button>'
+    : t.filesGone ? '<button class="btn btn-primary" data-act="again">' + icon('down', 14) + 'Скачать снова</button>'
+    : '<button class="btn btn-ghost" data-act="folder">' + icon('folder', 14) + 'Открыть папку</button>';
+  const src = t.source ? '<button class="src-link" data-act="source">' + icon('link', 13) + esc(hostOf(t.source)) + '</button>'
+    : '<span class="src-link none">' + (t.magnetOnly ? 'только magnet-ссылка' : 'страница не указана') + '</span>';
+  return '<div class="arow" data-tid="' + t.id + '"><span class="cat-ico" aria-hidden="true">' + icon(c.icon, 19) + '</span>' +
+    '<div class="t-main"><span class="t-name">' + esc(t.name) + '</span><span class="t-sub"><span>' + esc(c.name) + '</span><span>' + fmtSize(t.size) + '</span><span>' + filesWord(t.files.length) + '</span><span>добавлен ' + fmtDate(t.added) + '</span></span></div>' +
+    src + '<span><span class="state-badge ' + st.cls + '">' + st.label + '</span></span>' +
+    '<div class="t-actions">' + action + '<button class="ibtn" data-act="menu" aria-label="Действия с записью">' + icon('more', 18) + '</button></div></div>';
+}
+function renderArchive(){
+  const q = dlState.q.trim().toLowerCase();
+  const list = TORRENTS.filter((t) => (dlState.cat === 'all' || catOf(t.cat).id === dlState.cat) && (!q || t.name.toLowerCase().includes(q) || t.files.some((f) => f.name.toLowerCase().includes(q))))
+    .sort(dlState.sort === 'name' ? (a, b) => natural.compare(a.name, b.name) : (a, b) => b.added.localeCompare(a.added));
+  const total = TORRENTS.reduce((s, t) => s + t.size, 0);
+  $('#archSum').innerHTML = icon('archive', 15) + '<span>' + TORRENTS.length + ' ' + plural(TORRENTS.length, 'торрент', 'торрента', 'торрентов') + ' на ' + fmtSize(total) + '. Сами .torrent хранятся внутри Kino — удаление папки загрузок их не трогает.</span>';
+  if (!list.length) { $('#archList').innerHTML = '<div class="empty-dl">' + icon('search', 26) + '<span>В архиве ничего не нашлось' + (q ? ' по запросу «' + esc(q) + '»' : '') + '</span></div>'; return; }
+  let html = '', group = '';
+  list.forEach((t) => {
+    const g = dlState.sort === 'name' ? '' : cap(mfmt.format(new Date(t.added)).replace(' г.', ''));
+    if (g && g !== group) { group = g; html += '<div class="arch-group">' + g + '</div>'; }
+    html += archRowHTML(t);
+  });
+  $('#archList').innerHTML = html;
+}
+function flashArch(id){ setTimeout(() => { const r = document.querySelector('.arow[data-tid="' + id + '"]'); if (r) { r.scrollIntoView({ block:'center' }); r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash'); } }, 60); }
+
+/* ---------- Трекеры: встроенное окно (заглушка сайта) ---------- */
+let BOOKMARKS = [
+  { id:'rt', name:'Рутрекер', host:'rutracker.org', color:'#3b6fb6', letter:'R' },
+  { id:'rutor', name:'RuTor', host:'rutor.info', color:'#2f8a57', letter:'R' }
+];
+const SITE = {
+  rt: { query:'2-й сезон', results:[
+    { id:'s1', title:'The Last of Us (2-й сезон) / 2025 / WEB-DL 2160p / многоголосый', forum:'Зарубежные сериалы', seeds:892, topic:6640021, cat:'series', files:seriesFiles('The.Last.of.Us.S02E{e}.2160p.MAX.WEB-DL.mkv', 7, 52.4 * GB) },
+    { id:'s2', title:'Разделение / Severance (2-й сезон) / 2025 / WEB-DL 1080p', forum:'Зарубежные сериалы', seeds:412, topic:6593218, cat:'series', dupOf:'a1' },
+    { id:'s3', title:'Debian 13 «Trixie» amd64 DVD (официальный образ)', forum:'Linux', seeds:120, topic:6631002, cat:'apps', files:[{ name:'debian-13.1.0-amd64-DVD-1.iso', size:3.9 * GB, on:true }] },
+    { id:'s4', title:'Mindustry v8 / 2026 / open source', forum:'Инди-игры', seeds:64, topic:6629010, cat:'games', files:[{ name:'Mindustry-v8-windows64.zip', size:0.21 * GB, on:true }] }
+  ] },
+  rutor: { query:'linux', results:[
+    { id:'r1', title:'Fedora Workstation 43 x86_64 Live', forum:'Софт', seeds:233, topic:1052211, cat:'apps', files:[{ name:'Fedora-Workstation-Live-x86_64-43.iso', size:2.6 * GB, on:true }] },
+    { id:'r2', title:'SuperTuxKart 1.5 (Windows, установщик)', forum:'Игры', seeds:37, topic:1001234, cat:'games', dupOf:'a3' }
+  ] }
+};
+const trk = { bm:'rt', topic:null, back:[], fwd:[] };
+const bmOf = (id) => BOOKMARKS.find((b) => b.id === id) || BOOKMARKS[0];
+function resultData(r){
+  const dup = r.dupOf ? byTid(r.dupOf) : null;
+  const files = dup ? dup.files.map((f) => Object.assign({}, f, { on:true })) : r.files;
+  return { files:files, size:files.reduce((s, f) => s + f.size, 0), hash:dup ? dup.hash : fakeHash(r.title) };
+}
+function topicUrl(bm, r){ return bm.id === 'rutor' ? 'https://rutor.info/torrent/' + r.topic : bm.id === 'rt' ? 'https://rutracker.org/forum/viewtopic.php?t=' + r.topic : 'https://' + bm.host + '/topic/' + r.topic; }
+function pageUrl(){
+  const bm = bmOf(trk.bm), site = SITE[bm.id];
+  if (trk.topic) return topicUrl(bm, trk.topic);
+  if (!site) return 'https://' + bm.host + '/';
+  return bm.id === 'rutor' ? 'https://rutor.info/search/0/0/000/0/' + encodeURIComponent(site.query) : 'https://rutracker.org/forum/tracker.php?nm=' + encodeURIComponent(site.query);
+}
+function renderTrackers(){
+  $('#bmList').innerHTML = BOOKMARKS.map((b) => '<button class="trk-bm" data-bm="' + b.id + '" aria-current="' + (b.id === trk.bm) + '"><span class="favi" style="background:' + b.color + '">' + esc(b.letter) + '</span><span>' + esc(b.name) + '<small>' + esc(b.host) + '</small></span></button>').join('');
+  const url = pageUrl(), host = hostOf(url);
+  $('#trkUrl').innerHTML = 'https://<b>' + esc(host) + '</b>' + esc(url.slice(('https://' + host).length));
+  $('#trkBack').setAttribute('aria-disabled', String(!trk.back.length));
+  $('#trkFwd').setAttribute('aria-disabled', String(!trk.fwd.length));
+  const bm = bmOf(trk.bm), site = SITE[bm.id];
+  const top = '<div class="site-top" style="background:' + bm.color + '"><b>' + esc(bm.host) + '</b><small>заглушка сайта — так он откроется внутри Kino</small></div>';
+  let body;
+  if (!site) body = '<div class="site-wrap"><div class="site-box">Здесь откроется сайт <b>' + esc(bm.host) + '</b>. Войдите, найдите раздачу и нажмите «скачать» — Kino подхватит торрент.</div></div>';
+  else if (trk.topic) {
+    const r = trk.topic, d = resultData(r);
+    body = '<div class="site-wrap site-topic"><div class="site-crumbs">Главная » ' + esc(r.forum) + '</div><h1>' + esc(r.title) + '</h1>' +
+      '<div class="site-box"><div class="site-meta"><span>Размер: <b>' + fmtSize(d.size) + '</b></span><span>Сиды: <b class="seeds">' + r.seeds + '</b></span><span>' + filesWord(d.files.length) + '</span></div>' +
+      '<div class="site-bars"><span style="width:92%"></span><span style="width:78%"></span><span style="width:85%"></span><span style="width:40%"></span></div>' +
+      '<div class="site-dl"><button class="main" data-grab="torrent">' + icon('down', 15) + 'Скачать .torrent</button><button data-grab="magnet">' + icon('magnet', 15) + 'Магнет-ссылка</button></div></div></div>';
+  } else {
+    body = '<div class="site-wrap"><div class="site-search"><span>' + esc(site.query) + '</span><em>Поиск</em></div><table class="site-table"><thead><tr><th>Раздел</th><th>Тема</th><th class="num">Размер</th><th class="num">Сиды</th><th></th></tr></thead><tbody>' +
+      site.results.map((r) => '<tr><td>' + esc(r.forum) + '</td><td><button class="lnk" data-topic="' + r.id + '">' + esc(r.title) + '</button></td><td class="num">' + fmtSize(resultData(r).size) + '</td><td class="num seeds">' + r.seeds + '</td><td><button class="dl-ico" data-grab="torrent" data-rid="' + r.id + '" aria-label="Скачать .torrent">' + icon('down', 14) + '</button></td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+  $('#sitePage').innerHTML = '<div class="site">' + top + body + '</div>';
+}
+function trkNavigate(topic){ trk.back.push(trk.topic); trk.fwd = []; trk.topic = topic; renderTrackers(); $('#sitePage').scrollTop = 0; }
+function grab(kind, rid){
+  const bm = bmOf(trk.bm), site = SITE[bm.id];
+  const r = rid ? site.results.find((x) => x.id === rid) : trk.topic;
+  if (!r) return;
+  const d = resultData(r);
+  const ic = $('#intercept');
+  ic.innerHTML = icon(kind === 'magnet' ? 'magnet' : 'down', 16) + '<span>Kino перехватил ' + (kind === 'magnet' ? 'magnet-ссылку' : '.torrent') + ' — в «Загрузки» Windows ничего не сохранено</span>';
+  ic.classList.add('show'); clearTimeout(grab.tm); grab.tm = setTimeout(() => ic.classList.remove('show'), 3200);
+  openAdd({ mode:kind === 'magnet' ? 'magnet-site' : 'torrent', from:'tracker', host:bm.host, name:r.title, files:d.files.map((f) => Object.assign({}, f)), hash:d.hash, source:topicUrl(bm, r), cat:r.cat, magnetPending:kind === 'magnet' });
+}
+function openSourceInTrackers(t){
+  const host = hostOf(t.source);
+  const bm = BOOKMARKS.find((b) => b.host === host);
+  if (!bm) { toast('Откроется в браузере по умолчанию: ' + t.source); return; }
+  const site = SITE[bm.id];
+  const r = site && site.results.find((x) => x.dupOf === t.id);
+  trk.bm = bm.id; trk.back = []; trk.fwd = [];
+  trk.topic = r || { id:'x' + t.id, title:t.name, forum:catOf(t.cat).name, seeds:12, topic:(t.source.match(/(\d+)$/) || [0, 1])[1], cat:t.cat, dupOf:t.id };
+  dlState.tab = 'trackers'; go('downloads');
+}
+
+/* ---------- Добавление торрента ---------- */
+const ADD = {};
+function openAdd(opts){
+  Object.assign(ADD, { mode:'torrent', from:'file', host:'', name:'', files:[], hash:'', source:'', magnetPending:false, start:true, dup:null }, opts);
+  ADD.dup = ADD.hash ? TORRENTS.find((t) => t.hash === ADD.hash) || null : null;
+  if (ADD.dup) { ADD.cat = ADD.dup.cat; ADD.path = ADD.dup.path; ADD.name = ADD.dup.name; ADD.source = ADD.source || ADD.dup.source; ADD.magnetPending = false; ADD.files = ADD.dup.files.map((f) => Object.assign({}, f, { on:true })); }
+  else { ADD.cat = opts.cat || dlState.lastCat; ADD.path = catOf(ADD.cat).path; }
+  $('#newCat').classList.remove('show');
+  $('#addMagnet').value = '';
+  $('#addStart').setAttribute('aria-checked', 'true');
+  renderAdd();
+  openModal('#addModal');
+  if (ADD.magnetPending) loadMagnetMeta(ADD.hash);
+  setTimeout(() => {
+    const el = ADD.mode === 'magnet' && !ADD.hash ? $('#addMagnet') : $('#addName');
+    el.focus(); el.setSelectionRange(0, 0); el.scrollLeft = 0;
+  }, 60);
+}
+function loadMagnetMeta(hash){ setTimeout(() => { if (ADD.hash !== hash || !$('#addModal').classList.contains('open')) return; ADD.magnetPending = false; if (!ADD.files.length) ADD.files = guessFiles(ADD.name); renderAdd(); }, 1400); }
+function guessCat(name){ if (/S\d{1,2}|сезон|season|серии/i.test(name)) return 'series'; if (/game|игр|repack|gog/i.test(name)) return 'games'; if (/setup|windows|linux|\.iso|portable|x64|amd64/i.test(name)) return 'apps'; return dlState.lastCat; }
+function guessFiles(name){
+  const base = name.replace(/\s+/g, '.');
+  if (/S\d{1,2}|сезон|season|серии/i.test(name)) return seriesFiles(base + '.E{e}.mkv', 8, 31 * GB);
+  if (/4k|2160p|1080p|720p|movie|фильм|bdrip|web-dl|remux/i.test(name)) return [{ name:base + '.mkv', size:18.6 * GB, on:true }];
+  return [{ name:base + '.iso', size:4.2 * GB, on:true }];
+}
+function renderAdd(){
+  const dup = ADD.dup;
+  $('#addMagnetFld').hidden = ADD.mode !== 'magnet';
+  $('#addTitle').textContent = dup ? 'Этот торрент уже в архиве' : 'Добавить торрент';
+  $('#addFrom').innerHTML = ADD.from === 'tracker' ? icon('link', 13) + 'перехвачено на ' + esc(ADD.host)
+    : ADD.from === 'archive' ? icon('archive', 13) + 'из архива'
+    : ADD.mode === 'magnet' || ADD.mode === 'magnet-site' ? icon('magnet', 13) + 'magnet-ссылка' : icon('filePlus', 13) + 'файл .torrent';
+  const st = dup ? stateInfo(dup) : null;
+  $('#addDup').classList.toggle('show', !!dup);
+  $('#addDup').innerHTML = dup ? icon('archive', 18) + '<span><b>Уже в архиве</b> · ' + esc(catOf(dup.cat).name) + ' · добавлен ' + fmtDate(dup.added) + ' · ' + st.label.toLowerCase() + '. ' +
+    (isActive(dup) ? 'Он и сейчас в загрузках.' : dup.filesGone ? 'Можно скачать снова — запись в архиве останется той же.' : 'Файлы на месте: ' + esc(dup.path) + '.') + '</span>' : '';
+  $('#addName').value = ADD.name;
+  const total = ADD.files.reduce((s, f) => s + f.size, 0);
+  $('#addMeta').textContent = ADD.mode === 'magnet' && !ADD.hash ? 'Вставьте magnet-ссылку — название и файлы подтянутся сами'
+    : ADD.magnetPending ? 'Получаем список файлов от участников раздачи…' : fmtSize(total) + ' · ' + filesWord(ADD.files.length) + ' · хеш ' + ADD.hash.slice(0, 8) + '…' + ADD.hash.slice(-4);
+  $('#addCats').innerHTML = CATS.map((c) => '<button class="cat-opt" role="radio" aria-checked="' + (ADD.cat === c.id) + '" data-addcat="' + c.id + '">' + icon(c.icon, 17) + esc(c.name) + '</button>').join('') +
+    '<button class="cat-opt new" id="newCatBtn">' + icon('plus', 15) + 'Новая категория</button>';
+  $('#addPath').textContent = ADD.path;
+  $('#addSource').value = ADD.source;
+  const wait = (ADD.mode === 'magnet' && !ADD.hash) || ADD.magnetPending;
+  $('#addFiles').innerHTML = wait ? '<li class="files-wait" style="display:block">Список файлов появится, когда Kino получит описание раздачи от её участников. Обычно это несколько секунд.</li>'
+    : ADD.files.map((f, i) => '<li><button class="cbx" role="checkbox" aria-checked="' + f.on + '" data-addfile="' + i + '"><span class="cbx-box">' + icon('check', 13) + '</span><span class="cbx-name">' + esc(f.name) + '</span></button><span class="mono">' + fmtSize(f.size) + '</span></li>').join('');
+  const on = ADD.files.filter((f) => f.on);
+  $('#addSel').textContent = wait ? '' : on.length + ' из ' + ADD.files.length + ' · ' + fmtSize(on.reduce((s, f) => s + f.size, 0));
+  $('#addAll').setAttribute('aria-checked', !ADD.files.length || on.length === ADD.files.length ? 'true' : on.length ? 'mixed' : 'false');
+  $('#addAll').style.visibility = wait ? 'hidden' : 'visible';
+  $('#addConfirm').textContent = dup ? (isActive(dup) ? 'Открыть в загрузках' : dup.filesGone ? 'Скачать снова' : 'Показать в архиве') : 'Добавить';
+  $('#addConfirm').disabled = ADD.mode === 'magnet' && !ADD.hash;
+  $('#addConfirm').style.opacity = $('#addConfirm').disabled ? '.45' : '';
+}
+function confirmAdd(){
+  if ($('#addConfirm').disabled) return;
+  const name = $('#addName').value.trim() || ADD.name || 'Без названия';
+  const source = $('#addSource').value.trim();
+  const start = $('#addStart').getAttribute('aria-checked') === 'true';
+  dlState.lastCat = ADD.cat;
+  const dup = ADD.dup;
+  closeModal('#addModal');
+  if (dup && isActive(dup)) { dlState.tab = 'active'; dlState.sel = dup.id; dlState.cat = 'all'; go('downloads'); return; }
+  if (dup && !dup.filesGone) { dlState.tab = 'archive'; dlState.cat = 'all'; go('downloads'); flashArch(dup.id); return; }
+  if (dup) {
+    Object.assign(dup, { state:start ? 'down' : 'paused', progress:0, filesGone:false, down:(8 + Math.random() * 14) * MB, up:0.2 * MB, seeds:dup.seeds || 120, peers:dup.peers || 14, cat:ADD.cat, path:ADD.path, source:source || dup.source, files:ADD.files });
+    dlState.tab = 'active'; dlState.sel = dup.id; dlState.cat = 'all'; go('downloads');
+    toast('Качаем снова «' + dup.name + '» — запись в архиве та же');
+    return;
+  }
+  const files = ADD.files.length ? ADD.files : guessFiles(name);
+  const t = mkTorrent({ id:'n' + Date.now(), name:name, cat:ADD.cat, path:ADD.path, source:source, hash:ADD.hash || fakeHash(name), files:files.map((f) => Object.assign({}, f)),
+    state:start ? 'down' : 'paused', progress:0, down:(6 + Math.random() * 20) * MB, up:0.1 * MB, seeds:30 + Math.round(Math.random() * 400), peers:5 + Math.round(Math.random() * 40), added:todayISO(), magnetOnly:ADD.mode === 'magnet' });
+  TORRENTS.unshift(t);
+  dlState.tab = 'active'; dlState.sel = t.id; dlState.cat = 'all'; go('downloads');
+  toast('Добавлено в «' + catOf(t.cat).name + '» и сохранено в архиве' + (source ? ' вместе со ссылкой на раздачу' : ''));
+}
+function createCategory(name, path){
+  name = (name || '').trim();
+  if (!name) { toast('Введите название категории'); return null; }
+  if (CATS.some((c) => c.name.toLowerCase() === name.toLowerCase())) { toast('Категория «' + name + '» уже есть'); return null; }
+  const c = { id:'c' + Date.now(), name:name, icon:'tag', path:(path || '').trim() || 'D:\\' + name };
+  CATS.push(c);
+  toast('Категория «' + name + '» создана');
+  return c;
+}
+
+/* ---------- окна, подтверждения, меню ---------- */
+let lastFocus = null, miniResolve = null, menuItems = [];
+function openModal(sel){ lastFocus = document.activeElement; $(sel).classList.add('open'); }
+function closeModal(sel){ $(sel).classList.remove('open'); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+function miniOpen(title, text, fields, ok, danger){
+  $('#miniTitle').textContent = title;
+  $('#miniText').textContent = text || '';
+  $('#miniText').hidden = !text;
+  $('#miniFields').innerHTML = fields.map((f) => '<label class="fld"><span>' + esc(f.label) + '</span><input data-f="' + f.id + '" value="' + esc(f.value || '') + '" placeholder="' + esc(f.placeholder || '') + '"' + (f.mono ? ' class="mono"' : '') + ' autocomplete="off"></label>').join('');
+  $('#miniOk').textContent = ok;
+  $('#miniOk').className = 'btn ' + (danger ? 'btn-destructive' : 'btn-primary');
+  $('#miniModal').classList.add('open');
+  setTimeout(() => { const first = $('#miniFields input'); (first || $('#miniCancel')).focus(); }, 40);
+  return new Promise((resolve) => { miniResolve = resolve; });
+}
+function miniDone(ok){
+  const vals = {};
+  $$('#miniFields input').forEach((i) => { vals[i.dataset.f] = i.value.trim(); });
+  $('#miniModal').classList.remove('open');
+  const r = miniResolve; miniResolve = null;
+  if (r) r(ok ? vals : null);
+}
+function confirmModal(o){ return miniOpen(o.title, o.text, [], o.ok, o.danger).then((r) => r !== null); }
+function formModal(o){ return miniOpen(o.title, o.text, o.fields, o.ok, false); }
+$('#miniOk').addEventListener('click', () => miniDone(true));
+$('#miniCancel').addEventListener('click', () => miniDone(false));
+$('#miniFields').addEventListener('keydown', (e) => { if (e.key === 'Enter') miniDone(true); });
+
+function openMenu(anchor, items){
+  menuItems = items;
+  const m = $('#menu');
+  m.innerHTML = items.map((it, i) => it === 'sep' ? '<hr>' : it.head ? '<div class="m-label">' + esc(it.head) + '</div>'
+    : '<button role="' + (it.checked !== undefined ? 'menuitemradio' : 'menuitem') + '"' + (it.checked !== undefined ? ' aria-checked="' + it.checked + '"' : '') + (it.danger ? ' class="danger"' : '') + ' data-mi="' + i + '">' + icon(it.checked ? 'check' : it.icon, 16) + esc(it.label) + '</button>').join('');
+  m.classList.add('open');
+  const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
+  const w = m.offsetWidth, h = m.offsetHeight;
+  let x = (r.right !== undefined ? r.right - w : r.x), y = (r.bottom !== undefined ? r.bottom + 4 : r.y);
+  x = Math.max(8, Math.min(x, innerWidth - w - 8));
+  if (y + h > innerHeight - 8) y = Math.max(8, (r.top !== undefined ? r.top - h - 4 : r.y - h));
+  m.style.left = x + 'px'; m.style.top = y + 'px';
+  const first = m.querySelector('button'); if (first) first.focus();
+}
+function closeMenu(){ $('#menu').classList.remove('open'); }
+$('#menu').addEventListener('click', (e) => { const b = e.target.closest('[data-mi]'); if (!b) return; const it = menuItems[+b.dataset.mi]; closeMenu(); if (it && it.run) it.run(); });
+document.addEventListener('mousedown', (e) => { if (!e.target.closest('#menu')) closeMenu(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('#menu').classList.contains('open')) { closeMenu(); e.stopImmediatePropagation(); return; }
+  if ($('#miniModal').classList.contains('open')) { miniDone(false); e.stopImmediatePropagation(); return; }
+  if ($('#addModal').classList.contains('open')) { closeModal('#addModal'); e.stopImmediatePropagation(); }
+}, true);
+
+function categoryItems(t, onPick){
+  return [{ head:'Категория' }].concat(CATS.map((c) => ({ label:c.name, icon:c.icon, checked:catOf(t.cat).id === c.id, run:() => onPick(c) })));
+}
+function activeMenu(t, anchor){
+  openMenu(anchor, [
+    { label:'Открыть папку', icon:'folder', run:() => toast('Откроется папка в Проводнике: ' + t.path) },
+    { label:'Скопировать magnet-ссылку', icon:'copy', run:() => toast('Magnet-ссылка скопирована') },
+    t.source ? { label:'Открыть страницу раздачи', icon:'external', run:() => openSourceInTrackers(t) } : null,
+    'sep'
+  ].filter(Boolean).concat(categoryItems(t, (c) => { t.cat = c.id; renderDownloads(); toast('Категория: «' + c.name + '». Уже скачанные файлы остаются в ' + t.path); }), ['sep',
+    { label:'Убрать из загрузок', icon:'archive', run:() => { t.state = 'archived'; dlState.sel = null; renderDownloads(); toast('Убрано из загрузок. Файлы на месте, запись осталась в архиве'); } },
+    { label:'Удалить с файлами', icon:'trash', danger:true, run:async () => {
+      if (!(await confirmModal({ title:'Удалить файлы?', text:'«' + t.name + '» — ' + fmtSize(t.size) + ' в ' + t.path + '. Запись останется в архиве: скачать снова можно будет в один клик.', ok:'Удалить файлы', danger:true }))) return;
+      t.state = 'archived'; t.filesGone = true; dlState.sel = null; renderDownloads(); toast('Файлы удалены. Запись осталась в архиве');
+    } }
+  ]));
+}
+function archiveMenu(t, anchor){
+  openMenu(anchor, [
+    isActive(t) ? { label:'Перейти в загрузки', icon:'arrowR', run:() => { dlState.tab = 'active'; dlState.sel = t.id; go('downloads'); } }
+      : t.filesGone ? { label:'Скачать снова', icon:'down', run:() => openAdd({ from:'archive', hash:t.hash }) }
+      : { label:'Открыть папку', icon:'folder', run:() => toast('Откроется папка в Проводнике: ' + t.path) },
+    { label:'Скопировать magnet-ссылку', icon:'copy', run:() => toast('Magnet-ссылка скопирована') },
+    t.source ? { label:'Открыть страницу раздачи', icon:'external', run:() => openSourceInTrackers(t) }
+      : { label:'Указать страницу раздачи', icon:'edit', run:async () => { const v = await formModal({ title:'Страница раздачи', text:'Ссылка поможет найти раздачу, если её обновят или перезальют.', fields:[{ id:'url', label:'Адрес страницы', placeholder:'https://…', mono:true }], ok:'Сохранить' }); if (v && v.url) { t.source = v.url; renderDownloads(); toast('Ссылка сохранена в архиве'); } } },
+    'sep'
+  ].concat(categoryItems(t, (c) => { t.cat = c.id; renderDownloads(); toast('Категория: «' + c.name + '»'); }), ['sep',
+    { label:'Удалить из архива', icon:'trash', danger:true, run:async () => {
+      const ok = await confirmModal({ title:'Удалить из архива?', text:'Запись «' + t.name + '» и сохранённый .torrent удалятся насовсем. Скачать снова в один клик уже не получится' + (t.filesGone ? '' : ', а файлы на диске останутся') + '.', ok:'Удалить из архива', danger:true });
+      if (!ok) return;
+      TORRENTS = TORRENTS.filter((x) => x !== t); renderDownloads(); toast('Удалено из архива');
+    } }
+  ]));
+}
+function categoryMenu(c, anchor){
+  openMenu(anchor, [
+    { label:'Переименовать', icon:'edit', run:async () => { const v = await formModal({ title:'Переименовать категорию', fields:[{ id:'name', label:'Название', value:c.name }], ok:'Сохранить' }); if (v && v.name) { c.name = v.name; renderDownloads(); } } },
+    { label:'Папка по умолчанию', icon:'folder', run:async () => { const v = await formModal({ title:'Папка для «' + c.name + '»', text:'Сюда будут предлагаться новые загрузки этой категории.', fields:[{ id:'path', label:'Папка', value:c.path, mono:true }], ok:'Сохранить' }); if (v && v.path) { c.path = v.path; toast('Папка категории: ' + v.path); } } },
+    'sep',
+    { label:'Удалить категорию', icon:'trash', danger:true, run:async () => {
+      const n = TORRENTS.filter((t) => t.cat === c.id).length;
+      if (!(await confirmModal({ title:'Удалить «' + c.name + '»?', text:n ? n + ' ' + plural(n, 'торрент перейдёт', 'торрента перейдут', 'торрентов перейдут') + ' в «Без категории». Ничего не удалится.' : 'В категории нет торрентов.', ok:'Удалить категорию', danger:true }))) return;
+      TORRENTS.forEach((t) => { if (t.cat === c.id) t.cat = 'none'; });
+      CATS = CATS.filter((x) => x !== c);
+      if (dlState.cat === c.id) dlState.cat = 'all';
+      if (dlState.lastCat === c.id) dlState.lastCat = 'series';
+      renderDownloads(); toast('Категория удалена');
+    } }
+  ]);
+}
+
+/* ---------- обработчики экрана загрузок ---------- */
+$$('[data-dltab]').forEach((b) => b.addEventListener('click', () => { dlState.tab = b.dataset.dltab; renderDownloads(); }));
+$('#catbar').addEventListener('click', async (e) => {
+  if (e.target.closest('#catAdd')) {
+    const v = await formModal({ title:'Новая категория', text:'Например, «Фильмы» или «Книги». У категории своя папка для загрузок.', fields:[{ id:'name', label:'Название' }, { id:'path', label:'Папка по умолчанию', placeholder:'D:\\Фильмы', mono:true }], ok:'Создать' });
+    if (v && createCategory(v.name, v.path)) renderDownloads();
+    return;
+  }
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  dlState.cat = b.dataset.cat; renderDownloads();
+});
+$('#catbar').addEventListener('contextmenu', (e) => { const b = e.target.closest('[data-cat]'); if (!b) return; const c = CATS.find((x) => x.id === b.dataset.cat); if (!c) return; e.preventDefault(); categoryMenu(c, { x:e.clientX, y:e.clientY }); });
+$('#dlList').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-tid]'); if (!row) return;
+  const t = byTid(row.dataset.tid), act = e.target.closest('[data-act]');
+  if (act && act.dataset.act === 'menu') { activeMenu(t, act); return; }
+  if (act && act.dataset.act === 'watch') { openPlayer(t.play); return; }
+  if (act && act.dataset.act === 'toggle') { t.state = t.state === 'paused' ? (t.progress >= 1 ? 'seed' : 'down') : 'paused'; if (t.state === 'down') t.down = (6 + Math.random() * 14) * MB; renderDownloads(); return; }
+  dlState.sel = t.id; renderDownloads();
+});
+$('#dlList').addEventListener('contextmenu', (e) => { const row = e.target.closest('[data-tid]'); if (!row) return; e.preventDefault(); dlState.sel = row.dataset.tid; renderDownloads(); activeMenu(byTid(row.dataset.tid), { x:e.clientX, y:e.clientY }); });
+$('#dlDetail').addEventListener('click', (e) => {
+  const t = selTorrent(); if (!t) return;
+  const tab = e.target.closest('[data-dtab]'); if (tab) { dlState.detailTab = tab.dataset.dtab; renderDetail(); return; }
+  const f = e.target.closest('[data-file]'); if (f) { const file = t.files[+f.dataset.file]; file.on = !file.on; renderDetail(); toast(file.on ? 'Файл снова в загрузке' : 'Файл не будет скачиваться'); return; }
+  if (e.target.closest('[data-src]')) { openSourceInTrackers(t); return; }
+  if (e.target.closest('[data-act="close-detail"]')) { dlState.sel = null; renderDownloads(); }
+});
+$('#archList').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-tid]'); if (!row) return;
+  const t = byTid(row.dataset.tid), act = e.target.closest('[data-act]'); if (!act) return;
+  const a = act.dataset.act;
+  if (a === 'menu') archiveMenu(t, act);
+  if (a === 'goto') { dlState.tab = 'active'; dlState.sel = t.id; dlState.cat = 'all'; go('downloads'); }
+  if (a === 'again') openAdd({ from:'archive', hash:t.hash });
+  if (a === 'folder') toast('Откроется папка в Проводнике: ' + t.path);
+  if (a === 'source') openSourceInTrackers(t);
+});
+$('#archList').addEventListener('contextmenu', (e) => { const row = e.target.closest('[data-tid]'); if (!row) return; e.preventDefault(); archiveMenu(byTid(row.dataset.tid), { x:e.clientX, y:e.clientY }); });
+$('#archSearch').addEventListener('input', (e) => { dlState.q = e.target.value; renderArchive(); });
+$('#archSort').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) { dlState.sort = b.dataset.v; renderArchive(); } });
+$('#archExport').addEventListener('click', () => toast('Резервная копия: kino-archive-' + todayISO() + '.zip — ' + TORRENTS.length + ' .torrent и описание архива'));
+$('#archImport').addEventListener('click', () => toast('Импорт резервной копии: записи с тем же хешем не задвоятся'));
+$('#pauseAll').addEventListener('click', () => {
+  const running = TORRENTS.filter((t) => t.state === 'down' || t.state === 'seed' || t.state === 'queued');
+  if (running.length) { running.forEach((t) => { t.state = 'paused'; }); toast('Все загрузки и раздачи на паузе'); }
+  else { TORRENTS.filter((t) => t.state === 'paused').forEach((t) => { t.state = t.progress >= 1 ? 'seed' : 'down'; t.down = (6 + Math.random() * 14) * MB; }); toast('Загрузки продолжены'); }
+  renderDownloads();
+});
+$('#addTorrentBtn').addEventListener('click', () => $('#torrentInput').click());
+$('#addMagnetBtn').addEventListener('click', () => openAdd({ mode:'magnet', from:'magnet' }));
+function addTorrentFile(file){
+  const name = file.name.replace(/\.torrent$/i, '').replace(/[._]+/g, ' ').trim();
+  openAdd({ mode:'torrent', from:'file', name:name, files:guessFiles(name), hash:fakeHash(file.name + file.size), cat:guessCat(name) });
+}
+$('#torrentInput').addEventListener('change', (e) => { const fs = Array.from(e.target.files); if (fs[0]) addTorrentFile(fs[0]); if (fs.length > 1) toast('Добавляем по одному: сначала «' + fs[0].name + '»'); e.target.value = ''; });
+
+/* окно добавления */
+$('#addModal').addEventListener('mousedown', (e) => { if (e.target.id === 'addModal') closeModal('#addModal'); });
+$('#addModal').addEventListener('click', (e) => {
+  if (e.target.closest('[data-close-modal]')) { closeModal('#addModal'); return; }
+  const c = e.target.closest('[data-addcat]'); if (c) { ADD.cat = c.dataset.addcat; ADD.path = catOf(ADD.cat).path; renderAdd(); return; }
+  if (e.target.closest('#newCatBtn')) { $('#newCat').classList.add('show'); $('#newCatName').value = ''; $('#newCatPath').value = ''; $('#newCatName').focus(); return; }
+  const f = e.target.closest('[data-addfile]'); if (f) { const file = ADD.files[+f.dataset.addfile]; file.on = !file.on; renderAdd(); return; }
+  if (e.target.closest('#addAll')) { const all = ADD.files.every((x) => x.on); ADD.files.forEach((x) => { x.on = !all; }); renderAdd(); }
+});
+$('#newCatName').addEventListener('input', (e) => { $('#newCatPath').value = e.target.value.trim() ? 'D:\\' + e.target.value.trim() : ''; });
+$('#newCatCancel').addEventListener('click', () => $('#newCat').classList.remove('show'));
+$('#newCatSave').addEventListener('click', () => { const c = createCategory($('#newCatName').value, $('#newCatPath').value); if (!c) return; ADD.cat = c.id; ADD.path = c.path; $('#newCat').classList.remove('show'); renderAdd(); });
+$('#addPathBtn').addEventListener('click', async () => { const v = await formModal({ title:'Папка для загрузки', text:'В приложении здесь откроется системный выбор папки.', fields:[{ id:'path', label:'Папка', value:ADD.path, mono:true }], ok:'Выбрать' }); if (v && v.path) { ADD.path = v.path; renderAdd(); } });
+$('#addName').addEventListener('input', (e) => { ADD.name = e.target.value; });
+$('#addSource').addEventListener('input', (e) => { ADD.source = e.target.value; });
+$('#addMagnet').addEventListener('input', (e) => {
+  const v = e.target.value.trim(), m = v.match(/xt=urn:btih:([a-z0-9]+)/i);
+  if (!m) { ADD.hash = ''; renderAdd(); return; }
+  const dn = (v.match(/[?&]dn=([^&]+)/) || [0, ''])[1];
+  Object.assign(ADD, { hash:m[1].toLowerCase(), name:decodeURIComponent(dn.replace(/\+/g, ' ')) || 'Раздача ' + m[1].slice(0, 8), files:[], magnetPending:true });
+  ADD.dup = TORRENTS.find((t) => t.hash === ADD.hash) || null;
+  if (ADD.dup) { ADD.magnetPending = false; ADD.cat = ADD.dup.cat; ADD.path = ADD.dup.path; ADD.name = ADD.dup.name; ADD.source = ADD.source || ADD.dup.source; ADD.files = ADD.dup.files.map((f) => Object.assign({}, f, { on:true })); }
+  else { ADD.cat = guessCat(ADD.name); ADD.path = catOf(ADD.cat).path; loadMagnetMeta(ADD.hash); }
+  renderAdd();
+});
+$('#addConfirm').addEventListener('click', confirmAdd);
+
+/* трекеры */
+$('#bmList').addEventListener('click', (e) => { const b = e.target.closest('[data-bm]'); if (!b) return; trk.bm = b.dataset.bm; trk.topic = null; trk.back = []; trk.fwd = []; renderTrackers(); });
+$('#addBookmark').addEventListener('click', async () => {
+  const v = await formModal({ title:'Новый трекер', text:'Сайт откроется внутри Kino. Вход запомнится, торренты будут перехватываться.', fields:[{ id:'name', label:'Название', placeholder:'Kinozal' }, { id:'url', label:'Адрес', placeholder:'https://kinozal.tv', mono:true }], ok:'Добавить' });
+  if (!v || !v.url) return;
+  const host = hostOf(/^https?:\/\//.test(v.url) ? v.url : 'https://' + v.url) || v.url;
+  const id = 'b' + Date.now(), colors = ['#7a4fb5', '#b5644f', '#4f8fb5', '#8a7d2f'];
+  BOOKMARKS.push({ id:id, name:v.name || host, host:host, color:colors[BOOKMARKS.length % colors.length], letter:(v.name || host).charAt(0).toUpperCase() });
+  trk.bm = id; trk.topic = null; trk.back = []; trk.fwd = []; renderTrackers();
+});
+$('#sitePage').addEventListener('click', (e) => {
+  const tp = e.target.closest('[data-topic]'); if (tp) { const site = SITE[bmOf(trk.bm).id]; trkNavigate(site.results.find((r) => r.id === tp.dataset.topic)); return; }
+  const g = e.target.closest('[data-grab]'); if (g) grab(g.dataset.grab, g.dataset.rid);
+});
+$('#trkBack').addEventListener('click', () => { if (!trk.back.length) return; trk.fwd.push(trk.topic); trk.topic = trk.back.pop(); renderTrackers(); });
+$('#trkFwd').addEventListener('click', () => { if (!trk.fwd.length) return; trk.back.push(trk.topic); trk.topic = trk.fwd.pop(); renderTrackers(); });
+$('#trkReload').addEventListener('click', () => { $('#sitePage').style.opacity = '.4'; setTimeout(() => { $('#sitePage').style.opacity = ''; renderTrackers(); }, 250); });
+$('#trkExternal').addEventListener('click', () => toast('Откроется в браузере по умолчанию: ' + pageUrl()));
+
+/* ---------- живой прогресс ---------- */
+function updateGlobal(){
+  const downing = TORRENTS.filter((t) => t.state === 'down');
+  const dn = downing.reduce((s, t) => s + t.down, 0), up = TORRENTS.filter((t) => t.state === 'down' || t.state === 'seed').reduce((s, t) => s + t.up, 0);
+  const waiting = TORRENTS.filter((t) => t.state === 'down' || t.state === 'queued').length;
+  const badge = $('#dlBadge'); badge.textContent = waiting || ''; badge.style.display = waiting ? '' : 'none';
+  const seeding = TORRENTS.filter((t) => t.state === 'seed').length;
+  $('#dlStats').innerHTML = icon('down', 14) + '<b>' + fmtRate(dn) + '</b>' + icon('up', 14) + '<b>' + fmtRate(up) + '</b><span>' + downing.length + ' ' + plural(downing.length, 'качается', 'качаются', 'качаются') + ' · ' + seeding + ' ' + plural(seeding, 'раздаётся', 'раздаются', 'раздаются') + '</span>';
+  const sp = $('#tbSpeed');
+  sp.classList.toggle('show', dn > 0 && currentScreen !== 'downloads' && currentScreen !== 'player');
+  sp.innerHTML = icon('down', 13) + fmtRate(dn);
+}
+function tickTorrents(){
+  let finished = false;
+  TORRENTS.forEach((t) => {
+    if (t.state === 'down') {
+      t.down = Math.min(42 * MB, Math.max(2 * MB, t.down * (0.9 + Math.random() * 0.2)));
+      t.up = Math.max(0.05 * MB, t.up * (0.9 + Math.random() * 0.2));
+      t.progress = Math.min(1, t.progress + t.down * PROTO_SPEEDUP / selectedSize(t));
+      if (t.progress >= 1) { t.state = 'seed'; t.completed = todayISO(); finished = true; toast('Скачано: ' + t.name); }
+    } else if (t.state === 'seed') { t.up = Math.min(4 * MB, Math.max(0.05 * MB, t.up * (0.9 + Math.random() * 0.2))); t.ratio += t.up / t.size; }
+  });
+  if (currentScreen === 'downloads' && dlState.tab === 'active' && !$('#menu').classList.contains('open')) {
+    if (finished) renderDownloads();
+    else {
+      TORRENTS.filter(isActive).forEach((t) => {
+        const p = document.querySelector('[data-p="' + t.id + '"]'); if (!p) return;
+        p.style.width = (t.progress * 100) + '%';
+        document.querySelector('[data-pct="' + t.id + '"]').textContent = pctText(t);
+        document.querySelector('[data-spd="' + t.id + '"]').innerHTML = speedHTML(t);
+      });
+      const s = selTorrent();
+      if (s) $$('[data-fp]').forEach((b) => { b.style.width = (fileProgress(s, +b.dataset.fp) * 100) + '%'; });
+    }
+  }
+  updateGlobal();
+}
+setInterval(tickTorrents, 1000);
+
+/* =====================================================================
    Общие обработчики: переходы, переключатели, файлы
    ===================================================================== */
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-go],[data-win],[data-play],[data-play-ep],[data-series],[data-open],[data-proto-go],[data-proto-state],[data-proto-theme],.switch,.segc [role="radio"]');
+  const t = e.target.closest('[data-go],[data-win],[data-play],[data-play-ep],[data-series],[data-open],[data-proto-go],[data-proto-state],[data-proto-theme],[data-proto-torrent],.switch,.segc [role="radio"]');
   if (!t) return;
   if (t.dataset.go) go(t.dataset.go);
   else if (t.dataset.win) winAction(t.dataset.win);
@@ -1373,8 +2320,12 @@ document.addEventListener('click', (e) => {
   else if (t.dataset.playEp) { const p = t.dataset.playEp.split(':'); openPlayer(p[0], +p[1], p[2] === undefined ? undefined : +p[2]); }
   else if (t.dataset.series) { seriesId = t.dataset.series; go('series'); }
   else if (t.dataset.open) (t.dataset.open === 'file' ? $('#fileInput') : $('#folderInput')).click();
-  else if (t.dataset.protoGo) { if (t.dataset.protoGo === 'player') openPlayer(P.sh ? P.sh.id : 'pm', P.sh ? P.ep : undefined, P.sh ? P.t : undefined, { silent:!!P.sh }); else go(t.dataset.protoGo); }
+  else if (t.dataset.protoGo) {
+    if (t.dataset.protoGo === 'player') openPlayer(P.sh ? P.sh.id : 'pm', P.sh ? P.ep : undefined, P.sh ? P.t : undefined, { silent:!!P.sh });
+    else { if (t.dataset.protoGo === 'downloads') dlState.tab = 'active'; go(t.dataset.protoGo); }
+  }
   else if (t.dataset.protoState) protoState(t.dataset.protoState);
+  else if (t.dataset.protoTorrent) protoTorrent(t.dataset.protoTorrent);
   else if (t.dataset.protoTheme) setTheme(t.dataset.protoTheme);
   else if (t.classList.contains('switch') && !['autoSw'].includes(t.id)) t.setAttribute('aria-checked', String(t.getAttribute('aria-checked') !== 'true'));
   else if (t.matches('.segc [role="radio"]')) $$('[role="radio"]', t.parentElement).forEach((b) => b.setAttribute('aria-checked', String(b === t)));
@@ -1386,6 +2337,19 @@ function protoState(s){
   if (s === 'end') { openPlayer('pm', 5, P.sh && P.sh.id === 'pm' && P.ep === 5 ? P.dur - 17 : 2873, { silent:true }); }
   if (s === 'eps') { openPlayer('pm', 5, 1394, { silent:true }); setTimeout(() => setEps(true), 60); }
   $$('[data-proto-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoState === s)));
+}
+function protoTorrent(kind){
+  if (kind === 'magnet') {
+    dlState.tab = 'active'; go('downloads');
+    openAdd({ mode:'magnet', from:'magnet' });
+    setTimeout(() => { const i = $('#addMagnet'); i.value = 'magnet:?xt=urn:btih:' + fakeHash('Big Buck Bunny 4K') + '&dn=Big+Buck+Bunny+4K+(open+movie)'; i.dispatchEvent(new Event('input')); }, 500);
+  } else {
+    trk.bm = 'rt'; trk.back = []; trk.fwd = [];
+    trk.topic = SITE.rt.results.find((r) => r.id === (kind === 'dup' ? 's2' : 's1'));
+    dlState.tab = 'trackers'; go('downloads');
+    setTimeout(() => grab('torrent'), 450);
+  }
+  $$('[data-proto-torrent]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.protoTorrent === kind)));
 }
 $('#search').addEventListener('input', () => { if (currentScreen !== 'home') go('home'); else renderHome(); });
 ['assocBtn', 'assocBtn2'].forEach((id) => $('#' + id).addEventListener('click', () => toast('Kino станет плеером по умолчанию для .mkv, .mp4, .avi, .ts, .m2ts, .webm…')));
@@ -1418,7 +2382,13 @@ let dragDepth = 0;
 window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; $('#drop').classList.add('show'); });
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#drop').classList.remove('show'); });
-window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; $('#drop').classList.remove('show'); const fs = Array.from(e.dataTransfer.files || []); if (fs.length) openFiles(fs); });
+window.addEventListener('drop', (e) => {
+  e.preventDefault(); dragDepth = 0; $('#drop').classList.remove('show');
+  const fs = Array.from(e.dataTransfer.files || []);
+  const torrents = fs.filter((f) => /\.torrent$/i.test(f.name)), others = fs.filter((f) => !/\.torrent$/i.test(f.name));
+  if (torrents.length) { addTorrentFile(torrents[0]); if (torrents.length > 1) toast('Добавляем по одному: сначала «' + torrents[0].name + '»'); }
+  else if (others.length) openFiles(others);
+});
 
 /* =====================================================================
    Старт
