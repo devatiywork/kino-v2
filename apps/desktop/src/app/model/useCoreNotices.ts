@@ -2,8 +2,12 @@ import { useToast } from '@kino/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { onAutoplayed } from '../../entities/playback'
+import { hostOf } from '../../entities/torrent'
+import { showStatus } from '../../entities/tracker'
+import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
 import { playerIpc } from '../../shared/ipc/player'
 import { torrentsIpc } from '../../shared/ipc/torrents'
+import { trackersIpc } from '../../shared/ipc/trackers'
 
 const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, e)
 
@@ -38,6 +42,28 @@ export function useCoreNotices(): void {
     })
     return () => {
       unlisten.then((u) => u()).catch(report('torrent notices'))
+    }
+  }, [t, toast])
+
+  // SPEC 4.5: what the trackers browser caught goes to the add dialog with its release page
+  useEffect(() => {
+    const tt = (key: string, options?: Record<string, unknown>) => t(key, { ns: 'torrents', ...options })
+    const unlisteners = [
+      trackersIpc.onTorrent(({ target, sourceUrl }) => {
+        showStatus({ kind: 'torrent', text: tt('trackers.interceptedTorrent') })
+        openTorrentFile(target, sourceUrl).catch((e: unknown) =>
+          toast.show({ title: tt('toast.notTorrent', { message: String(e) }), tone: 'danger', duration: 6000 }),
+        )
+      }),
+      trackersIpc.onMagnet(({ target, sourceUrl }) => {
+        showStatus({ kind: 'magnet', text: tt('trackers.interceptedMagnet') })
+        openMagnetDialog(target, sourceUrl)
+        void submitMagnet(target, tt('magnet.invalid'))
+      }),
+      trackersIpc.onExternal((url) => showStatus({ kind: 'external', text: tt('trackers.external', { host: hostOf(url) }) })),
+    ]
+    return () => {
+      for (const p of unlisteners) p.then((u) => u()).catch(report('trackers'))
     }
   }, [t, toast])
 

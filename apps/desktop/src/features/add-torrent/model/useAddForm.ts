@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSettings } from '../../../entities/settings'
 import { folderOf, lastCategory } from '../../../entities/torrent'
 import type { AddRequest, Preview } from '../../../shared/ipc/torrents'
+import { useAddTorrent } from './addTorrent'
 
 /**
  * The add dialog's choices (SPEC 4.1): the category used last, its folder (until the folder
@@ -10,6 +11,7 @@ import type { AddRequest, Preview } from '../../../shared/ipc/torrents'
  */
 export function useAddForm(preview: Preview | null) {
   const startPaused = useSettings((s) => s.startPaused)
+  const trackerPage = useAddTorrent((s) => s.sourceUrl)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [folder, setFolder] = useState('')
   const [folderEdited, setFolderEdited] = useState(false)
@@ -24,10 +26,11 @@ export function useAddForm(preview: Preview | null) {
     setCategoryId(category)
     setFolder(known ? known.saveDir : folderOf(category))
     setFolderEdited(false)
-    setSource(known?.sourceUrl ?? '')
+    // SPEC 4.5: the tracker's page goes into the archive by itself
+    setSource(known?.sourceUrl ?? trackerPage ?? '')
     setStart(!startPaused)
     setSelected(new Set(preview.files.map((f) => f.index)))
-  }, [preview, startPaused])
+  }, [preview, startPaused, trackerPage])
 
   const chooseCategory = (id: number | null) => {
     setCategoryId(id)

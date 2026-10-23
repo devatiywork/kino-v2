@@ -37,6 +37,8 @@ export interface Kino {
   playing: () => Promise<string | null>
   /** The settings as the core keeps them (src/shared/ipc/settings.ts) */
   settings: () => Promise<Record<string, unknown>>
+  /** Another page of Kino's WebView2 — the site in the trackers browser — by its address */
+  webPage: (prefix: string) => Promise<Page>
   close: () => Promise<void>
 }
 
@@ -86,6 +88,9 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
   })
   await waitForCdp(cdp, Date.now() + 40_000)
   const browser: Browser = await chromium.connectOverCDP(cdp)
+  // Playwright takes the browser's downloads for itself: give them back, so that Kino's own
+  // handler sees what the trackers browser downloads
+  await (await browser.newBrowserCDPSession()).send('Browser.setDownloadBehavior', { behavior: 'default' })
   const context = browser.contexts()[0] ?? (await browser.newContext())
   const page = context.pages()[0] ?? (await context.waitForEvent('page'))
   await page.waitForFunction(() => '__TAURI_INTERNALS__' in window && document.querySelector('#root')?.childElementCount)
@@ -104,6 +109,15 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
     snapshot,
     playing: async () => (await snapshot()).path?.split(/[\\/]/).pop() ?? null,
     settings: () => invoke<Record<string, unknown>>('settings_get'),
+    webPage: async (prefix) => {
+      const deadline = Date.now() + 15_000
+      for (;;) {
+        const found = browser.contexts().flatMap((c) => c.pages()).find((p) => p.url().startsWith(prefix))
+        if (found) return found
+        if (Date.now() > deadline) throw new Error(`no page at ${prefix}`)
+        await new Promise((r) => setTimeout(r, 200))
+      }
+    },
     close: async () => {
       await browser.close().catch((e: unknown) => console.warn('[e2e] disconnect', e))
       child.kill()

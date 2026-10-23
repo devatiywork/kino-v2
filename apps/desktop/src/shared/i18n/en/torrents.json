@@ -2,7 +2,8 @@
   "tabs": {
     "label": "Download sections",
     "downloads": "Downloads",
-    "archive": "Archive"
+    "archive": "Archive",
+    "trackers": "Trackers"
   },
   "addTorrent": "Add torrent",
   "addMagnet": "Magnet link",
@@ -112,7 +113,8 @@
     "duplicateOnDisk": "The files are here: {{folder}}.",
     "openInDownloads": "Open in downloads",
     "downloadAgain": "Download again",
-    "showInArchive": "Show in archive"
+    "showInArchive": "Show in archive",
+    "fromTracker": "caught on {{host}}"
   },
   "magnet": {
     "title": "Add a magnet link",
@@ -195,5 +197,37 @@
     "privateTrackers": "Private torrent: peers come from the tracker only, no DHT or PeX",
     "noTrackers": "The torrent has no trackers — peers come from DHT",
     "tracker": "Tracker address"
+  },
+  "trackers": {
+    "tab": "Trackers",
+    "bookmarks": "Tracker bookmarks",
+    "bookmarksTitle": "Bookmarks",
+    "addBookmark": "Add a tracker",
+    "note": "Sign-in and captcha work as in a normal browser. Kino catches downloaded .torrent files and magnet links itself and keeps them in the archive with the release page.",
+    "back": "Back",
+    "forward": "Forward",
+    "reload": "Reload the page",
+    "address": "Page address",
+    "isolated": "Isolated from Kino",
+    "openInBrowser": "Open in browser",
+    "empty": "Choose a tracker on the left — its site opens here. Sign in, find a release and press “download”: Kino picks up the torrent.",
+    "interceptedTorrent": "Kino caught the .torrent — nothing was saved to Windows Downloads",
+    "interceptedMagnet": "Kino caught the magnet link",
+    "external": "Another site opened in the browser: {{host}}",
+    "bookmarkMenu": "Actions of bookmark {{title}}",
+    "edit": "Edit",
+    "up": "Move up",
+    "down": "Move down",
+    "delete": "Delete",
+    "createTitle": "New tracker",
+    "editTitle": "Tracker “{{title}}”",
+    "title": "Name",
+    "titleHint": "Empty — the site name",
+    "url": "Address",
+    "create": "Add",
+    "save": "Save",
+    "deleteTitle": "Delete “{{title}}”?",
+    "deleteText": "The bookmark goes. The site sign-in and the torrent archive stay.",
+    "deleteConfirm": "Delete bookmark"
   }
 }

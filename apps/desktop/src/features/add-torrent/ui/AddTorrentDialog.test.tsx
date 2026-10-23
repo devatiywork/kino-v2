@@ -102,6 +102,31 @@ describe('AddTorrentDialog (integration)', () => {
     expect(mock.calls().some(([command]) => command === 'torrent_add')).toBe(false)
   })
 
+  it('торрент с трекера: откуда он и страница раздачи уже в форме, ссылка уходит в архив', async () => {
+    const user = renderDialog()
+    mock.respond('torrent_preview', preview())
+    await act(() => openTorrentFile('C:\\Kino\\trackers\\downloads\\1-shogun.torrent', 'https://rutracker.org/forum/viewtopic.php?t=1'))
+    const dialog = screen.getByRole('dialog', { name: 'Добавить торрент' })
+    expect(within(dialog).getByText('перехвачено на rutracker.org')).toBeInTheDocument()
+    expect(within(dialog).getByRole('textbox', { name: 'Страница раздачи' })).toHaveValue('https://rutracker.org/forum/viewtopic.php?t=1')
+    mock.respond('torrent_add', 42)
+    await user.click(within(dialog).getByRole('button', { name: 'Добавить' }))
+    expect(mock.calls().find(([command]) => command === 'torrent_add')?.[1]).toMatchObject({
+      request: { sourceUrl: 'https://rutracker.org/forum/viewtopic.php?t=1' },
+    })
+  })
+
+  it('уже в архиве, но без страницы раздачи — запись получает ссылку с трекера', async () => {
+    const user = renderDialog()
+    mock.respond('torrent_preview', preview({ duplicate: archiveEntry({ status: 'filesDeleted', sourceUrl: null }) }))
+    await act(() => openTorrentFile('C:\\Kino\\trackers\\downloads\\2-severance.torrent', 'https://rutor.info/torrent/1'))
+    await user.click(screen.getByRole('button', { name: 'Скачать снова' }))
+    expect(mock.calls().filter(([command]) => command !== 'torrent_preview').slice(0, 2)).toEqual([
+      ['torrent_set_source', { id: 11, url: 'https://rutor.info/torrent/1' }],
+      ['torrent_download_again', { id: 11, saveDir: 'D:\\Загрузки\\Сериалы', start: true }],
+    ])
+  })
+
   it('уже в загрузках — просто показывает его там', async () => {
     const user = renderDialog()
     await open({ duplicate: archiveEntry({ status: 'inDownloads' }) })

@@ -2,6 +2,7 @@ import { Button, Dialog, Modal, TextField } from '@kino/ui'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useOverlayTriggerState } from 'react-stately'
+import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { closeMagnetDialog, submitMagnet, useAddTorrent } from '../model/addTorrent'
 
 /** «Magnet-ссылка»: paste, and Kino asks the peers for the torrent's files */
@@ -9,14 +10,16 @@ export function MagnetDialog() {
   const { t } = useTranslation('torrents')
   const { t: tc } = useTranslation()
   const open = useAddTorrent((s) => s.magnetOpen)
+  const prefill = useAddTorrent((s) => s.magnetText)
   const resolving = useAddTorrent((s) => s.resolving)
   const error = useAddTorrent((s) => s.magnetError)
   const state = useOverlayTriggerState({ isOpen: open, onOpenChange: (isOpen) => !isOpen && closeMagnetDialog() })
   const [text, setText] = useState('')
+  useCoverNativeLayer(open)
 
   useEffect(() => {
-    if (open) setText('')
-  }, [open])
+    if (open) setText(prefill)
+  }, [open, prefill])
 
   const submit = () => void submitMagnet(text, t('magnet.invalid'))
 

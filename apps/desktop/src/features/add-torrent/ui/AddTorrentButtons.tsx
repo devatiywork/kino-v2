@@ -20,7 +20,7 @@ export function AddTorrentButtons() {
 
   return (
     <>
-      <Button variant="outline" icon={<IconMagnet size={16} />} onPress={openMagnetDialog}>
+      <Button variant="outline" icon={<IconMagnet size={16} />} onPress={() => openMagnetDialog()}>
         {t('addMagnet')}
       </Button>
       <Button variant="primary" icon={<IconPlus size={16} />} onPress={() => void pick()}>

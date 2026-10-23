@@ -4,6 +4,7 @@ mod library;
 mod player;
 mod settings;
 mod torrent;
+mod trackers;
 
 use std::sync::Arc;
 
@@ -14,6 +15,7 @@ use library::{commands as lc, Library};
 use player::{commands as pc, Player};
 use settings::{commands as sc, SettingsStore};
 use torrent::{commands as tc, Torrents, TorrentsOptions};
+use trackers::{commands as trc, Trackers};
 
 /// Files passed on the command line (Explorer "Open with", file associations)
 #[tauri::command]
@@ -107,6 +109,8 @@ pub fn run() {
             .map_err(|e| format!("torrents: {e:#}"))?;
             tc::spawn_updates(app.handle().clone(), torrents.clone());
             app.manage(torrents);
+            // The trackers browser (SPEC 4.5): made when the tab is first opened
+            app.manage(Arc::new(Trackers::new(app.handle(), &data.join("kino.db"), &data.join("trackers"), offline)?));
 
             // New episodes in the library folders since the last run
             let (handle, rescan) = (app.handle().clone(), library.clone());
@@ -189,6 +193,15 @@ pub fn run() {
             tc::torrent_delete_record,
             tc::torrent_magnet,
             tc::torrent_downloads_folder,
+            trc::tracker_bookmarks,
+            trc::tracker_bookmark_create,
+            trc::tracker_bookmark_update,
+            trc::tracker_bookmark_delete,
+            trc::tracker_bookmark_move,
+            trc::tracker_open,
+            trc::tracker_layout,
+            trc::tracker_go,
+            trc::tracker_page,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Kino");

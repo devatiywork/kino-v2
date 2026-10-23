@@ -17,6 +17,8 @@ const showDownload = (id: number) => {
  */
 export async function confirmAdd(preview: Preview, request: AddRequest): Promise<AddOutcome> {
   const known = preview.duplicate
+  // A record without its release page gets the one it was found on now
+  if (known && !known.sourceUrl && request.sourceUrl) await torrentsIpc.setSource(known.id, request.sourceUrl)
   if (known?.status === 'inDownloads') {
     closeAddDialog()
     showDownload(known.id)

@@ -2,6 +2,7 @@ import { ConfirmDialog, IconButton, IconMore, IconPause, IconPlay, MenuButton, u
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { categoryItems, categoryOfItem, copyMagnet, downloadsView, revealContent, SourceDialog, useTorrents } from '../../../entities/torrent'
+import { routeSourcePage } from '../../../entities/tracker'
 import { appIpc } from '../../../shared/ipc/app'
 import { torrentsIpc, type ActiveTorrent } from '../../../shared/ipc/torrents'
 import { formatSize } from '../../../shared/lib/formatBytes'
@@ -28,6 +29,12 @@ export function TorrentActions({ torrent }: { torrent: ActiveTorrent }) {
     void run('remove', () => torrentsIpc.remove(torrent.id, deleteFiles), t(deleteFiles ? 'toast.deleted' : 'toast.removed'))
   }
 
+  // A bookmarked tracker's page opens in the trackers tab, another site — in the browser
+  const openSource = (url: string) => {
+    if (routeSourcePage(url)) downloadsView.set({ tab: 'trackers' })
+    else void run('source', () => appIpc.openUrl(url))
+  }
+
   const items: MenuItemData[] = [
     { id: 'folder', label: t('menu.openFolder') },
     { id: 'magnet', label: t('menu.copyMagnet') },
@@ -47,7 +54,7 @@ export function TorrentActions({ torrent }: { torrent: ActiveTorrent }) {
     if (key === 'folder') return void run('folder', () => revealContent(torrent.contentPath, torrent.saveDir))
     if (key === 'magnet') return void run('magnet', () => copyMagnet(torrent.id), t('toast.magnetCopied'))
     if (key === 'hash') return void run('hash', () => appIpc.copyText(torrent.infoHash), t('toast.hashCopied'))
-    if (key === 'source' && torrent.sourceUrl) return void run('source', () => appIpc.openUrl(torrent.sourceUrl ?? ''))
+    if (key === 'source' && torrent.sourceUrl) return void openSource(torrent.sourceUrl)
     if (key === 'set-source') return setEditingSource(true)
     if (key === 'remove') return leave(false)
     if (key === 'delete') setConfirming(true)

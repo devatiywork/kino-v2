@@ -8,6 +8,7 @@ vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
 const { ArchiveActions } = await import('./ArchiveActions')
 const { downloadsView, torrentsStore } = await import('../../../entities/torrent')
+const { trackersStore } = await import('../../../entities/tracker')
 const { archiveEntry, categories } = await import('../../../test/torrents')
 const mock = await tauri
 
@@ -59,5 +60,22 @@ describe('ArchiveActions (integration)', () => {
     const active = renderActions({ id: 12, status: 'inDownloads' })
     await active.click(screen.getAllByRole('button', { name: 'Действия с записью' })[1] as HTMLElement)
     expect(screen.getByRole('menuitem', { name: 'Удалить из архива' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('страница раздачи трекера из закладок — во вкладке «Трекеры», другого сайта — в браузере', async () => {
+    act(() => trackersStore.set({ bookmarks: [{ id: 1, title: 'Рутрекер', url: 'https://rutracker.org/forum/index.php' }], pending: null }))
+    const user = renderActions({ status: 'onDisk' })
+    await user.click(screen.getByRole('button', { name: 'Действия с записью' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Открыть страницу раздачи' }))
+    expect(downloadsView.get().tab).toBe('trackers')
+    expect(trackersStore.get().pending).toBe('https://rutracker.org/forum/viewtopic.php?t=6593218')
+    expect(mock.calls()).toEqual([])
+
+    act(() => downloadsView.set({ tab: 'archive' }))
+    const other = renderActions({ id: 12, status: 'onDisk', sourceUrl: 'https://kinozal.tv/details.php?id=1' })
+    await other.click(screen.getAllByRole('button', { name: 'Действия с записью' })[1] as HTMLElement)
+    await other.click(screen.getByRole('menuitem', { name: 'Открыть страницу раздачи' }))
+    expect(mock.calls()).toEqual([['app_open_url', { url: 'https://kinozal.tv/details.php?id=1' }]])
+    expect(downloadsView.get().tab).toBe('archive')
   })
 })

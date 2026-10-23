@@ -8,6 +8,7 @@ import { formatRate } from '../../../shared/lib/formatBytes'
 import { ArchiveList } from '../../../widgets/archive-list'
 import { DownloadsList } from '../../../widgets/downloads-list'
 import { TorrentDetailsPanel } from '../../../widgets/torrent-details'
+import { TrackersPane } from '../../../widgets/trackers-pane'
 import { useMagnetPaste } from '../model/useMagnetPaste'
 
 /** Total speeds of all downloads */
@@ -43,6 +44,7 @@ export function DownloadsPage() {
   const tabs = [
     { id: 'downloads', label: t('tabs.downloads'), count: active.length },
     { id: 'archive', label: t('tabs.archive'), count: archiveCount },
+    { id: 'trackers', label: t('tabs.trackers') },
   ]
 
   return (
@@ -52,7 +54,7 @@ export function DownloadsPage() {
         items={tabs}
         selectedKey={tab}
         onSelectionChange={(key) => downloadsView.set({ tab: key as DownloadsTab, highlight: null })}
-        className="min-h-0 flex-1 gap-3.5 px-8 pt-[22px]"
+        className="min-h-0 flex-1 gap-3.5 px-8 pt-[22px] pb-0 [&>[role=tabpanel]]:pb-5"
         panelClassName="flex min-h-0 flex-1 flex-col gap-3"
         toolbar={
           <>
@@ -63,14 +65,18 @@ export function DownloadsPage() {
           </>
         }
       >
-        {(item) => (
-          <>
-            <CategoryBar items={item.id === 'downloads' ? active : archive} />
-            <ScrollArea className="min-h-0 flex-1" viewportClassName="pb-6" aria-label={item.label}>
-              {item.id === 'downloads' ? <DownloadsList /> : <ArchiveList />}
-            </ScrollArea>
-          </>
-        )}
+        {(item) =>
+          item.id === 'trackers' ? (
+            <TrackersPane />
+          ) : (
+            <>
+              <CategoryBar items={item.id === 'downloads' ? active : archive} />
+              <ScrollArea className="min-h-0 flex-1" viewportClassName="pb-6" aria-label={item.label}>
+                {item.id === 'downloads' ? <DownloadsList /> : <ArchiveList />}
+              </ScrollArea>
+            </>
+          )
+        }
       </Tabs>
       {selected ? <TorrentDetailsPanel torrent={selected} onClose={() => downloadsView.set({ selected: null })} /> : null}
     </div>

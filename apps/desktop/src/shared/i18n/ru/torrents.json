@@ -2,7 +2,8 @@
   "tabs": {
     "label": "Разделы загрузок",
     "downloads": "Загрузки",
-    "archive": "Архив"
+    "archive": "Архив",
+    "trackers": "Трекеры"
   },
   "addTorrent": "Добавить торрент",
   "addMagnet": "Magnet-ссылка",
@@ -116,7 +117,8 @@
     "duplicateOnDisk": "Файлы на месте: {{folder}}.",
     "openInDownloads": "Открыть в загрузках",
     "downloadAgain": "Скачать снова",
-    "showInArchive": "Показать в архиве"
+    "showInArchive": "Показать в архиве",
+    "fromTracker": "перехвачено на {{host}}"
   },
   "magnet": {
     "title": "Добавить magnet-ссылку",
@@ -201,5 +203,37 @@
     "privateTrackers": "Частный торрент: пиры только от трекера, без DHT и PeX",
     "noTrackers": "У торрента нет трекеров — пиры находятся через DHT",
     "tracker": "Адрес трекера"
+  },
+  "trackers": {
+    "tab": "Трекеры",
+    "bookmarks": "Закладки трекеров",
+    "bookmarksTitle": "Закладки",
+    "addBookmark": "Добавить трекер",
+    "note": "Вход и капча — как в обычном браузере. Скачанные .torrent и magnet-ссылки Kino перехватывает сам и сохраняет в архив вместе со ссылкой на раздачу.",
+    "back": "Назад",
+    "forward": "Вперёд",
+    "reload": "Обновить страницу",
+    "address": "Адрес страницы",
+    "isolated": "Изолировано от Kino",
+    "openInBrowser": "Открыть в браузере",
+    "empty": "Выберите трекер слева — его сайт откроется здесь. Войдите, найдите раздачу и нажмите «скачать»: Kino подхватит торрент.",
+    "interceptedTorrent": "Kino перехватил .torrent — в «Загрузки» Windows ничего не сохранено",
+    "interceptedMagnet": "Kino перехватил magnet-ссылку",
+    "external": "Другой сайт открыт в браузере: {{host}}",
+    "bookmarkMenu": "Действия с закладкой {{title}}",
+    "edit": "Изменить",
+    "up": "Выше",
+    "down": "Ниже",
+    "delete": "Удалить",
+    "createTitle": "Новый трекер",
+    "editTitle": "Трекер «{{title}}»",
+    "title": "Название",
+    "titleHint": "Пусто — по имени сайта",
+    "url": "Адрес",
+    "create": "Добавить",
+    "save": "Сохранить",
+    "deleteTitle": "Удалить «{{title}}»?",
+    "deleteText": "Закладка исчезнет. Вход на сайт и архив торрентов останутся.",
+    "deleteConfirm": "Удалить закладку"
   }
 }

@@ -6,6 +6,7 @@ import { startLibrarySync } from '../../entities/library'
 import { startPlaybackSync } from '../../entities/playback'
 import { startSettingsSync } from '../../entities/settings'
 import { startTorrentsSync } from '../../entities/torrent'
+import { startTrackersSync } from '../../entities/tracker'
 import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
 import { useAddFolder } from '../../features/library-folders'
 import { useOpenVideo } from '../../features/open-video'
@@ -40,6 +41,7 @@ export function useAppStartup(): { dropping: boolean } {
     const stopLibrary = startLibrarySync()
     const stopSettings = startSettingsSync()
     const stopTorrents = startTorrentsSync()
+    const stopTrackers = startTrackersSync()
     if (!launchHandled) {
       // Once per process: StrictMode runs this effect twice in development
       launchHandled = true
@@ -51,7 +53,7 @@ export function useAppStartup(): { dropping: boolean } {
           if (torrent) return openTorrentFile(torrent)
           const magnet = files.map(findMagnet).find((m) => m != null)
           if (magnet) {
-            openMagnetDialog()
+            openMagnetDialog(magnet)
             return submitMagnet(magnet, t('magnet.invalid', { ns: 'torrents' }))
           }
           const video = files.find(isVideoPath)
@@ -65,6 +67,7 @@ export function useAppStartup(): { dropping: boolean } {
       stopLibrary()
       stopSettings()
       stopTorrents()
+      stopTrackers()
     }
   }, [])
 

@@ -121,6 +121,18 @@ const MIGRATIONS: &[&str] = &[
         PRIMARY KEY (item_id, idx)
     );
     "#,
+    // 5 — bookmarks of the trackers browser (SPEC 4.5)
+    r#"
+    CREATE TABLE torrent_bookmarks (
+        id       INTEGER PRIMARY KEY,
+        title    TEXT    NOT NULL,
+        url      TEXT    NOT NULL,
+        position INTEGER NOT NULL
+    );
+    INSERT INTO torrent_bookmarks (title, url, position) VALUES
+        ('Рутрекер', 'https://rutracker.org/forum/index.php', 1),
+        ('RuTor', 'https://rutor.info/', 2);
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {

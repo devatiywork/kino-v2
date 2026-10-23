@@ -13,7 +13,7 @@ export function useMagnetPaste(): void {
       const magnet = findMagnet(e.clipboardData?.getData('text') ?? '')
       if (!magnet) return
       e.preventDefault()
-      openMagnetDialog()
+      openMagnetDialog(magnet)
       void submitMagnet(magnet, t('magnet.invalid'))
     }
     window.addEventListener('paste', onPaste)

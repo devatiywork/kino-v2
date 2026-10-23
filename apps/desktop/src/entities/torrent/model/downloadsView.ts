@@ -1,6 +1,6 @@
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
-export type DownloadsTab = 'downloads' | 'archive'
+export type DownloadsTab = 'downloads' | 'archive' | 'trackers'
 /** 'all', a category id, or 'none' — «Без категории» */
 export type CategoryFilter = 'all' | 'none' | number
 

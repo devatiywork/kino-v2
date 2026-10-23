@@ -196,6 +196,20 @@ export const IconExternal = createIcon(
     <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />
   </>,
 )
+export const IconLock = createIcon(
+  'Lock',
+  <>
+    <rect x="5" y="10.5" width="14" height="10" rx="1.5" />
+    <path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" />
+  </>,
+)
+export const IconRefresh = createIcon(
+  'Refresh',
+  <>
+    <path d="M19.5 11A7.5 7.5 0 1 0 17.3 16.3" />
+    <path d="M20 4.5V10h-5.5" />
+  </>,
+)
 export const IconClock = createIcon(
   'Clock',
   <>

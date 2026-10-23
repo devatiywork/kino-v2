@@ -1,9 +1,10 @@
-import { Button, Dialog, IconArchive, IconFileAdd, IconMagnet, Modal, useToast } from '@kino/ui'
+import { Button, Dialog, IconArchive, IconFileAdd, IconLink, IconMagnet, Modal, useToast } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { useOverlayTriggerState } from 'react-stately'
-import { categoryName, shortDate, useTorrents } from '../../../entities/torrent'
+import { categoryName, hostOf, shortDate, useTorrents } from '../../../entities/torrent'
 import type { ArchiveEntry } from '../../../shared/ipc/torrents'
 import { formatSize } from '../../../shared/lib/formatBytes'
+import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { closeAddDialog, useAddTorrent } from '../model/addTorrent'
 import { confirmAdd } from '../model/confirmAdd'
 import { useAddForm } from '../model/useAddForm'
@@ -17,9 +18,11 @@ export function AddTorrentDialog() {
   const toast = useToast()
   const preview = useAddTorrent((s) => s.preview)
   const origin = useAddTorrent((s) => s.origin)
+  const trackerPage = useAddTorrent((s) => s.sourceUrl)
   const categories = useTorrents((s) => s.categories)
   const form = useAddForm(preview)
   const state = useOverlayTriggerState({ isOpen: preview != null, onOpenChange: (open) => !open && closeAddDialog() })
+  useCoverNativeLayer(preview != null)
   const locale = i18n.language
   const known = preview?.duplicate ?? null
   const locked = known != null && known.status !== 'filesDeleted'
@@ -70,8 +73,12 @@ export function AddTorrentDialog() {
           <div className="flex flex-col gap-4 pt-1">
             <div className="flex min-w-0 flex-col gap-1">
               <span className="flex items-center gap-1.5 text-xs text-fg-3">
-                {origin === 'magnet' ? <IconMagnet size={13} /> : <IconFileAdd size={13} />}
-                {origin === 'magnet' ? t('add.fromMagnet') : t('add.fromFile')}
+                {origin === 'tracker' ? <IconLink size={13} /> : origin === 'magnet' ? <IconMagnet size={13} /> : <IconFileAdd size={13} />}
+                {origin === 'tracker'
+                  ? t('add.fromTracker', { host: hostOf(trackerPage ?? '') })
+                  : origin === 'magnet'
+                    ? t('add.fromMagnet')
+                    : t('add.fromFile')}
               </span>
               <b className="truncate text-md font-semibold text-fg">{preview.name}</b>
               <span className="font-mono text-xs text-fg-3">

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '../../../entities/settings'
 import { categoryItems, categoryOfItem, copyMagnet, downloadsView, refreshTorrents, revealContent, SourceDialog, useTorrents } from '../../../entities/torrent'
+import { routeSourcePage } from '../../../entities/tracker'
 import { appIpc } from '../../../shared/ipc/app'
 import { torrentsIpc, type ArchiveEntry } from '../../../shared/ipc/torrents'
 
@@ -34,6 +35,12 @@ export function ArchiveActions({ entry }: { entry: ArchiveEntry }) {
       toDownloads()
     }, t('toast.downloadAgain', { name: entry.name }))
 
+  // A bookmarked tracker's page opens in the trackers tab, another site — in the browser
+  const openSource = (url: string) => {
+    if (routeSourcePage(url)) downloadsView.set({ tab: 'trackers' })
+    else void run('source', () => appIpc.openUrl(url))
+  }
+
   const items: MenuItemData[] = [
     ...(entry.status === 'onDisk' ? [{ id: 'seed', label: t('menu.seedAgain') }] : []),
     ...(entry.status === 'filesDeleted' ? [{ id: 'again-elsewhere', label: `${t('menu.downloadAgain')}…` }] : []),
@@ -59,7 +66,7 @@ export function ArchiveActions({ entry }: { entry: ArchiveEntry }) {
     }
     if (key === 'folder') return void run('folder', () => revealContent(entry.contentPath, entry.saveDir))
     if (key === 'magnet') return void run('magnet', () => copyMagnet(entry.id), t('toast.magnetCopied'))
-    if (key === 'source' && entry.sourceUrl) return void run('source', () => appIpc.openUrl(entry.sourceUrl ?? ''))
+    if (key === 'source' && entry.sourceUrl) return void openSource(entry.sourceUrl)
     if (key === 'set-source') return setEditingSource(true)
     if (key === 'delete') setConfirming(true)
   }

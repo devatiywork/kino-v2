@@ -33,7 +33,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - Tauri 2 (Rust ≥ 1.90) — app shell, file system, single instance, file associations
 - libmpv in-process via the `libmpv2` crate — rendered into a dedicated child HWND under a transparent WebView2. Confirmed by `spikes/tauri-mpv` (see its README for the recipe: opaque window + `backgroundColor: #00000000`, video host at `HWND_BOTTOM` without `WS_CLIPSIBLINGS`). libmpv comes from shinchiro/mpv-winbuild-cmake via `scripts/fetch-libmpv.ps1` into `vendor/libmpv` (not committed)
 - `librqbit` 9 — BitTorrent engine in the Rust core (torrent module), with fast resume; TLS through Windows' schannel
-- Trackers window — a separate, isolated WebView (no IPC capabilities) with a persistent profile; `.torrent` downloads and `magnet:` navigations are intercepted on the Rust side and turned into the "add torrent" flow
+- Trackers browser — a child webview of the main window (`window.add_child`, Tauri feature `unstable`), laid over the «Трекеры» tab by bounds the renderer reports; a remote origin gets no Tauri IPC (no `remote.urls` in the capabilities). It shares the main WebView2 profile, so logins persist. `.torrent` downloads (`on_download`), `magnet:` and other-site navigations (`on_navigation`) and new windows (`on_new_window`) are handled on the Rust side and turned into the "add torrent" flow
 - SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive records, files, download state); the archive's `.torrent` files lie in `<data>\torrents\files`
 - Tauri plugins: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video), tray, notifications
 - React 19 + TypeScript 7 + Vite 8
@@ -67,34 +67,40 @@ apps/desktop/          — Tauri app (@kino/desktop)
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, series (list + folders),
                          show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
                          settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
-                         hotkeys, system), downloads (tabs «Загрузки» / «Архив», speeds, category bar, details panel,
-                         Ctrl V with a magnet link), placeholder
+                         hotkeys, system), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds, category bar, details
+                         panel, Ctrl V with a magnet link), placeholder
     widgets/           — app-title-bar, player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
                          torrent-details (General / Files / Peers / Trackers, polled every second, resizable),
-                         archive-list (search, sort, month groups)
+                         archive-list (search, sort, month groups), trackers-pane (bookmarks + browser bar + the place the
+                         native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
                          add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
                          torrent-actions (pause, menu, delete with files), archive-actions (download / seed again, delete
-                         record), manage-categories (CategoryBar with right-click edit, CategoryList for the settings)
+                         record), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
+                         manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog)
     entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
                          settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
                          rebind with swap, key labels, useHotkeyLabel),
                          library (store: continue/history/series/folders, useSeriesDetail, labels, day grouping, Thumb,
                          ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window,
                          torrent (store mirrored from the core: downloads every second, categories, archive; downloadsView;
-                         labels; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog; categories and record helpers)
+                         labels; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog; categories and record helpers),
+                         tracker (bookmarks, the page's address, the interception status line, a release page routed to the
+                         trackers tab when its site is bookmarked, the last bookmark remembered)
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
-                         settings, torrents, window, app), lib/ (store, router, media, time, sizes and rates), i18n/ (ru, en:
+                         settings, torrents, trackers, window, app), lib/ (store, router, media, time, sizes and rates,
+                         nativeLayer — dialogs hide the native trackers page while open), i18n/ (ru, en:
                          common, player, library, settings, torrents)
     test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge; it also stands behind
                          window.__TAURI_INTERNALS__, so a module that got the real bridge still reaches the mock), track,
                          library and torrent fixtures
   e2e/                 — Playwright: kino.ts (launches kino-desktop.exe, connects over CDP, `launch` fixture), player/history/
-                         series/settings/torrents scenarios, `workdir` fixture, global-setup (fixture check + cargo build),
-                         fixtures/ (make-media.ps1, subtitle templates, torrent.ts — a .torrent of a file or folder, media/ —
-                         tiny generated clips: a series of 2 seasons and a film)
+                         series/settings/torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
+                         page by address), global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
+                         templates, torrent.ts — a .torrent of a file or folder and its magnet link, trackerSite.ts — a tiny
+                         tracker on the loopback, media/ — tiny generated clips: a series of 2 seasons and a film)
   src-tauri/           — Rust core:
     src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
     src/settings/      — Settings (typed, SPEC 6; one JSON row in app_settings, a broken value falls back alone), SettingsStore,
@@ -115,11 +121,16 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          .torrent / magnet reading), store (TorrentStore: own connection to the same db; categories, items,
                          files, case-insensitive search), commands (torrents://update every second, torrents://changed,
                          torrents://notice). Knows nothing about the player
-    src/lib.rs         — setup (data dir, library, settings, torrents, main window from the config, player), app_clear_history,
+    src/trackers/      — Trackers (the browser webview: open, layout, back / forward / reload; interception: magnet →
+                         trackers://magnet, .torrent download → <data>\trackers\downloads + trackers://torrent, another site →
+                         the default browser + trackers://external; trackers://state), rules (same site, app URLs blocked,
+                         address normalization — pure), store (BookmarkStore: bookmarks with positions), commands
+    src/lib.rs         — setup (data dir, library, settings, torrents, trackers, main window from the config, player), app_clear_history,
                          app_open_url (http(s) only), app_reveal_path
-    later              — trackers (isolated webview, download/magnet interception), tray
+    later              — tray
   data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
-                         torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table)
+                         torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
+                         trackers\downloads (.torrent files the trackers browser caught, cleared at start)
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light; accent presets ember/gold/lime/teal/violet
                          with a shade per theme), base.css (no browser legacy), index.css
@@ -180,7 +191,7 @@ Every feature must be covered before it is considered complete:
 
 - **Unit** — business logic in isolation (TS: Vitest; Rust: `cargo test`)
 - **Integration** — IPC bridge, player service, module interactions with mocks
-- **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles; add torrent with category, remove from downloads keeps archive, download again)
+- **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles; add torrent with category, remove from downloads keeps archive, download again; a tracker's .torrent and magnet caught with the release page)
 
 E2E runs the real debug build: Playwright connects to WebView2 over CDP (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port`).
 Each launch gets its own temp folder; the core reads these variables:
@@ -188,6 +199,8 @@ Each launch gets its own temp folder; the core reads these variables:
 - `KINO_DATA_DIR` — kino.db and thumbs instead of %APPDATA% (all builds), so tests never touch the real history
 - `KINO_TEST_OFFLINE` (debug builds only) — torrents without the network: no DHT, trackers, LSD or UPnP, listening on the
   loopback only (no firewall prompt). The tests make a .torrent of a file already in place, so it is checked and seeded
+- Playwright over CDP takes the browser's downloads for itself: `kino.ts` sends `Browser.setDownloadBehavior { behavior: 'default' }`
+  so that the trackers browser's downloads reach Kino. The tracker scenarios run against `fixtures/trackerSite.ts`, never a real site
 - `KINO_TEST_VOLUME`, `KINO_TEST_MONITOR` (debug builds only) — start volume and the monitor (`1920x1080`) the window opens on, without focus.
   The harness sets 1% and Full HD; override with `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`
 - Test media is generated, never the user's own files
