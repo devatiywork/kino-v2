@@ -400,6 +400,7 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
 [data-theme="cutroom"] .set-sec h3{font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--text-2)}
 .set-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-l)}
 .set-row{display:flex;align-items:center;gap:20px;padding:14px 18px;border-top:1px solid var(--line)}
+.set-row.off{opacity:.4;pointer-events:none}
 .set-row:first-child{border-top:0}
 .set-row .lbl{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .set-row .lbl b{font-weight:500;font-size:14px}
@@ -1114,8 +1115,9 @@ kbd{font-family:var(--f-mono);font-size:11px;color:var(--text-3);border:1px soli
                 <div class="set-row"><div class="lbl"><b>Анонимный режим</b><span>Не сообщать пирам и трекерам название клиента</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Анонимный режим</span></button></div>
                 <div class="set-row"><div class="lbl"><b>Очередь</b><span>Активных загрузок / раздач / всего — остальные ждут</span></div><label class="num-in"><input class="short" value="3" inputmode="numeric" aria-label="Активных загрузок"></label><label class="num-in"><input class="short" value="5" inputmode="numeric" aria-label="Активных раздач"></label><label class="num-in"><input class="short" value="8" inputmode="numeric" aria-label="Активных всего"></label></div>
                 <div class="set-row"><div class="lbl"><b>Не считать медленные торренты</b><span>Медленнее 2 КБ/с они не занимают место в очереди</span></div><button class="switch" role="switch" aria-checked="true"><span class="sr">Не считать медленные</span></button></div>
-                <div class="set-row"><div class="lbl"><b>Остановить раздачу</b><span>Когда рейтинг достигнет / когда раздача идёт дольше</span></div><label class="num-in"><span>рейтинг</span><input class="short" value="2.0" inputmode="decimal" aria-label="Рейтинг"></label><label class="num-in"><input class="short" placeholder="—" inputmode="numeric" aria-label="Время раздачи"><span>мин</span></label></div>
-                <div class="set-row"><div class="lbl"><b>Затем</b></div><div class="segc" role="radiogroup" aria-label="Что делать после лимита раздачи"><button role="radio" aria-checked="true">Остановить</button><button role="radio" aria-checked="false">Убрать из загрузок</button><button role="radio" aria-checked="false">Суперсид</button></div></div>
+                <div class="set-row"><div class="lbl"><b>Не раздавать после загрузки — сразу в архив</b><span>Скачалось — раздача останавливается, торрент уходит из загрузок. Файлы на месте, запись в архиве. Исключение — «До рейтинга» в «Параметрах» торрента</span></div><button class="switch" role="switch" id="autoArchive" aria-checked="false"><span class="sr">Не раздавать после загрузки</span></button></div>
+                <div class="set-row" data-seedrule><div class="lbl"><b>Остановить раздачу</b><span>Когда рейтинг достигнет / когда раздача идёт дольше</span></div><label class="num-in"><span>рейтинг</span><input class="short" value="2.0" inputmode="decimal" aria-label="Рейтинг"></label><label class="num-in"><input class="short" placeholder="—" inputmode="numeric" aria-label="Время раздачи"><span>мин</span></label></div>
+                <div class="set-row" data-seedrule><div class="lbl"><b>Затем</b></div><div class="segc" role="radiogroup" aria-label="Что делать после лимита раздачи"><button role="radio" aria-checked="true">Остановить</button><button role="radio" aria-checked="false">Убрать из загрузок</button><button role="radio" aria-checked="false">Суперсид</button></div></div>
                 <div class="set-row"><div class="lbl"><b>Добавлять свои трекеры к новым загрузкам</b><span>Кроме частных торрентов</span></div><button class="switch" role="switch" aria-checked="false"><span class="sr">Свои трекеры</span></button></div>
               </div>
               <div class="set-subh">Поведение</div>
@@ -2436,11 +2438,12 @@ function archiveMenu(t, anchor){
     isActive(t) ? { label:'Перейти в загрузки', icon:'arrowR', run:() => { dlState.tab = 'active'; dlState.sel = t.id; go('downloads'); } }
       : t.filesGone ? { label:'Скачать снова', icon:'down', run:() => openAdd({ from:'archive', hash:t.hash }) }
       : { label:'Открыть папку', icon:'folder', run:() => toast('Откроется папка в Проводнике: ' + t.path) },
+    !isActive(t) && !t.filesGone && t.progress >= 1 ? { label:'Снова раздавать', icon:'up', run:() => { t.state = 'seed'; t.up = 0.1 * MB; renderArchive(); toast('Файлы проверены — «' + t.name + '» снова раздаётся'); } } : null,
     { label:'Скопировать magnet-ссылку', icon:'copy', run:() => toast('Magnet-ссылка скопирована') },
     t.source ? { label:'Открыть страницу раздачи', icon:'external', run:() => openSourceInTrackers(t) }
       : { label:'Указать страницу раздачи', icon:'edit', run:async () => { const v = await formModal({ title:'Страница раздачи', text:'Ссылка поможет найти раздачу, если её обновят или перезальют.', fields:[{ id:'url', label:'Адрес страницы', placeholder:'https://…', mono:true }], ok:'Сохранить' }); if (v && v.url) { t.source = v.url; renderDownloads(); toast('Ссылка сохранена в архиве'); } } },
     'sep'
-  ].concat(categoryItems(t, (c) => { t.cat = c.id; renderDownloads(); toast('Категория: «' + c.name + '»'); }), ['sep',
+  ].filter(Boolean).concat(categoryItems(t, (c) => { t.cat = c.id; renderDownloads(); toast('Категория: «' + c.name + '»'); }), ['sep',
     { label:'Удалить из архива', icon:'trash', danger:true, run:async () => {
       const ok = await confirmModal({ title:'Удалить из архива?', text:'Запись «' + t.name + '» и сохранённый .torrent удалятся насовсем. Скачать снова в один клик уже не получится' + (t.filesGone ? '' : ', а файлы на диске останутся') + '.', ok:'Удалить из архива', danger:true });
       if (!ok) return;
@@ -2670,6 +2673,22 @@ function updateGlobal(){
   sp.classList.toggle('show', dn > 0 && currentScreen !== 'downloads' && currentScreen !== 'player');
   sp.innerHTML = icon('down', 13) + fmtRate(dn);
 }
+/* «Не раздавать после загрузки»: глобально или в «Параметрах» торрента; «До рейтинга» у торрента — исключение */
+const DL_SET = { autoArchive:false };
+function noSeeding(t){ const share = t._d ? t._d.share : 'global'; return share === 'none' || (share === 'global' && DL_SET.autoArchive); }
+$('#autoArchive').addEventListener('click', async () => {
+  DL_SET.autoArchive = !DL_SET.autoArchive;
+  $('#autoArchive').setAttribute('aria-checked', String(DL_SET.autoArchive));
+  $$('[data-seedrule]').forEach((r) => r.classList.toggle('off', DL_SET.autoArchive));
+  const seeding = TORRENTS.filter((t) => t.state === 'seed' && noSeeding(t));
+  if (!DL_SET.autoArchive || !seeding.length) return;
+  const n = seeding.length;
+  const ok = await confirmModal({ title:'Убрать раздачи в архив?', text:'Сейчас ' + plural(n, 'раздаётся', 'раздаются', 'раздаются') + ' ' + n + ' ' + plural(n, 'торрент', 'торрента', 'торрентов') + '. Остановить раздачу и убрать из загрузок? Файлы останутся на месте. Если нет — правило сработает для следующих загрузок.', ok:'Убрать в архив' });
+  if (!ok) return;
+  seeding.forEach((t) => { t.state = 'archived'; t.up = 0; if (dlState.sel === t.id) dlState.sel = null; });
+  renderDownloads();
+  toast('Раздачи остановлены, торренты в архиве. Файлы на месте');
+});
 function tickTorrents(){
   let finished = false;
   TORRENTS.forEach((t) => {
@@ -2677,7 +2696,11 @@ function tickTorrents(){
       t.down = Math.min(42 * MB, Math.max(2 * MB, t.down * (0.9 + Math.random() * 0.2)));
       t.up = Math.max(0.05 * MB, t.up * (0.9 + Math.random() * 0.2));
       t.progress = Math.min(1, t.progress + t.down * PROTO_SPEEDUP / selectedSize(t));
-      if (t.progress >= 1) { t.state = 'seed'; t.completed = todayISO(); finished = true; toast('Скачано: ' + t.name); }
+      if (t.progress >= 1) {
+        t.completed = todayISO(); finished = true;
+        if (noSeeding(t)) { t.state = 'archived'; t.down = t.up = 0; if (dlState.sel === t.id) dlState.sel = null; toast('Скачано и убрано в архив: ' + t.name + '. Файлы на месте'); }
+        else { t.state = 'seed'; toast('Скачано: ' + t.name); }
+      }
     } else if (t.state === 'seed') { t.up = Math.min(4 * MB, Math.max(0.05 * MB, t.up * (0.9 + Math.random() * 0.2))); t.ratio += t.up / t.size; }
     const D = t._d; // живые подробности — только у торрентов, которые уже открывали
     if (D) {
@@ -2731,7 +2754,7 @@ document.addEventListener('click', (e) => {
   else if (t.dataset.protoState) protoState(t.dataset.protoState);
   else if (t.dataset.protoTorrent) protoTorrent(t.dataset.protoTorrent);
   else if (t.dataset.protoTheme) setTheme(t.dataset.protoTheme);
-  else if (t.classList.contains('switch') && !['autoSw'].includes(t.id)) t.setAttribute('aria-checked', String(t.getAttribute('aria-checked') !== 'true'));
+  else if (t.classList.contains('switch') && !['autoSw', 'autoArchive'].includes(t.id)) t.setAttribute('aria-checked', String(t.getAttribute('aria-checked') !== 'true'));
   else if (t.matches('.segc [role="radio"]')) $$('[role="radio"]', t.parentElement).forEach((b) => b.setAttribute('aria-checked', String(b === t)));
 });
 function protoState(s){
