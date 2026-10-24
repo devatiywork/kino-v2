@@ -66,6 +66,7 @@ export function preview(patch: Partial<Preview> = {}): Preview {
       { index: 2, path: 'Subs\\Rus.srt', size: 1_000 },
     ],
     duplicate: null,
+    mergedTrackers: 0,
     ...patch,
   }
 }

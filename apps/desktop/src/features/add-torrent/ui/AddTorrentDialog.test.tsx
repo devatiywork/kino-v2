@@ -129,6 +129,15 @@ describe('AddTorrentDialog (integration)', () => {
     ])
   })
 
+  it('тот же торрент с новыми трекерами — сказано, сколько добавлено и когда раздача их получит', async () => {
+    renderDialog()
+    await open({ duplicate: archiveEntry({ status: 'filesDeleted' }), mergedTrackers: 2 })
+    expect(screen.getByRole('status')).toHaveTextContent('Можно скачать снова — запись в архиве останется той же. Добавлено 2 новых трекера.')
+    act(() => addTorrentStore.set({ preview: null }))
+    await open({ duplicate: archiveEntry({ status: 'inDownloads' }), mergedTrackers: 1 })
+    expect(screen.getByRole('status')).toHaveTextContent('Добавлен 1 новый трекер — раздача получит его при следующем запуске Kino.')
+  })
+
   it('уже в загрузках — просто показывает его там', async () => {
     const user = renderDialog()
     await open({ duplicate: archiveEntry({ status: 'inDownloads' }) })

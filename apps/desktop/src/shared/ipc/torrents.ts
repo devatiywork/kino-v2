@@ -91,6 +91,8 @@ export interface Preview {
   files: TorrentFile[]
   /** «Уже в архиве» */
   duplicate: ArchiveEntry | null
+  /** Trackers this .torrent or magnet link brought to the archive's record («объединить трекеры») */
+  mergedTrackers: number
 }
 
 export type PreviewSource = { kind: 'file'; path: string } | { kind: 'magnet'; uri: string }

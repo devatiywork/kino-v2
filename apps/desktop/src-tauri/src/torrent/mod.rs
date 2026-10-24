@@ -205,6 +205,8 @@ pub struct Preview {
     pub files: Vec<FileEntry>,
     /// «Уже в архиве» — the same hash was added before
     pub duplicate: Option<ArchiveEntry>,
+    /// Trackers of this .torrent or magnet link the archive's record did not have: merged into it
+    pub merged_trackers: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -311,6 +313,8 @@ pub struct Torrents {
     schedule_was: Mutex<Option<bool>>,
     /// Waiting in the queue: paused by Kino, not by the user
     queued: Mutex<std::collections::HashSet<i64>>,
+    /// Since when each torrent of the queue runs: «медленные не считаются» after a minute of it
+    running_since: Mutex<HashMap<i64, std::time::Instant>>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -364,6 +368,7 @@ impl Torrents {
             applied_limits: Mutex::default(),
             schedule_was: Mutex::default(),
             queued: Mutex::default(),
+            running_since: Mutex::default(),
         });
         torrents.reconcile().await?;
         Ok(torrents)
@@ -397,7 +402,7 @@ impl Torrents {
 
     async fn start_item(&self, item: &Item) -> anyhow::Result<()> {
         let bytes = self.stored_bytes(&item.info_hash)?;
-        self.engine.add(bytes, &item.output_folder(), item.only_files.clone(), item.paused, self.extra_trackers()).await
+        self.engine.add(bytes, &item.output_folder(), item.only_files.clone(), item.paused, self.trackers_for(Some(item))).await
     }
 
     fn item(&self, id: i64) -> anyhow::Result<Item> {
@@ -450,21 +455,30 @@ impl Torrents {
             PreviewSource::Magnet { uri } => {
                 let hash = engine::magnet_hash(&uri)?;
                 // The archive already has its .torrent: no need to ask the peers
-                match self.stored_bytes(&hash) {
+                let mut meta = match self.stored_bytes(&hash) {
                     Ok(bytes) => engine::read_torrent(bytes)?,
                     Err(_) => tokio::time::timeout(MAGNET_TIMEOUT, self.engine.resolve_magnet(&uri))
                         .await
                         .context("the peers did not send the torrent's description in time")??,
-                }
+                };
+                meta.trackers = engine::magnet_trackers(&uri);
+                meta
             }
         };
-        let duplicate = self.store.item_by_hash(&meta.info_hash)?.map(|item| ArchiveEntry::of(&item));
+        let known = self.store.item_by_hash(&meta.info_hash)?;
+        let merged_trackers = known.as_ref().map_or(0, |item| {
+            self.merge_trackers(item, &meta.trackers).unwrap_or_else(|e| {
+                eprintln!("[torrents] merge trackers of {}: {e:#}", item.name);
+                0
+            })
+        });
         let preview = Preview {
             info_hash: meta.info_hash.clone(),
             name: meta.name.clone(),
             total_size: meta.files.iter().map(|f| f.size).sum(),
             files: meta.files.clone(),
-            duplicate,
+            duplicate: known.as_ref().map(ArchiveEntry::of),
+            merged_trackers,
         };
         lock(&self.pending).insert(meta.info_hash.clone(), meta);
         Ok(preview)
@@ -479,7 +493,7 @@ impl Torrents {
         std::fs::write(self.torrent_file(&hash), &meta.torrent_bytes)?;
         let incomplete = self.incomplete_folder();
         let output = output_folder(incomplete.as_deref().unwrap_or(&request.save_dir), &meta.name, meta.files.len());
-        self.engine.add(meta.torrent_bytes.clone(), &output, only_files.clone(), !request.start, self.extra_trackers()).await?;
+        self.engine.add(meta.torrent_bytes.clone(), &output, only_files.clone(), !request.start, self.trackers_for(None)).await?;
         let item = self.store.insert(&NewItem {
             info_hash: &hash,
             name: &meta.name,
@@ -742,31 +756,20 @@ impl Torrents {
         fn text<B: AsRef<[u8]>>(value: &Option<B>) -> Option<String> {
             value.as_ref().map(|v| String::from_utf8_lossy(v.as_ref()).into_owned())
         }
-        let mut trackers: Vec<String> = Vec::new();
-        for url in torrent.iter_announce().filter_map(|t| std::str::from_utf8(t.as_ref()).ok()) {
-            if !trackers.iter().any(|known| known == url) {
-                trackers.push(url.to_string());
-            }
-        }
+        let mut trackers = engine::trackers_of(&torrent);
         let (comment, created_by) = (text(&torrent.comment), text(&torrent.created_by));
         let created_at = torrent.creation_date.map(|secs| secs as i64 * 1000);
         let private = torrent.info.data.private;
         let info = torrent.info.data.validate().context("broken .torrent in the archive")?;
         let lengths = info.lengths();
         let handle = self.engine.torrent(&item.info_hash);
-        // «Свои трекеры» the engine got on top of the torrent's own
-        if let Some(torrent) = &handle {
-            // The engine keeps them parsed: «http://T.example» comes back as «http://t.example/»
-            let same = |a: &str, b: &str| a.trim_end_matches('/').eq_ignore_ascii_case(b.trim_end_matches('/'));
-            let mut extra: Vec<String> = torrent
-                .shared()
-                .trackers
-                .iter()
-                .map(|url| url.to_string())
-                .filter(|url| !trackers.iter().any(|own| same(own, url)))
-                .collect();
-            extra.sort();
-            trackers.extend(extra);
+        // After the torrent's own: the merged ones, then «свои трекеры» the engine got
+        let mut running: Vec<String> = handle.as_ref().map(|t| t.shared().trackers.iter().map(|url| url.to_string()).collect()).unwrap_or_default();
+        running.sort();
+        for url in item.trackers.iter().cloned().chain(running) {
+            if !trackers.iter().any(|known| engine::same_tracker(known, &url)) {
+                trackers.push(url);
+            }
         }
         let progress = handle.as_ref().map(|t| t.stats().file_progress).unwrap_or_default();
         let selected = |index: usize| item.only_files.as_ref().is_none_or(|only| only.contains(&index));

@@ -123,7 +123,15 @@
     "openInDownloads": "Открыть в загрузках",
     "downloadAgain": "Скачать снова",
     "showInArchive": "Показать в архиве",
-    "fromTracker": "перехвачено на {{host}}"
+    "fromTracker": "перехвачено на {{host}}",
+    "merged_one": "Добавлен {{count}} новый трекер.",
+    "merged_few": "Добавлено {{count}} новых трекера.",
+    "merged_many": "Добавлено {{count}} новых трекеров.",
+    "merged_other": "Добавлено {{count}} новых трекера.",
+    "mergedNextStart_one": "Добавлен {{count}} новый трекер — раздача получит его при следующем запуске Kino.",
+    "mergedNextStart_few": "Добавлено {{count}} новых трекера — раздача получит их при следующем запуске Kino.",
+    "mergedNextStart_many": "Добавлено {{count}} новых трекеров — раздача получит их при следующем запуске Kino.",
+    "mergedNextStart_other": "Добавлено {{count}} новых трекера — раздача получит их при следующем запуске Kino."
   },
   "magnet": {
     "title": "Добавить magnet-ссылку",

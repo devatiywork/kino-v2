@@ -100,7 +100,14 @@ export function AddTorrentDialog() {
                 })}
               </span>
             </div>
-            {known ? <KnownBanner entry={known} category={categoryName(known.categoryId, categories, t)} date={shortDate(known.addedAt, locale)} /> : null}
+            {known ? (
+              <KnownBanner
+                entry={known}
+                category={categoryName(known.categoryId, categories, t)}
+                date={shortDate(known.addedAt, locale)}
+                merged={preview?.mergedTrackers ?? 0}
+              />
+            ) : null}
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5">
               <AddFormFields form={form} isDisabled={locked} />
               <FileChecklist files={preview.files} selected={form.selected} onChange={form.setSelected} isDisabled={locked} />
@@ -113,16 +120,21 @@ export function AddTorrentDialog() {
   )
 }
 
-/** «Уже в архиве · Сериалы · добавлен 2 мар. 2026 · файлы удалены. Можно скачать снова…» */
-function KnownBanner({ entry, category, date }: { entry: ArchiveEntry; category: string; date: string }) {
+/**
+ * «Уже в архиве · Сериалы · добавлен 2 мар. 2026 · файлы удалены. Можно скачать снова…» and the
+ * trackers this .torrent brought to the record
+ */
+function KnownBanner({ entry, category, date, merged }: { entry: ArchiveEntry; category: string; date: string; merged: number }) {
   const { t } = useTranslation('torrents')
   const next =
     entry.status === 'inDownloads' ? t('add.duplicateActive') : entry.status === 'filesDeleted' ? t('add.duplicateDeleted') : t('add.duplicateOnDisk', { folder: entry.contentPath })
+  const trackers = merged ? ` ${t(entry.status === 'inDownloads' ? 'add.mergedNextStart' : 'add.merged', { count: merged })}` : ''
   return (
     <div role="status" className="flex items-start gap-2.5 rounded-md border border-accent/40 bg-accent-soft px-3 py-2.5 text-sm text-fg">
       <IconArchive size={18} className="mt-px shrink-0 text-accent-fg" />
       <span>
         {t('add.duplicate', { category, date, status: t(`archiveState.${entry.status}`).toLowerCase() })} {next}
+        {trackers}
       </span>
     </div>
   )

@@ -96,6 +96,18 @@ describe('DownloadsSection (ТЗ 6 «Загрузки»)', () => {
       ['settings_update', { patch: { seedLimitAction: 'archive' } }],
       ['settings_update', { patch: { maxActiveDownloads: 2 } }],
     ])
+    await user.clear(screen.getByRole('textbox', { name: 'Раздавать одновременно' }))
+    await user.type(screen.getByRole('textbox', { name: 'Раздавать одновременно' }), '3{Enter}')
+    await user.clear(screen.getByRole('textbox', { name: 'Всего активных' }))
+    await user.type(screen.getByRole('textbox', { name: 'Всего активных' }), '500{Enter}')
+    await user.click(screen.getByRole('switch', { name: 'Медленные не считаются' }))
+    await user.click(screen.getByRole('switch', { name: 'Тот же торрент ещё раз — объединить трекеры' }))
+    expect(updates().slice(3)).toEqual([
+      ['settings_update', { patch: { maxActiveSeeds: 3 } }],
+      ['settings_update', { patch: { maxActiveTotal: 100 } }],
+      ['settings_update', { patch: { queueSkipSlow: true } }],
+      ['settings_update', { patch: { mergeTrackers: false } }],
+    ])
     act(() => settingsStore.set({ noSeeding: true }))
     expect(screen.getByRole('textbox', { name: 'Раздавать не дольше' })).toBeDisabled()
     expect(within(screen.getByRole('radiogroup', { name: 'Затем' })).getByRole('radio', { name: 'Пауза' })).toBeDisabled()

@@ -157,7 +157,6 @@
       "archive": "To archive"
     },
     "maxActive": "Download at once",
-    "maxActiveHint": "The rest wait “Queued” in the order added; 0 — no limit",
     "port": "Incoming port",
     "portHint": "0 — a random one at every start",
     "upnp": "UPnP / NAT-PMP",
@@ -176,7 +175,15 @@
     "dht": "DHT",
     "dhtHint": "Finding peers without a tracker; needed for magnet links",
     "lsd": "Find peers on the local network",
-    "lsdHint": "Local Service Discovery: computers on the same network with this torrent"
+    "lsdHint": "Local Service Discovery: computers on the same network with this torrent",
+    "mergeTrackers": "Same torrent again — merge trackers",
+    "mergeTrackersHint": "New trackers of the .torrent or magnet link join the archive record; a running torrent gets them when Kino starts next",
+    "queueHint": "the rest wait “Queued” in the order added; 0 — no limit",
+    "maxSeeds": "Seed at once",
+    "maxTotal": "Active in total",
+    "maxTotalHint": "Downloads take the places first",
+    "skipSlow": "Slow torrents don’t count",
+    "skipSlowHint": "A torrent slower than 2 KB/s both ways for over a minute takes no place — the next one starts"
   },
   "hotkeys": {
     "title": "Hotkeys",

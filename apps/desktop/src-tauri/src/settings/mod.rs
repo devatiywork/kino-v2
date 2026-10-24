@@ -144,6 +144,11 @@ pub fn minutes_of(time: &str) -> Option<u32> {
     (hours < 24 && minutes < 60).then_some(hours * 60 + minutes)
 }
 
+/// A web or UDP tracker address
+pub fn is_tracker(url: &str) -> bool {
+    ["http://", "https://", "udp://"].iter().any(|scheme| url.starts_with(scheme))
+}
+
 fn is_socks5(proxy: &str) -> bool {
     proxy
         .strip_prefix("socks5://")
@@ -154,12 +159,7 @@ fn is_socks5(proxy: &str) -> bool {
 impl Settings {
     /// The trackers added to every new torrent: the lines that are web or UDP addresses
     pub fn extra_tracker_list(&self) -> Vec<String> {
-        self.extra_trackers
-            .lines()
-            .map(str::trim)
-            .filter(|line| ["http://", "https://", "udp://"].iter().any(|scheme| line.starts_with(scheme)))
-            .map(str::to_string)
-            .collect()
+        self.extra_trackers.lines().map(str::trim).filter(|line| is_tracker(line)).map(str::to_string).collect()
     }
 
     /// This local time is inside the schedule of the alternative limits; None — no schedule
@@ -254,8 +254,14 @@ pub struct Settings {
     pub seed_ratio_limit: f64,
     pub seed_time_limit: u32,
     pub seed_limit_action: SeedLimitAction,
-    /// Downloading at once; the rest wait in the queue. 0 — no limit
+    /// Downloading, seeding and all of them at once; the rest wait in the queue. 0 — no limit
     pub max_active_downloads: u32,
+    pub max_active_seeds: u32,
+    pub max_active_total: u32,
+    /// «Медленные не считаются»: a torrent slower than 2 KB/s both ways for a minute takes no place
+    pub queue_skip_slow: bool,
+    /// «Тот же торрент ещё раз — объединить трекеры»: its new trackers join the archive's record
+    pub merge_trackers: bool,
     /// SPEC 4.6: closing the window while torrents download or seed hides Kino in the tray
     pub close_to_tray: bool,
     /// A Windows notification when a torrent finishes
@@ -310,6 +316,10 @@ impl Default for Settings {
             seed_time_limit: 0,
             seed_limit_action: SeedLimitAction::Pause,
             max_active_downloads: 0,
+            max_active_seeds: 0,
+            max_active_total: 0,
+            queue_skip_slow: false,
+            merge_trackers: true,
             close_to_tray: true,
             notify_finished: true,
             keep_awake_downloads: true,
@@ -352,6 +362,8 @@ impl Settings {
         self.extra_trackers = self.extra_trackers.trim().to_string();
         self.seed_ratio_limit = if self.seed_ratio_limit.is_finite() { self.seed_ratio_limit.clamp(0.0, 1000.0) } else { 0.0 };
         self.max_active_downloads = self.max_active_downloads.min(QUEUE_MAX);
+        self.max_active_seeds = self.max_active_seeds.min(QUEUE_MAX);
+        self.max_active_total = self.max_active_total.min(QUEUE_MAX);
         self
     }
 

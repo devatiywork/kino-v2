@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { makeTorrent } from './fixtures/torrent'
+import { magnetOf, makeTorrent } from './fixtures/torrent'
 import { expect, FILM, test, type Kino } from './kino'
 
 /** The test film already downloaded into `<workdir>\downloads` and its .torrent next to it */
@@ -127,7 +127,7 @@ test.describe('торренты', () => {
     await expect(record(page, 'Film.2014.mkv').getByText('Файлы на диске')).toBeVisible()
   })
 
-  test('без окна добавления: сразу в загрузки, .torrent удалён; очередь, свои трекеры, альтернативные лимиты', async ({ launch, workdir }) => {
+  test('без окна добавления: сразу в загрузки, .torrent удалён; очередь, свои и объединённые трекеры, альтернативные лимиты', async ({ launch, workdir }) => {
     // Two files that are nowhere in the downloads: offline they wait for peers all the time
     const src = join(workdir, 'src')
     const out = join(workdir, 'out')
@@ -167,6 +167,17 @@ test.describe('торренты', () => {
     await page.getByRole('button', { name: 'Альтернативные лимиты' }).click()
     await expect(page.getByRole('button', { name: 'Альтернативные лимиты' })).toHaveAttribute('aria-pressed', 'true')
     await expect.poll(async () => (await kino.settings()).altLimitsOn).toBe(true)
+
+    // The same torrent again, from a magnet link with another tracker: it joins the record
+    const other = 'udp://other.example:1337/announce'
+    await page.getByRole('button', { name: 'Magnet-ссылка' }).click()
+    await page.getByRole('textbox', { name: 'Magnet-ссылка' }).fill(`${magnetOf(join(src, 'One.mkv'))}&tr=${encodeURIComponent(other)}`)
+    await page.getByRole('button', { name: 'Продолжить' }).click()
+    const known = page.getByRole('dialog', { name: 'Этот торрент уже в архиве' })
+    await expect(known.getByRole('status')).toContainText('Добавлен 1 новый трекер — раздача получит его при следующем запуске Kino.')
+    await known.getByRole('button', { name: 'Открыть в загрузках' }).click()
+    await details.getByRole('tab', { name: /^Трекеры/ }).click()
+    await expect(details.getByText(other)).toBeVisible()
 
     // The first one paused by hand: the queue lets the second one go
     await row(page, 'One.mkv').getByRole('button', { name: 'Пауза' }).click()

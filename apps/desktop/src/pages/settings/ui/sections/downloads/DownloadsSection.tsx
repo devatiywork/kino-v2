@@ -36,6 +36,7 @@ export function DownloadsSection() {
       <SwitchRow setting="showAddDialog" label={t('downloads.showAddDialog')} hint={t('downloads.showAddDialogHint')} />
       <SwitchRow setting="startPaused" label={t('downloads.startPaused')} hint={t('downloads.startPausedHint')} />
       <SwitchRow setting="deleteTorrentFile" label={t('downloads.deleteTorrentFile')} hint={t('downloads.deleteTorrentFileHint')} />
+      <SwitchRow setting="mergeTrackers" label={t('downloads.mergeTrackers')} hint={t('downloads.mergeTrackersHint')} />
       <SettingRow label={t('downloads.extraTrackers')} hint={t('downloads.extraTrackersHint')} stacked>
         <TextSetting
           label={t('downloads.extraTrackers')}
@@ -55,10 +56,17 @@ export function DownloadsSection() {
       <SettingGroup title={t('downloads.groups.seeding')} />
       <SeedingRows />
 
-      <SettingGroup title={t('downloads.groups.queue')} />
-      <SettingRow label={t('downloads.maxActive')} hint={t('downloads.maxActiveHint')}>
+      <SettingGroup title={t('downloads.groups.queue')} hint={t('downloads.queueHint')} />
+      <SettingRow label={t('downloads.maxActive')}>
         <NumberField label={t('downloads.maxActive')} setting="maxActiveDownloads" max={100} className="w-28" />
       </SettingRow>
+      <SettingRow label={t('downloads.maxSeeds')}>
+        <NumberField label={t('downloads.maxSeeds')} setting="maxActiveSeeds" max={100} className="w-28" />
+      </SettingRow>
+      <SettingRow label={t('downloads.maxTotal')} hint={t('downloads.maxTotalHint')}>
+        <NumberField label={t('downloads.maxTotal')} setting="maxActiveTotal" max={100} className="w-28" />
+      </SettingRow>
+      <SwitchRow setting="queueSkipSlow" label={t('downloads.skipSlow')} hint={t('downloads.skipSlowHint')} />
 
       <SettingGroup title={t('downloads.groups.connection')} hint={t('downloads.afterRestart')} />
       <ConnectionRows />

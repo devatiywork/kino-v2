@@ -72,8 +72,14 @@ export interface Settings {
   seedRatioLimit: number
   seedTimeLimit: number
   seedLimitAction: SeedLimitAction
-  /** Downloading at once, the rest wait in the queue; 0 — no limit */
+  /** Downloading, seeding, all at once; the rest wait in the queue. 0 — no limit */
   maxActiveDownloads: number
+  maxActiveSeeds: number
+  maxActiveTotal: number
+  /** «Медленные не считаются»: slower than 2 KB/s both ways for a minute — takes no place */
+  queueSkipSlow: boolean
+  /** «Тот же торрент ещё раз — объединить трекеры» */
+  mergeTrackers: boolean
   /** «Окно добавления»: off — straight to the downloads, unless the archive knows the torrent */
   showAddDialog: boolean
   /** «Удалять исходный .torrent после добавления» */
@@ -128,6 +134,10 @@ export const DEFAULT_SETTINGS: Settings = {
   seedTimeLimit: 0,
   seedLimitAction: 'pause',
   maxActiveDownloads: 0,
+  maxActiveSeeds: 0,
+  maxActiveTotal: 0,
+  queueSkipSlow: false,
+  mergeTrackers: true,
   showAddDialog: true,
   deleteTorrentFile: false,
   incompleteFolder: '',

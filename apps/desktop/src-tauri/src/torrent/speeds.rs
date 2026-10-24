@@ -28,6 +28,13 @@ impl SpeedHistory {
         self.torrents.retain(|id, _| seen.contains(id));
     }
 
+    /// The last `seconds` were all slower than `below` bytes per second both ways
+    pub fn quiet(&self, id: i64, seconds: usize, below: u64) -> bool {
+        self.torrents
+            .get(&id)
+            .is_some_and(|samples| samples.len() >= seconds && samples.iter().rev().take(seconds).all(|[down, up]| *down < below && *up < below))
+    }
+
     pub fn of(&self, id: i64) -> Vec<[u64; 2]> {
         self.torrents.get(&id).map(|s| s.iter().copied().collect()).unwrap_or_default()
     }
@@ -88,6 +95,20 @@ mod tests {
         assert_eq!(samples[0], [10, 1], "the oldest went");
         history.record([(8, 5, 5)]);
         assert!(history.of(7).is_empty(), "left the downloads — forgotten");
+    }
+
+    #[test]
+    fn quiet_means_every_one_of_the_last_seconds_was_slow_both_ways() {
+        let mut history = SpeedHistory::default();
+        for _ in 0..59 {
+            history.record([(1, 100, 100)]);
+        }
+        assert!(!history.quiet(1, 60, 2048), "not a minute yet");
+        history.record([(1, 100, 100)]);
+        assert!(history.quiet(1, 60, 2048));
+        history.record([(1, 100, 5000)]);
+        assert!(!history.quiet(1, 60, 2048), "it uploads fast");
+        assert!(!history.quiet(2, 60, 2048), "unknown torrent");
     }
 
     #[test]

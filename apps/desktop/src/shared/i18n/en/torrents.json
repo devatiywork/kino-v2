@@ -119,7 +119,11 @@
     "openInDownloads": "Open in downloads",
     "downloadAgain": "Download again",
     "showInArchive": "Show in archive",
-    "fromTracker": "caught on {{host}}"
+    "fromTracker": "caught on {{host}}",
+    "merged_one": "{{count}} new tracker added.",
+    "merged_other": "{{count}} new trackers added.",
+    "mergedNextStart_one": "{{count}} new tracker added — the torrent gets it when Kino starts next.",
+    "mergedNextStart_other": "{{count}} new trackers added — the torrent gets them when Kino starts next."
   },
   "magnet": {
     "title": "Add a magnet link",

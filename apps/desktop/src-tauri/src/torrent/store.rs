@@ -52,6 +52,8 @@ pub struct Item {
     pub incomplete_dir: Option<String>,
     /// Unix ms: seeding since then (the time limit of the settings counts from it)
     pub seeding_since: Option<i64>,
+    /// Trackers of the same torrent added again: the engine gets them with the torrent's own
+    pub trackers: Vec<String>,
 }
 
 /// SPEC 4.3: how long a torrent seeds after it is downloaded
@@ -140,7 +142,7 @@ pub type StoreResult<T> = Result<T, StoreError>;
 const ITEM_COLUMNS: &str = "i.id, i.info_hash, i.name, i.total_size, i.category_id, i.save_dir, i.source_url, i.added_at,
     i.completed_at, i.in_downloads, i.paused, i.files_deleted, i.only_files, i.uploaded,
     (SELECT count(*) FROM torrent_files f WHERE f.item_id = i.id),
-    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1), i.seed_mode, i.seed_ratio, i.incomplete_dir, i.seeding_since";
+    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1), i.seed_mode, i.seed_ratio, i.incomplete_dir, i.seeding_since, i.trackers";
 
 fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
     let only_files: Option<String> = row.get(12)?;
@@ -164,6 +166,7 @@ fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
         seeding: Seeding::from_columns(&row.get::<_, String>(16)?, row.get(17)?),
         incomplete_dir: row.get(18)?,
         seeding_since: row.get(19)?,
+        trackers: row.get::<_, Option<String>>(20)?.map(|list| list.lines().map(str::to_string).collect()).unwrap_or_default(),
     })
 }
 
@@ -316,6 +319,13 @@ impl TorrentStore {
     pub fn set_seeding(&self, id: i64, seeding: Seeding) -> StoreResult<()> {
         let (mode, ratio) = seeding.columns();
         self.conn().execute("UPDATE torrent_items SET seed_mode = ?2, seed_ratio = ?3 WHERE id = ?1", params![id, mode, ratio])?;
+        Ok(())
+    }
+
+    /// «Объединить трекеры»: the record's own list of added trackers
+    pub fn set_trackers(&self, id: i64, trackers: &[String]) -> StoreResult<()> {
+        let list = (!trackers.is_empty()).then(|| trackers.join("\n"));
+        self.conn().execute("UPDATE torrent_items SET trackers = ?2 WHERE id = ?1", params![id, list])?;
         Ok(())
     }
 

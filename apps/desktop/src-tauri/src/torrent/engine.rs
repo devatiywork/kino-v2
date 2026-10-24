@@ -62,6 +62,30 @@ pub struct Metainfo {
     pub files: Vec<FileEntry>,
     /// The whole .torrent: stored in the archive (for a magnet — rebuilt from the peers' metadata)
     pub torrent_bytes: Bytes,
+    /// The trackers it came with: the .torrent's, or a magnet link's `tr`
+    pub trackers: Vec<String>,
+}
+
+/// The same tracker written two ways: the engine keeps them parsed, «http://T.example» comes
+/// back as «http://t.example/»
+pub fn same_tracker(a: &str, b: &str) -> bool {
+    a.trim_end_matches('/').eq_ignore_ascii_case(b.trim_end_matches('/'))
+}
+
+/// The trackers of a .torrent, in its order, each once
+pub fn trackers_of<B: AsRef<[u8]>>(torrent: &librqbit::TorrentMetaV1<B>) -> Vec<String> {
+    let mut trackers: Vec<String> = Vec::new();
+    for url in torrent.iter_announce().filter_map(|t| std::str::from_utf8(t.as_ref()).ok()) {
+        if !trackers.iter().any(|known| same_tracker(known, url)) {
+            trackers.push(url.to_string());
+        }
+    }
+    trackers
+}
+
+/// A magnet link's trackers (`tr`)
+pub fn magnet_trackers(uri: &str) -> Vec<String> {
+    librqbit::Magnet::parse(uri).map(|magnet| magnet.trackers).unwrap_or_default()
 }
 
 /// KB/s → the engine's bytes per second; 0 — no limit
@@ -93,10 +117,11 @@ pub fn squeeze(haves: &[bool], count: usize, parts: usize) -> Vec<u8> {
 /// Reads a .torrent file: name, files, hash — without the engine
 pub fn read_torrent(bytes: Bytes) -> anyhow::Result<Metainfo> {
     let torrent = librqbit::torrent_from_bytes(&bytes).context("not a .torrent file")?;
+    let trackers = trackers_of(&torrent);
     let info = torrent.info.data.validate().context("broken .torrent file")?;
     let name = info.name().map(|n| n.into_owned()).unwrap_or_else(|| torrent.info_hash.as_string());
     let files = files_of(&info);
-    Ok(Metainfo { info_hash: torrent.info_hash.as_string(), name, files, torrent_bytes: bytes })
+    Ok(Metainfo { info_hash: torrent.info_hash.as_string(), name, files, torrent_bytes: bytes, trackers })
 }
 
 /// The info hash of a magnet link, in lower-case hex
@@ -194,7 +219,7 @@ impl Engine {
             AddTorrentResponse::ListOnly(list) => {
                 let files = files_of(&list.info);
                 let name = list.info.name().map(|n| n.into_owned()).unwrap_or_else(|| list.info_hash.as_string());
-                Ok(Metainfo { info_hash: list.info_hash.as_string(), name, files, torrent_bytes: list.torrent_bytes })
+                Ok(Metainfo { info_hash: list.info_hash.as_string(), name, files, torrent_bytes: list.torrent_bytes, trackers: magnet_trackers(uri) })
             }
             AddTorrentResponse::AlreadyManaged(_, torrent) | AddTorrentResponse::Added(_, torrent) => torrent
                 .with_metadata(|m| read_torrent(m.torrent_bytes.clone()))

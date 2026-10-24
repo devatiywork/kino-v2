@@ -156,6 +156,10 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE torrent_items ADD COLUMN seeding_since INTEGER;
     "#,
+    // 10 — trackers of the same torrent added again, one per line: «объединить трекеры» (SPEC 6)
+    r#"
+    ALTER TABLE torrent_items ADD COLUMN trackers TEXT;
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {

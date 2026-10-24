@@ -139,8 +139,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          JSON file; a restore adds only what is missing), manage (a torrent's own seeding, full check,
                          re-announce, moving the files, saving the .torrent, the folder for unfinished torrents, deleting
                          the source .torrent), policy (the settings' rules the engine lacks, run by the update loop: the
-                         alternative limits' schedule by its edges, seeding limits by ratio and time, the queue — state
-                         `queued`), speeds (30 minutes of speeds per torrent, peer speeds), commands (torrents://update
+                         alternative limits' schedule by its edges, seeding limits by ratio and time, the queue of
+                         downloads / seeds / total with slow torrents left out — state `queued`; the trackers the engine
+                         gets: merged from the same torrent added again + «свои трекеры»), speeds (30 minutes of speeds per torrent, peer speeds), commands (torrents://update
                          every second, torrents://changed, torrents://notice; settings://changed when the schedule switched
                          the limits). Engine network options (port, UPnP, protocol, peers, SOCKS5, DHT, LSD) are read at
                          start only. Knows nothing about the player
