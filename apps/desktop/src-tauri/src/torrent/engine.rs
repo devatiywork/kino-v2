@@ -19,7 +19,7 @@ use librqbit::{
 };
 
 use super::store::FileEntry;
-use crate::settings::Protocol;
+use crate::settings::{Encryption, Protocol};
 
 /// SPEC 6 «Соединение» and the peer sources: read when the engine starts
 #[derive(Debug, Clone, PartialEq)]
@@ -28,6 +28,8 @@ pub struct Network {
     pub port: u16,
     pub upnp: bool,
     pub protocol: Protocol,
+    /// MSE/PE (librqbit as Kino has it: crates/librqbit)
+    pub encryption: Encryption,
     /// Connections per torrent; 0 — the engine's own
     pub peer_limit: u32,
     /// socks5://…; empty — none
@@ -38,7 +40,16 @@ pub struct Network {
 
 impl Default for Network {
     fn default() -> Self {
-        Self { port: 0, upnp: true, protocol: Protocol::TcpAndUtp, peer_limit: 0, proxy: String::new(), dht: true, lsd: true }
+        Self {
+            port: 0,
+            upnp: true,
+            protocol: Protocol::TcpAndUtp,
+            encryption: Encryption::Prefer,
+            peer_limit: 0,
+            proxy: String::new(),
+            dht: true,
+            lsd: true,
+        }
     }
 }
 
@@ -177,8 +188,16 @@ impl Engine {
                     enable_upnp_port_forwarding: !options.offline && net.upnp,
                     ..Default::default()
                 }),
-                connect: (!net.proxy.is_empty()).then(|| librqbit::ConnectionOptions {
-                    proxy_url: Some(net.proxy.clone()),
+                connect: Some(librqbit::ConnectionOptions {
+                    proxy_url: (!net.proxy.is_empty()).then(|| net.proxy.clone()),
+                    peer_opts: Some(librqbit::PeerConnectionOptions {
+                        encryption: match net.encryption {
+                            Encryption::Prefer => librqbit::Encryption::Prefer,
+                            Encryption::Require => librqbit::Encryption::Require,
+                            Encryption::Off => librqbit::Encryption::Disable,
+                        },
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 }),
                 peer_limit: (net.peer_limit > 0).then_some(net.peer_limit as usize),
@@ -321,16 +340,47 @@ mod tests {
     }
 
     async fn offline_engine(dir: &Path) -> Engine {
+        engine_with(dir, Encryption::Prefer).await
+    }
+
+    async fn engine_with(dir: &Path, encryption: Encryption) -> Engine {
         Engine::start(EngineOptions {
             state_dir: dir.join("state"),
             default_folder: dir.join("downloads"),
             offline: true,
             download_kbps: 0,
             upload_kbps: 0,
-            network: Network::default(),
+            network: Network { encryption, ..Network::default() },
         })
         .await
         .unwrap()
+    }
+
+    /// The seeder's encryption, the leecher's: whether the leecher gets the file within `within`
+    async fn downloads(name: &str, seeds: Encryption, leeches: Encryption, within: std::time::Duration) -> bool {
+        let dir = temp(name);
+        let bytes = torrent_of(&dir.join("seed"), "clip.bin", 200_000).await;
+        let hash = read_torrent(bytes.clone()).unwrap().info_hash;
+        let seeder = engine_with(&dir.join("a"), seeds).await;
+        seeder.add(bytes.clone(), &dir.join("seed"), None, false, Vec::new()).await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(30), seeder.torrent(&hash).unwrap().wait_until_completed()).await.unwrap().unwrap();
+
+        let leecher = engine_with(&dir.join("b"), leeches).await;
+        let options = AddTorrentOptions {
+            overwrite: true,
+            output_folder: Some(dir.join("got").to_string_lossy().into_owned()),
+            initial_peers: Some(vec![seeder.session.listen_addr().unwrap()]),
+            ..Default::default()
+        };
+        let handle = leecher.session.add_torrent(AddTorrent::from_bytes(bytes), Some(options)).await.unwrap().into_handle().unwrap();
+        let done = tokio::time::timeout(within, handle.wait_until_completed()).await.is_ok_and(|r| r.is_ok());
+        if done {
+            assert_eq!(std::fs::read(dir.join("got").join("clip.bin")).unwrap(), std::fs::read(dir.join("seed").join("clip.bin")).unwrap());
+        }
+        seeder.stop().await;
+        leecher.stop().await;
+        let _ = std::fs::remove_dir_all(&dir);
+        done
     }
 
     #[test]
@@ -357,6 +407,75 @@ mod tests {
             assert_eq!(magnet_hash(&magnet).unwrap(), meta.info_hash);
             assert!(read_torrent(Bytes::from_static(b"not a torrent")).is_err());
             std::fs::remove_dir_all(&dir).unwrap();
+        });
+    }
+
+    /// MSE/PE between two engines (crates/librqbit/src/mse.rs): a seeder that requires it is
+    /// reached by one that prefers it, not by one that has it off; one that has it off is
+    /// reached by one that prefers it — after the encrypted try, plain
+    #[test]
+    fn encryption_is_agreed_between_engines() {
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let long = std::time::Duration::from_secs(60);
+            assert!(downloads("enc-req-pref", Encryption::Require, Encryption::Prefer, long).await, "require ← prefer");
+            assert!(downloads("enc-req-req", Encryption::Require, Encryption::Require, long).await, "require ← require");
+            assert!(downloads("enc-off-pref", Encryption::Off, Encryption::Prefer, long).await, "off ← prefer: plain");
+            assert!(!downloads("enc-req-off", Encryption::Require, Encryption::Off, std::time::Duration::from_secs(8)).await, "require ← off: refused");
+        });
+    }
+
+    /// MSE/PE against libtorrent — what qBittorrent runs on — with its encryption forced, RC4 only:
+    /// both ways, Kino downloads from it and it downloads from Kino. Needs Python with libtorrent:
+    /// KINO_LIBTORRENT_PYTHON=<python.exe> cargo test encryption_interop -- --ignored
+    /// (LT_TRANSPORT=tcp|utp for one transport only, LT_PEER_LOG=1 for libtorrent's own log)
+    #[test]
+    #[ignore]
+    fn encryption_interop_with_libtorrent() {
+        let python = std::env::var("KINO_LIBTORRENT_PYTHON").expect("KINO_LIBTORRENT_PYTHON: a python with libtorrent");
+        let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../scripts/libtorrent-peer.py");
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let dir = temp("interop");
+            let bytes = torrent_of(&dir.join("seed"), "clip.bin", 3_000_000).await;
+            let torrent = dir.join("clip.torrent");
+            std::fs::write(&torrent, &bytes).unwrap();
+            let hash = read_torrent(bytes.clone()).unwrap().info_hash;
+            let spawn = |args: Vec<String>| {
+                std::process::Command::new(&python).arg("-I").arg(&script).args(args).stdout(std::process::Stdio::piped()).spawn().unwrap()
+            };
+            let path = |p: &Path| p.to_string_lossy().into_owned();
+
+            // libtorrent seeds; Kino, preferring encryption, downloads
+            let mut seeder = spawn(vec!["seed".into(), path(&torrent), path(&dir.join("seed")), "41651".into()]);
+            let kino = engine_with(&dir.join("kino-leech"), Encryption::Prefer).await;
+            let options = AddTorrentOptions {
+                overwrite: true,
+                output_folder: Some(path(&dir.join("kino-got"))),
+                initial_peers: Some(vec!["127.0.0.1:41651".parse().unwrap()]),
+                ..Default::default()
+            };
+            let handle = kino.session.add_torrent(AddTorrent::from_bytes(bytes.clone()), Some(options)).await.unwrap().into_handle().unwrap();
+            let got = tokio::time::timeout(std::time::Duration::from_secs(60), handle.wait_until_completed()).await;
+            seeder.kill().unwrap();
+            seeder.wait().unwrap();
+            assert!(got.is_ok_and(|r| r.is_ok()), "Kino downloads from libtorrent that forces RC4");
+            assert_eq!(std::fs::read(dir.join("kino-got").join("clip.bin")).unwrap(), std::fs::read(dir.join("seed").join("clip.bin")).unwrap());
+            kino.stop().await;
+
+            // Kino seeds, requiring encryption; libtorrent downloads
+            let kino = engine_with(&dir.join("kino-seed"), Encryption::Require).await;
+            kino.add(bytes.clone(), &dir.join("seed"), None, false, Vec::new()).await.unwrap();
+            tokio::time::timeout(std::time::Duration::from_secs(30), kino.torrent(&hash).unwrap().wait_until_completed()).await.unwrap().unwrap();
+            let port = kino.session.listen_addr().unwrap().port().to_string();
+            let leecher = spawn(vec!["leech".into(), path(&torrent), path(&dir.join("lt-got")), "41652".into(), port]);
+            let out = tokio::task::spawn_blocking(move || leecher.wait_with_output().unwrap()).await.unwrap();
+            let log = String::from_utf8_lossy(&out.stdout).into_owned();
+            // Its policy is forced, RC4 only: had the stream been anything else, nothing would come
+            assert!(out.status.success() && log.contains("DONE"), "libtorrent downloads from Kino:
+{log}");
+            kino.stop().await;
+            let _ = std::fs::remove_dir_all(&dir);
         });
     }
 

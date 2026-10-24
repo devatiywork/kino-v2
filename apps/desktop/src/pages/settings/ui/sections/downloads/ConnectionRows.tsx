@@ -1,18 +1,20 @@
 import { SegmentedControl } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { updateSettings, useSettings } from '../../../../../entities/settings'
-import type { TorrentProtocol } from '../../../../../shared/ipc/settings'
+import type { TorrentEncryption, TorrentProtocol } from '../../../../../shared/ipc/settings'
 import { options } from '../../../lib/options'
 import { SettingRow } from '../../SettingsLayout'
 import { isProxy } from './checks'
 import { NumberField, SwitchRow, TextSetting } from './fields'
 
 const PROTOCOLS: TorrentProtocol[] = ['tcpAndUtp', 'tcp', 'utp']
+const ENCRYPTIONS: TorrentEncryption[] = ['prefer', 'require', 'off']
 
 /** SPEC 6 «Соединение» and the peer sources: the engine reads them when Kino starts */
 export function ConnectionRows() {
   const { t } = useTranslation('settings')
   const protocol = useSettings((s) => s.protocol)
+  const encryption = useSettings((s) => s.encryption)
 
   return (
     <>
@@ -26,6 +28,14 @@ export function ConnectionRows() {
           options={options(PROTOCOLS, (v) => t(`downloads.protocols.${v}`))}
           value={protocol}
           onChange={(value) => void updateSettings({ protocol: value })}
+        />
+      </SettingRow>
+      <SettingRow label={t('downloads.encryption')} hint={t('downloads.encryptionHint')}>
+        <SegmentedControl
+          aria-label={t('downloads.encryption')}
+          options={options(ENCRYPTIONS, (v) => t(`downloads.encryptions.${v}`))}
+          value={encryption}
+          onChange={(value) => void updateSettings({ encryption: value })}
         />
       </SettingRow>
       <SettingRow label={t('downloads.peerLimit')} hint={t('downloads.peerLimitHint')}>

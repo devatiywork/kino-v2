@@ -107,6 +107,19 @@ pub enum Protocol {
     Utp,
 }
 
+/// Protocol encryption of the peer connections (SPEC 6 «Соединение»), as qBittorrent's
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum Encryption {
+    /// Encrypted first, plain with a peer that cannot
+    #[default]
+    Prefer,
+    /// Encrypted only: a peer that cannot is not connected
+    Require,
+    /// Plain only
+    Off,
+}
+
 /// What happens to a torrent that has seeded enough by the settings' rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -250,10 +263,12 @@ pub struct Settings {
     pub schedule_to: String,
     pub schedule_days: ScheduleDays,
     // Connection — read when the engine starts: they apply after a restart of Kino
-    /// 0 — a random port at every start
+    /// Chosen at the first start and kept, so that a port forwarded on the router keeps working;
+    /// 0 — a new one at the next start
     pub listen_port: u16,
     pub upnp: bool,
     pub protocol: Protocol,
+    pub encryption: Encryption,
     /// Connections per torrent; 0 — the engine's own (128)
     pub peer_limit: u32,
     /// «socks5://[user:password@]host:port»; empty — none
@@ -324,6 +339,7 @@ impl Default for Settings {
             listen_port: 0,
             upnp: true,
             protocol: Protocol::TcpAndUtp,
+            encryption: Encryption::Prefer,
             peer_limit: 0,
             proxy: String::new(),
             dht: true,

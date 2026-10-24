@@ -11,6 +11,8 @@ export type SubtitlePosition = 'bottom' | 'raised' | 'high'
 /** The days of the alternative limits' schedule */
 export type ScheduleDays = 'everyday' | 'weekdays' | 'weekends'
 export type TorrentProtocol = 'tcpAndUtp' | 'tcp' | 'utp'
+/** MSE/PE of the peer connections, as qBittorrent's */
+export type TorrentEncryption = 'prefer' | 'require' | 'off'
 /** What a torrent that has seeded enough does: stays on pause or goes to the archive */
 export type SeedLimitAction = 'pause' | 'archive'
 
@@ -68,6 +70,7 @@ export interface Settings {
   listenPort: number
   upnp: boolean
   protocol: TorrentProtocol
+  encryption: TorrentEncryption
   /** Connections per torrent; 0 — the engine's own */
   peerLimit: number
   /** socks5://[user:password@]host:port; empty — none */
@@ -137,6 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   listenPort: 0,
   upnp: true,
   protocol: 'tcpAndUtp',
+  encryption: 'prefer',
   peerLimit: 0,
   proxy: '',
   dht: true,

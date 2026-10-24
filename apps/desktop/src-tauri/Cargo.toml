@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.27.2"
+version = "0.28.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -57,3 +57,11 @@ windows = { version = "0.61", features = [
   "Win32_UI_Shell_Common",
   "Win32_UI_WindowsAndMessaging",
 ] }
+
+# librqbit 9.0.1 with protocol encryption (MSE/PE), which upstream lacks: crates/librqbit/KINO.md.
+# A member, so that its own tests run: cargo test -p librqbit mse
+[workspace]
+members = ["crates/librqbit"]
+
+[patch.crates-io]
+librqbit = { path = "crates/librqbit" }

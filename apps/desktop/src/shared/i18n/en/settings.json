@@ -159,7 +159,7 @@
     },
     "maxActive": "Download at once",
     "port": "Incoming port",
-    "portHint": "0 — a random one at every start",
+    "portHint": "Picked at the first start and kept — it can be forwarded on the router. 0 — a new one at the next start",
     "upnp": "UPnP / NAT-PMP",
     "upnpHint": "Open the port on the router automatically",
     "protocol": "Protocol",
@@ -167,6 +167,13 @@
       "tcpAndUtp": "TCP and µTP",
       "tcp": "TCP",
       "utp": "µTP"
+    },
+    "encryption": "Encryption",
+    "encryptionHint": "Peers that require encryption refuse Kino without it. «Require» turns away peers that cannot encrypt",
+    "encryptions": {
+      "prefer": "Prefer",
+      "require": "Require",
+      "off": "Off"
     },
     "peerLimit": "Connections per torrent",
     "peerLimitHint": "0 — the engine decides (128)",

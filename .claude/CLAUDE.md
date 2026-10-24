@@ -54,6 +54,9 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run ui` — UI library showcase on http://127.0.0.1:5180
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
+- `KINO_LIBTORRENT_PYTHON=<python with libtorrent> cargo test encryption_interop -- --ignored` (in src-tauri) —
+  protocol encryption against libtorrent, both ways (`apps/desktop/scripts/libtorrent-peer.py`); run it after touching
+  crates/librqbit
 - `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`).
   `KINO_DEV_PORT=5191` — next to a running `bun run dev` of another checkout (a git worktree): its own Vite, and the core is
   built for that port (TAURI_CONFIG merges `build.devUrl`)
@@ -147,6 +150,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
     src/power.rs       — KeepAwake: a Windows power request — for a video (screen + system) or for downloads (system)
     src/background.rs  — SPEC 4.6: the tray (speeds in the tooltip, «Пауза всех», «Открыть», «Выйти»), «Скачан»
                          notifications; none in the E2E tests (a killed test leaves a dead tray icon)
+    crates/librqbit/   — librqbit 9.0.1 with MSE/PE protocol encryption (src/mse.rs), patched in through [patch.crates-io]
+                         and a workspace member (its tests: `cargo test -p librqbit mse`); what differs — its KINO.md
     src/torrent/       — Torrents (the engine + the archive + settings: preview, add, pause, remove, download / seed again,
                          details; the update loop is the only place where torrents finish — «Не раздавать» archives there),
                          engine (librqbit session with fast resume, reconcile with the archive, offline mode for tests,

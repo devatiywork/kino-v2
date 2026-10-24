@@ -61,12 +61,15 @@ describe('DownloadsSection (ТЗ 6 «Загрузки»)', () => {
     await user.clear(proxy)
     await user.type(proxy, 'socks5://10.0.0.1:1080{Enter}')
     await user.click(screen.getByRole('radio', { name: 'TCP' }))
+    expect(screen.getByRole('radio', { name: 'Предпочитать' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Требовать' }))
     await user.click(screen.getByRole('switch', { name: 'DHT' }))
     await user.clear(screen.getByRole('textbox', { name: 'Порт для входящих' }))
     await user.type(screen.getByRole('textbox', { name: 'Порт для входящих' }), '99999{Enter}')
     expect(updates()).toEqual([
       ['settings_update', { patch: { proxy: 'socks5://10.0.0.1:1080' } }],
       ['settings_update', { patch: { protocol: 'tcp' } }],
+      ['settings_update', { patch: { encryption: 'require' } }],
       ['settings_update', { patch: { dht: false } }],
       ['settings_update', { patch: { listenPort: 65535 } }],
     ])

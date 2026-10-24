@@ -321,6 +321,38 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// Ports Kino picks from: above the well-known and registered ones most programs take, below
+/// Windows' dynamic range (49152–65535), where any outgoing connection may hold one
+const PORT_RANGE: std::ops::Range<u16> = 20_000..40_000;
+
+/// A port of its own from the first online start, as qBittorrent does: a port forwarded on the
+/// router keeps working across restarts. «0» in the settings asks for a new one
+fn keep_a_port(settings: &SettingsStore) {
+    if settings.read(|s| s.listen_port) != 0 {
+        return;
+    }
+    let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0) ^ std::process::id();
+    let port = pick_port(seed, |port| std::net::TcpListener::bind(("0.0.0.0", port)).is_ok());
+    if port == 0 {
+        return;
+    }
+    let mut patch = serde_json::Map::new();
+    patch.insert("listenPort".into(), port.into());
+    if let Err(e) = settings.update(&patch) {
+        eprintln!("[torrents] keep the port {port}: {e}");
+    }
+}
+
+/// The first free port from a pseudo-random start in PORT_RANGE; 0 — none of 20 tries was free
+/// (the engine then takes a random one for this run)
+fn pick_port(seed: u32, free: impl Fn(u16) -> bool) -> u16 {
+    let span = u32::from(PORT_RANGE.end - PORT_RANGE.start);
+    (0..20u32)
+        .map(|i| PORT_RANGE.start + (seed.wrapping_add(i.wrapping_mul(7919)) % span) as u16)
+        .find(|&port| free(port))
+        .unwrap_or(0)
+}
+
 impl Torrents {
     pub async fn start(options: TorrentsOptions) -> anyhow::Result<Arc<Self>> {
         let files_dir = options.dir.join("files");
@@ -334,10 +366,14 @@ impl Torrents {
             upload_kbps,
             network,
         };
+        if !options.offline {
+            keep_a_port(&options.settings);
+        }
         let network = options.settings.read(|s| Network {
             port: s.listen_port,
             upnp: s.upnp,
             protocol: s.protocol,
+            encryption: s.encryption,
             peer_limit: s.peer_limit,
             proxy: s.proxy.clone(),
             dht: s.dht,
@@ -900,6 +936,22 @@ impl Torrents {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_port_is_picked_once_and_kept() {
+        assert_eq!(pick_port(0, |_| true), PORT_RANGE.start, "the start when free");
+        let busy = PORT_RANGE.start;
+        assert_ne!(pick_port(0, |port| port != busy), busy, "a busy one is skipped");
+        assert_eq!(pick_port(123, |_| false), 0, "none free — the engine's own for this run");
+        assert!((1..100).all(|seed| PORT_RANGE.contains(&pick_port(seed * 104_729, |_| true))));
+
+        let settings = SettingsStore::load(Arc::new(crate::library::Library::in_memory()));
+        keep_a_port(&settings);
+        let port = settings.read(|s| s.listen_port);
+        assert!(PORT_RANGE.contains(&port), "{port}");
+        keep_a_port(&settings);
+        assert_eq!(settings.read(|s| s.listen_port), port, "kept at the next start");
+    }
 
     #[test]
     fn video_files_by_extension() {
