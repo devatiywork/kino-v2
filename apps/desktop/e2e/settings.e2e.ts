@@ -45,7 +45,7 @@ test.describe('настройки', () => {
     await again.page.getByRole('region', { name: 'System' }).getByRole('button', { name: 'Reset settings' }).click()
     await again.page.getByRole('alertdialog', { name: 'Reset the settings?' }).getByRole('button', { name: 'Reset' }).click()
     await expect(root).toHaveAttribute('data-theme', 'dark')
-    await expect(root).toHaveAttribute('data-accent', 'ember')
+    await expect(root).toHaveAttribute('data-accent', 'blue')
     await expect(again.page.getByRole('heading', { level: 1, name: 'Настройки' })).toBeVisible()
   })
 

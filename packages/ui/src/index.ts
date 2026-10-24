@@ -20,7 +20,7 @@ export { Pressable, type PressableProps } from './components/pressable/Pressable
 export { ListBox, ListBoxBase, type ListBoxProps } from './components/list-box/ListBox'
 export type { ListItem } from './components/list-box/listItem'
 export { Select, type SelectProps } from './components/select/Select'
-export { TitleBar, TitleBarSpacer, type TitleBarProps } from './components/title-bar/TitleBar'
+export { TitleBar, type TitleBarProps } from './components/title-bar/TitleBar'
 export { WindowControls, type WindowControlsProps } from './components/title-bar/WindowControls'
 export { TitleBarNav, type NavItem, type TitleBarNavProps } from './components/title-bar/TitleBarNav'
 export { SearchField, type SearchFieldProps } from './components/search-field/SearchField'

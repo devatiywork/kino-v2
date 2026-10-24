@@ -23,7 +23,7 @@ export function ResumeBanner() {
   return (
     <div
       role="status"
-      className="absolute top-[66px] left-1/2 z-20 flex -translate-x-1/2 animate-fade-in items-center gap-3.5 rounded-lg border border-glass-line bg-panel py-2 pr-2 pl-4 text-base text-fg"
+      className="absolute top-[66px] left-1/2 z-20 flex -translate-x-1/2 animate-fade-in items-center gap-3.5 rounded-lg border border-glass-line glass py-2 pr-2 pl-4 text-base text-fg"
     >
       <span>{t('resumed', { time: formatTime(from) })}</span>
       <Button

@@ -43,7 +43,7 @@ function TooltipBubble({ state, triggerRef, placement, children, shortcut, ...pr
       <div
         {...mergeProps(tooltipProps, overlayProps)}
         ref={overlayRef}
-        className="pointer-events-none flex animate-pop-in items-center gap-2 rounded-sm border border-line-2 bg-raise-2 px-2 py-1 text-xs whitespace-nowrap text-fg shadow-pop [--pop-shift:4px]"
+        className="pointer-events-none flex animate-pop-in items-center gap-2 rounded-sm border border-glass-line glass px-2 py-1 text-xs whitespace-nowrap text-fg shadow-pop [--pop-shift:4px]"
       >
         {children}
         {shortcut ? <span className="font-mono text-2xs text-fg-3">{shortcut}</span> : null}

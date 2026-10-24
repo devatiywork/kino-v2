@@ -1,7 +1,7 @@
 import { invoke, listen, type UnlistenFn } from './bridge'
 
 export type ThemeSetting = 'dark' | 'light' | 'system'
-export type AccentSetting = 'ember' | 'gold' | 'lime' | 'teal' | 'violet'
+export type AccentSetting = 'blue' | 'ember' | 'gold' | 'lime' | 'teal' | 'violet'
 export type LanguageSetting = 'ru' | 'en'
 export type PreferredAudio = 'russian' | 'original'
 /** Subtitles with a Russian dub: none, signs and inscriptions only, or the full ones */
@@ -103,7 +103,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
-  accent: 'ember',
+  accent: 'blue',
   language: 'ru',
   resume: true,
   autoplay: true,

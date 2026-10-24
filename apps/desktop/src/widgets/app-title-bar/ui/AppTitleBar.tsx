@@ -1,4 +1,4 @@
-import { IconButton, IconSettings, Logo, TitleBar, TitleBarNav, TitleBarSpacer, WindowControls } from '@kino/ui'
+import { IconButton, IconSettings, Logo, TitleBar, TitleBarNav, WindowControls } from '@kino/ui'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useWindowState } from '../../../entities/app-window'
@@ -15,8 +15,8 @@ const isSection = (screen: Screen): screen is Section => (SECTIONS as readonly S
 const report = (what: string) => (e: unknown) => console.error(`[window] ${what}`, e)
 
 /**
- * Window title bar: logo, sections, the search (`search` — the app puts it there), "Open",
- * settings and the window buttons on the right
+ * Window title bar: logo and sections on the left, the search in the middle of the window
+ * (`search` — the app puts it there), "Open", settings and the window buttons on the right
  */
 export function AppTitleBar({ search }: { search?: ReactNode }) {
   const { t } = useTranslation()
@@ -26,6 +26,16 @@ export function AppTitleBar({ search }: { search?: ReactNode }) {
 
   return (
     <TitleBar
+      center={search}
+      end={
+        <>
+          <OpenFileButton />
+          <AddFolderButton icon />
+          <IconButton label={t('nav.settings')} tooltipPlacement="bottom" isSelected={screen === 'settings'} onPress={() => navigate('settings')}>
+            <IconSettings size={19} />
+          </IconButton>
+        </>
+      }
       controls={
         <WindowControls
           isMaximized={maximized}
@@ -43,13 +53,6 @@ export function AppTitleBar({ search }: { search?: ReactNode }) {
         current={screen === 'show' ? 'series' : isSection(screen) ? screen : null}
         onNavigate={navigate}
       />
-      {search}
-      <TitleBarSpacer />
-      <OpenFileButton />
-      <AddFolderButton icon />
-      <IconButton label={t('nav.settings')} tooltipPlacement="bottom" isSelected={screen === 'settings'} onPress={() => navigate('settings')}>
-        <IconSettings size={19} />
-      </IconButton>
     </TitleBar>
   )
 }

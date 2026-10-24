@@ -7,7 +7,7 @@ import { tv } from '../../lib/tv'
 /** Поверхность всплывающих окон: меню, списки, подсказки с действиями */
 export const popoverStyles = tv({
   base: [
-    'rounded-lg border border-glass-line bg-glass text-fg shadow-pop backdrop-blur-[14px] outline-none',
+    'glass rounded-lg border border-glass-line text-fg shadow-pop outline-none',
     'animate-pop-in data-[exiting]:animate-pop-out',
     'data-[placement=top]:[--pop-shift:6px] data-[placement=bottom]:[--pop-shift:-6px]',
   ],

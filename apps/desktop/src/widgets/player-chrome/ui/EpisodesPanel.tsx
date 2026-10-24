@@ -21,7 +21,7 @@ export function EpisodesPanel({ open, onClose }: { open: boolean; onClose: () =>
       aria-label={t('episodes')}
       aria-hidden={!open}
       className={cn(
-        'absolute inset-y-0 right-0 z-20 flex w-[360px] flex-col border-l border-glass-line bg-panel',
+        'absolute inset-y-0 right-0 z-20 flex w-[360px] flex-col border-l border-glass-line glass',
         'transition-transform duration-(--duration-slow) ease-in-out',
         !open && 'pointer-events-none translate-x-full',
       )}

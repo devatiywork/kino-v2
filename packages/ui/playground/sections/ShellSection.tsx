@@ -14,7 +14,6 @@ import {
   Tabs,
   TitleBar,
   TitleBarNav,
-  TitleBarSpacer,
   WindowControls,
   type SearchComboSection,
 } from '../../src'
@@ -83,30 +82,35 @@ export function ShellSection() {
       <Demo title="Заголовок окна">
         <div className="w-full overflow-hidden rounded-md border border-line-2">
           <TitleBar
+            center={
+              <SearchField
+                label="Поиск"
+                placeholder="Поиск по истории и папкам"
+                shortcut="Ctrl K"
+                value={query}
+                onChange={setQuery}
+                className="w-72"
+              />
+            }
+            end={
+              <>
+                <Button variant="primary" icon={<IconFileAdd size={16} />}>
+                  Открыть
+                </Button>
+                <IconButton label="Открыть папку" tooltipPlacement="bottom">
+                  <IconFolder size={19} />
+                </IconButton>
+                <IconButton label="Настройки" shortcut="Ctrl ," tooltipPlacement="bottom">
+                  <IconSettings size={19} />
+                </IconButton>
+              </>
+            }
             controls={
               <WindowControls isMaximized={maximized} onToggleMaximize={() => setMaximized((v) => !v)} />
             }
           >
             <Logo />
             <TitleBarNav label="Разделы" items={NAV} current={section} onNavigate={setSection} />
-            <SearchField
-              label="Поиск"
-              placeholder="Поиск по истории и папкам"
-              shortcut="Ctrl K"
-              value={query}
-              onChange={setQuery}
-              className="ml-2 w-60"
-            />
-            <TitleBarSpacer />
-            <Button variant="primary" icon={<IconFileAdd size={16} />}>
-              Открыть
-            </Button>
-            <IconButton label="Открыть папку" tooltipPlacement="bottom">
-              <IconFolder size={19} />
-            </IconButton>
-            <IconButton label="Настройки" shortcut="Ctrl ," tooltipPlacement="bottom">
-              <IconSettings size={19} />
-            </IconButton>
           </TitleBar>
         </div>
       </Demo>

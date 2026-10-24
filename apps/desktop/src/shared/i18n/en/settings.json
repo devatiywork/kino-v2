@@ -13,6 +13,7 @@
     "accent": "Accent colour",
     "accentHint": "Progress, selected tracks, main buttons",
     "accents": {
+      "blue": "Blue",
       "ember": "Orange",
       "gold": "Gold",
       "lime": "Lime",

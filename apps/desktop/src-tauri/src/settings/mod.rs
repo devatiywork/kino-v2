@@ -25,10 +25,12 @@ pub enum Theme {
     System,
 }
 
-/// Accent presets: each has its own shade for the dark and the light theme (tokens.css)
+/// Accent presets: each has its own shade for the dark and the light theme (tokens.css).
+/// Blue — Kino v1's, the default
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Accent {
+    Blue,
     Ember,
     Gold,
     Lime,
@@ -133,6 +135,8 @@ pub const WATCHED_PERCENTS: [u8; 3] = [85, 90, 95];
 /// More than the player has actions: a bound for a hand-edited database
 const HOTKEYS_MAX: usize = 32;
 /// 10 GB/s in KB/s: more is a typo
+/// The palette moved to Kino v1's: `to_v1_palette` ran
+const PALETTE_KEY: &str = "settings.palette";
 const LIMIT_MAX: u32 = 10_000_000;
 const PEER_LIMIT_MAX: u32 = 2_000;
 const QUEUE_MAX: u32 = 100;
@@ -283,7 +287,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: Theme::Dark,
-            accent: Accent::Ember,
+            accent: Accent::Blue,
             language: Language::Ru,
             resume: true,
             autoplay: true,
@@ -473,7 +477,27 @@ impl SettingsStore {
                 Settings::default()
             }
         };
-        Self { library, current: Mutex::new(current) }
+        let store = Self { library, current: Mutex::new(current) };
+        store.to_v1_palette();
+        store
+    }
+
+    /// Once: the palette became Kino v1's (v0.25.0) and its blue the default accent. The orange
+    /// stored before was the old default, not a choice: it becomes blue too
+    fn to_v1_palette(&self) {
+        if self.library.setting(PALETTE_KEY).ok().flatten().is_some() {
+            return;
+        }
+        let mut current = self.lock();
+        if current.accent == Accent::Ember {
+            current.accent = Accent::Blue;
+            if let Err(e) = self.save(&current) {
+                eprintln!("[settings] palette: {e}");
+            }
+        }
+        if let Err(e) = self.library.set_setting(PALETTE_KEY, "v1") {
+            eprintln!("[settings] palette: {e}");
+        }
     }
 
     fn lock(&self) -> MutexGuard<'_, Settings> {
@@ -513,6 +537,21 @@ impl SettingsStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_old_default_orange_becomes_v1_blue_once_a_choice_made_later_stays() {
+        let library = Arc::new(Library::in_memory());
+        library.set_setting(STORAGE_KEY, r#"{"accent":"ember","theme":"dark"}"#).unwrap();
+        let store = SettingsStore::load(library.clone());
+        assert_eq!(store.get().accent, Accent::Blue);
+        // Chosen again after the move: it stays
+        store.update(serde_json::json!({ "accent": "ember" }).as_object().unwrap()).unwrap();
+        assert_eq!(SettingsStore::load(library.clone()).get().accent, Accent::Ember);
+        // Another accent is never touched
+        let teal = Arc::new(Library::in_memory());
+        teal.set_setting(STORAGE_KEY, r#"{"accent":"teal"}"#).unwrap();
+        assert_eq!(SettingsStore::load(teal).get().accent, Accent::Teal);
+    }
 
     #[test]
     fn the_schedule_of_the_alternative_limits() {
@@ -567,7 +606,7 @@ mod tests {
     fn a_patch_changes_only_its_keys() {
         let next = merge(&Settings::default(), &patch(json!({ "theme": "light", "watchedPercent": 85 }))).unwrap();
         assert_eq!((next.theme, next.watched_percent), (Theme::Light, 85));
-        assert_eq!(next.accent, Accent::Ember);
+        assert_eq!(next.accent, Accent::Blue);
     }
 
     #[test]
@@ -595,7 +634,7 @@ mod tests {
     fn a_broken_stored_value_falls_back_alone() {
         let s = from_stored(r#"{ "theme": "light", "accent": "neon", "autoplay": false, "removedLongAgo": 1 }"#);
         assert_eq!(s.theme, Theme::Light);
-        assert_eq!(s.accent, Accent::Ember, "unknown accent → default");
+        assert_eq!(s.accent, Accent::Blue, "unknown accent → default");
         assert!(!s.autoplay);
         assert_eq!(from_stored("not json"), Settings::default());
     }

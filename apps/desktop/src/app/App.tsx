@@ -56,7 +56,7 @@ export function App() {
       {screen === 'player' ? (
         <PlayerPage />
       ) : (
-        <div className="flex h-full flex-col bg-bg">
+        <div className="flex h-full flex-col bg-wallpaper">
           <AppTitleBar search={<GlobalSearch />} />
           <main className="min-h-0 flex-1">
             <Page screen={screen} />

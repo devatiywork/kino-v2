@@ -113,7 +113,7 @@ export function GlobalSearch() {
       emptyText={results && results.query === query.trim() ? t('search.empty', { query: results.query }) : undefined}
       clearLabel={t('search.clear')}
       inputRef={input}
-      className="ml-2 w-[300px] shrink"
+      className="w-[clamp(240px,28vw,380px)]"
     />
   )
 }

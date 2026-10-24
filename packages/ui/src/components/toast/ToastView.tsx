@@ -43,7 +43,7 @@ export function ToastView({ toast, onDismiss, onPause, onResume }: ToastViewProp
       onMouseEnter={onPause}
       onMouseLeave={onResume}
       {...dataFlags({ exiting: toast.isExiting })}
-      className="pointer-events-auto flex animate-toast-in items-start gap-3 rounded-lg border border-glass-line bg-glass p-3 pl-3.5 shadow-pop backdrop-blur-[14px] data-[exiting]:animate-fade-out"
+      className="pointer-events-auto flex animate-toast-in items-start gap-3 rounded-lg border border-glass-line glass p-3 pl-3.5 shadow-pop data-[exiting]:animate-fade-out"
     >
       <span className={cn('mt-0.5 shrink-0', TONE_CLASS[toast.tone])}>{TONE_ICON[toast.tone]}</span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-px">

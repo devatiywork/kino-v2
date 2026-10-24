@@ -28,10 +28,12 @@ function ModalLayer({ state, children, isDismissable, isExiting }: ModalProps & 
   const { modalProps, underlayProps } = useModalOverlay({ isDismissable }, state, ref)
   return (
     <Overlay>
+      {/* The page behind blurs here, not under the dialog: the dialog's pop-in animation would
+          cut its own glass off from the page */}
       <div
         {...underlayProps}
         {...dataFlags({ exiting: isExiting })}
-        className="fixed inset-0 z-50 grid animate-fade-in place-items-center bg-scrim/55 p-6 data-[exiting]:animate-fade-out"
+        className="fixed inset-0 z-50 grid animate-fade-in place-items-center bg-scrim/55 p-6 backdrop-blur-[6px] data-[exiting]:animate-fade-out"
       >
         <div {...modalProps} ref={ref} {...dataFlags({ exiting: isExiting })} className="animate-pop-in data-[exiting]:animate-pop-out">
           {children}
@@ -57,7 +59,7 @@ export function Dialog({ title, children, actions, className, ...props }: Dialog
     <section
       {...dialogProps}
       ref={ref}
-      className={cn('flex w-[440px] max-w-full flex-col gap-3 rounded-xl border border-line-2 bg-panel p-6 shadow-pop outline-none', className)}
+      className={cn('flex w-[440px] max-w-full flex-col gap-3 rounded-xl border border-glass-line glass p-6 shadow-pop outline-none', className)}
     >
       <h2 {...titleProps} className="font-display text-lg font-semibold text-fg">
         {title}

@@ -34,7 +34,7 @@ export function TracksButton({ onOpenChange }: { onOpenChange?: (open: boolean) 
       placement="top end"
       onOpenChange={onOpenChange}
       // Over the video: an opaque surface, backdrop blur does not reach mpv's window
-      popoverClassName="w-[600px] bg-panel p-3.5"
+      popoverClassName="w-[600px] p-3.5"
       content={
         <div className="grid grid-cols-2 gap-3.5">
           <section>

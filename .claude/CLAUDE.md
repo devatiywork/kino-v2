@@ -25,7 +25,7 @@ One window, two independent modules:
 
 The player never depends on the torrent module. The only link is optional: "this video file came from that torrent". See `.claude/SPEC.md`.
 
-Visual direction: **«Проектор»** — warm graphite dark theme (not near-black: easy on OLED), amber accent, Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
+Visual direction: the layout of **«Проектор»** with the colors and the glass of **Kino v1** — iOS dark system colors (#1c1c1e), translucent panels over a blurred violet-blue wallpaper, dark glass with backdrop blur for the title bar, menus, dialogs and toasts, iOS blue accent by default. Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
 Themes: dark (default), light, system. The video area and controls over video are always dark (`data-theme="dark"` scope).
 
 ## Tech Stack
@@ -181,8 +181,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)
 packages/ui/           — @kino/ui, our UI library
-  src/styles/          — tokens.css (single source of design tokens, dark + light; accent presets ember/gold/lime/teal/violet
-                         with a shade per theme), base.css (no browser legacy), index.css
+  src/styles/          — tokens.css (single source of design tokens, dark + light in Kino v1's palette; accent presets
+                         blue (default)/ember/gold/lime/teal/violet with a shade per theme; utilities bg-wallpaper, glass,
+                         glass-titlebar), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
   src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
                          PopoverButton, Kbd, KeyRecorder, Checkbox (indeterminate), TextField (description, error, addon,

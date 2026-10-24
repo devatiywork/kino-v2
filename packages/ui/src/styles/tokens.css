@@ -141,109 +141,143 @@
 }
 
 /* ---------- Тёмная тема (по умолчанию) ----------
- * Тёплый графит, а не почти чёрный: на OLED глубокий чёрный фон с ярким текстом режет глаза
- * и смазывается при прокрутке. Фон на уровне тёмной темы Windows 11, текст чуть приглушён.
- * Контраст текста ≥ 4.5:1 на всех поверхностях до raise; видео — всегда на чёрном (--kino-video).
+ * Палитра Kino v1: тёмные системные цвета iOS и «стекло». Окно — фон #1c1c1e с размытыми
+ * сине-фиолетовыми пятнами (--kino-wallpaper); панели и карточки полупрозрачные, сквозь них
+ * видны пятна; заголовок, меню, окна и уведомления — тёмное стекло с размытием.
+ * Текст — белый с прозрачностью, как в v1. Видео — всегда на чёрном (--kino-video).
  */
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
-  --kino-bg: #1f1d1b;
-  --kino-panel: #272523;
-  --kino-raise: #302d2a;
-  --kino-raise-2: #3b3733;
-  --kino-line: #34312d;
-  --kino-line-2: #45403b;
-  --kino-fg: #ede8e1;
-  --kino-fg-2: #c3bbb0;
-  --kino-fg-3: #a0988d;
-  --kino-fg-4: #b0a79c;
-  /* Набор акцентов (applyAccent): яркие, текст на них тёмный */
+  --kino-bg: #1c1c1e;
+  --kino-panel: rgb(255 255 255 / 0.06);
+  --kino-raise: rgb(255 255 255 / 0.1);
+  --kino-raise-2: rgb(255 255 255 / 0.16);
+  --kino-line: rgb(255 255 255 / 0.1);
+  --kino-line-2: rgb(255 255 255 / 0.18);
+  --kino-fg: rgb(255 255 255 / 0.92);
+  --kino-fg-2: rgb(255 255 255 / 0.6);
+  --kino-fg-3: rgb(255 255 255 / 0.45);
+  --kino-fg-4: rgb(255 255 255 / 0.52);
+  /* Набор акцентов (applyAccent). Синий — системный iOS, как в v1, текст на нём белый;
+   * остальные яркие, текст на них тёмный */
+  --kino-accent-blue: #0a84ff;
   --kino-accent-ember: #ff7a2e;
   --kino-accent-gold: #e8c26a;
   --kino-accent-lime: #b5dc5a;
   --kino-accent-teal: #2bb3a3;
-  --kino-accent-violet: #b4a2ff;
+  --kino-accent-violet: #bf5af2;
+  --kino-on-accent-blue: #ffffff;
   --kino-on-accent-ember: #170b03;
   --kino-on-accent-gold: #1a1303;
   --kino-on-accent-lime: #111a03;
   --kino-on-accent-teal: #03211e;
-  --kino-on-accent-violet: #170f35;
-  --kino-accent: var(--kino-accent-ember);
+  --kino-on-accent-violet: #ffffff;
+  --kino-accent: var(--kino-accent-blue);
   --kino-accent-hover: color-mix(in oklab, var(--kino-accent), white 16%);
-  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 16%, transparent);
-  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 22%);
-  --kino-on-accent: var(--kino-on-accent-ember);
-  --kino-danger: #ff7478;
-  --kino-on-danger: #1a0506;
-  --kino-hover: rgb(237 232 225 / 0.07);
-  --kino-hover-2: rgb(237 232 225 / 0.13);
-  --kino-glass: rgb(31 29 27 / 0.9);
-  --kino-glass-line: rgb(237 232 225 / 0.1);
-  --kino-track: rgb(242 237 230 / 0.22);
-  --kino-track-buffer: rgb(242 237 230 / 0.34);
-  --kino-scrim: rgb(0 0 0 / 0.78);
+  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 22%, transparent);
+  --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 28%);
+  --kino-on-accent: var(--kino-on-accent-blue);
+  --kino-danger: #ff453a;
+  --kino-on-danger: #ffffff;
+  --kino-hover: rgb(255 255 255 / 0.07);
+  --kino-hover-2: rgb(255 255 255 / 0.13);
+  --kino-glass: rgb(44 44 46 / 0.8);
+  --kino-glass-line: rgb(255 255 255 / 0.16);
+  /* Заголовок окна: стекло потоньше, сквозь него видны пятна фона */
+  --kino-titlebar: rgb(28 28 30 / 0.72);
+  --kino-track: rgb(255 255 255 / 0.2);
+  --kino-track-buffer: rgb(255 255 255 / 0.32);
+  --kino-scrim: rgb(0 0 0 / 0.55);
   --kino-video: #000000;
   --kino-win-close: #c42b1c;
   --kino-win-close-fg: #ffffff;
-  --kino-shadow-pop: 0 18px 50px rgb(0 0 0 / 0.55);
+  --kino-shadow-pop: 0 8px 32px rgb(0 0 0 / 0.35), 0 0 1px rgb(0 0 0 / 0.5), inset 0 0.5px 0 rgb(255 255 255 / 0.18);
   --kino-shadow-thumb: 0 0 0 3px rgb(0 0 0 / 0.35);
+  --kino-wallpaper:
+    radial-gradient(ellipse at 20% 50%, rgb(120 60 180 / 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgb(30 80 220 / 0.3) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgb(80 40 160 / 0.25) 0%, transparent 50%), var(--kino-bg);
 }
 
 /* ---------- Светлая тема ----------
- * Фон — тёплый светло-серый (не чисто белый), панели белые с мягкой тенью.
- * Акцент — жжёный оранжевый с белым текстом (4.7:1); чёрный текст на оранжевом
- * в светлой теме смотрится грубо. Видео всегда на чёрном.
+ * Светлая палитра Kino v1: фон #f2f2f7 с бледными пятнами, белые полупрозрачные панели,
+ * текст чёрный с прозрачностью, синий акцент iOS с белым текстом. Видео всегда на чёрном.
  */
 [data-theme='light'] {
   color-scheme: light;
-  --kino-bg: #f3f0eb;
-  --kino-panel: #ffffff;
-  --kino-raise: #ebe7e1;
-  --kino-raise-2: #e0dbd3;
-  --kino-line: #e4dfd8;
-  --kino-line-2: #d2ccc3;
-  --kino-fg: #1d1a17;
-  --kino-fg-2: #4f4840;
-  --kino-fg-3: #6b635a;
-  --kino-fg-4: #5c544c;
-  /* Тот же набор, темнее: белый текст на акценте — не ниже 4.5:1 */
+  --kino-bg: #f2f2f7;
+  --kino-panel: rgb(255 255 255 / 0.62);
+  --kino-raise: rgb(0 0 0 / 0.05);
+  --kino-raise-2: rgb(0 0 0 / 0.09);
+  --kino-line: rgb(60 60 67 / 0.16);
+  --kino-line-2: rgb(60 60 67 / 0.3);
+  --kino-fg: rgb(0 0 0 / 0.9);
+  --kino-fg-2: rgb(0 0 0 / 0.6);
+  --kino-fg-3: rgb(0 0 0 / 0.48);
+  --kino-fg-4: rgb(0 0 0 / 0.55);
+  /* Тот же набор, темнее: белый текст на акценте */
+  --kino-accent-blue: #007aff;
   --kino-accent-ember: #c94a0c;
   --kino-accent-gold: #8a6512;
   --kino-accent-lime: #4a7612;
   --kino-accent-teal: #0f766e;
-  --kino-accent-violet: #6a4ed2;
+  --kino-accent-violet: #8944ab;
+  --kino-on-accent-blue: #ffffff;
   --kino-on-accent-ember: #ffffff;
   --kino-on-accent-gold: #ffffff;
   --kino-on-accent-lime: #ffffff;
   --kino-on-accent-teal: #ffffff;
   --kino-on-accent-violet: #ffffff;
-  --kino-accent: var(--kino-accent-ember);
+  --kino-accent: var(--kino-accent-blue);
   --kino-accent-hover: color-mix(in oklab, var(--kino-accent), black 12%);
-  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 12%, transparent);
+  --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 14%, transparent);
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), black 18%);
-  --kino-on-accent: var(--kino-on-accent-ember);
-  --kino-danger: #cf3238;
+  --kino-on-accent: var(--kino-on-accent-blue);
+  --kino-danger: #d70015;
   --kino-on-danger: #ffffff;
-  --kino-hover: rgb(29 26 23 / 0.05);
-  --kino-hover-2: rgb(29 26 23 / 0.09);
-  --kino-glass: rgb(255 255 255 / 0.9);
-  --kino-glass-line: rgb(29 26 23 / 0.1);
-  --kino-track: rgb(29 26 23 / 0.16);
-  --kino-track-buffer: rgb(29 26 23 / 0.26);
-  --kino-scrim: rgb(0 0 0 / 0.78);
+  --kino-hover: rgb(0 0 0 / 0.04);
+  --kino-hover-2: rgb(0 0 0 / 0.08);
+  --kino-glass: rgb(255 255 255 / 0.8);
+  --kino-glass-line: rgb(0 0 0 / 0.1);
+  --kino-titlebar: rgb(242 242 247 / 0.72);
+  --kino-track: rgb(0 0 0 / 0.14);
+  --kino-track-buffer: rgb(0 0 0 / 0.24);
+  --kino-scrim: rgb(0 0 0 / 0.35);
   --kino-video: #000000;
   --kino-win-close: #c42b1c;
   --kino-win-close-fg: #ffffff;
-  --kino-shadow-pop: 0 12px 36px rgb(60 45 30 / 0.16), 0 2px 6px rgb(60 45 30 / 0.08);
+  --kino-shadow-pop: 0 8px 32px rgb(0 0 0 / 0.12), 0 0 1px rgb(0 0 0 / 0.16), inset 0 0.5px 0 rgb(255 255 255 / 0.8);
   --kino-shadow-thumb: 0 0 0 3px rgb(255 255 255 / 0.9);
+  --kino-wallpaper:
+    radial-gradient(ellipse at 20% 50%, rgb(180 140 240 / 0.2) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgb(100 160 255 / 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgb(160 120 220 / 0.15) 0%, transparent 50%), var(--kino-bg);
+}
+
+/* Фон окна и стекло — утилиты: градиент и размытие не задаются цветом */
+@utility bg-wallpaper {
+  background: var(--kino-wallpaper);
+}
+@utility glass {
+  background-color: var(--kino-glass);
+  backdrop-filter: blur(40px) saturate(180%);
+}
+@utility glass-titlebar {
+  background-color: var(--kino-titlebar);
+  backdrop-filter: blur(20px) saturate(160%);
 }
 
 /* ---------- Акцентный цвет ----------
  * applyAccent ставит data-accent на корень. Каждый элемент с data-theme заново выбирает акцент
  * из своей темы, поэтому вложенная тёмная тема (плеер поверх светлой) получает свой оттенок.
- * ember — акцент по умолчанию, для него правила не нужны.
+ * blue — акцент по умолчанию (как в Kino v1), для него правила не нужны.
  */
+[data-accent='ember'][data-theme],
+[data-accent='ember'] [data-theme] {
+  --kino-accent: var(--kino-accent-ember);
+  --kino-on-accent: var(--kino-on-accent-ember);
+}
 [data-accent='gold'][data-theme],
 [data-accent='gold'] [data-theme] {
   --kino-accent: var(--kino-accent-gold);

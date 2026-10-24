@@ -26,10 +26,10 @@ export function applyTheme(mode: ThemeMode, root: HTMLElement = document.documen
 }
 
 /** Набор акцентных цветов: у каждого свой оттенок для тёмной и светлой темы (tokens.css) */
-export const ACCENTS = ['ember', 'gold', 'lime', 'teal', 'violet'] as const
+export const ACCENTS = ['blue', 'ember', 'gold', 'lime', 'teal', 'violet'] as const
 export type AccentName = (typeof ACCENTS)[number]
 
-/** Акцентный цвет приложения (атрибут data-accent на корне); ember — по умолчанию */
+/** Акцентный цвет приложения (атрибут data-accent на корне); blue — по умолчанию, как в Kino v1 */
 export function applyAccent(accent: AccentName, root: HTMLElement = document.documentElement): void {
   root.dataset.accent = accent
 }
