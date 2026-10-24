@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0a84ff" alt="Windows 10, 11">
   <img src="https://img.shields.io/badge/Tauri%202-Rust%20%2B%20React-24c8db" alt="Tauri 2, Rust, React">
   <img src="https://img.shields.io/badge/%D0%B2%D0%B8%D0%B4%D0%B5%D0%BE-mpv-691f69" alt="mpv">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-34c759" alt="Лицензия MIT"></a>
 </p>
 
 <p align="center">
@@ -104,7 +105,7 @@ Kino — две программы, которые знают друг о дру
 
 ## Установка
 
-1. Скачайте `Kino v2_<версия>_x64-setup.exe` со страницы [последнего релиза](https://github.com/devatiywork/kino-v2/releases/latest).
+1. Скачайте `Kino-v2_<версия>_x64-setup.exe` со страницы [последнего релиза](https://github.com/devatiywork/kino-v2/releases/latest).
 2. Запустите. Kino ставится для всех пользователей в `C:\Program Files\Kino v2` и попросит права администратора.
 3. Установщик не подписан, поэтому Windows SmartScreen может предупредить: «Подробнее» → «Выполнить в любом случае».
 
@@ -165,7 +166,11 @@ design/              прототип интерфейса
 scripts/             libmpv, списки блокировки рекламы, иконки
 ```
 
-## Сторонние компоненты
+## Лицензия
+
+Kino — под лицензией [MIT](LICENSE): можно свободно использовать, менять и распространять, сохраняя уведомление об авторских правах.
+
+Сторонние компоненты — под своими лицензиями:
 
 - [mpv / libmpv](https://mpv.io) — LGPL 2.1+ (сборка [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake)).
 - [librqbit](https://github.com/ikatson/rqbit) — Apache 2.0, © Igor Katson; копия с изменениями описана в `crates/librqbit/KINO.md`.

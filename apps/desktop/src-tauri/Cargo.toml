@@ -1,9 +1,10 @@
 [package]
 name = "kino-desktop"
-version = "0.30.1"
+version = "0.30.2"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
+license = "MIT"
 
 [lib]
 name = "kino_desktop_lib"
