@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <!-- The same for 16–32 px: the square fills the cell, a thicker ring, a bigger «play» -->
-  <rect x="0" y="0" width="1024" height="1024" rx="208" fill="#1f1d1b"/>
-  <circle cx="512" cy="512" r="300" fill="none" stroke="#ff7a2e" stroke-width="170"/>
-  <path d="M448 380 L640 512 L448 644 Z" fill="#ede8e1" stroke="#ede8e1" stroke-width="40" stroke-linejoin="round"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="208" fill="#1c1c1e"/>
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#0a84ff" stroke-width="170"/>
+  <path d="M448 380 L640 512 L448 644 Z" fill="#ffffff" stroke="#ffffff" stroke-width="40" stroke-linejoin="round"/>
 </svg>

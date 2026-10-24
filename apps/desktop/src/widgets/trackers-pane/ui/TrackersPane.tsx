@@ -58,7 +58,7 @@ export function TrackersPane() {
             {status.text}
           </p>
         ) : null}
-        <div ref={host} className="relative min-h-0 flex-1 bg-bg">
+        <div ref={host} className="relative min-h-0 flex-1">
           {!opened ? <p className="mx-auto mt-16 max-w-md px-6 text-center text-base leading-relaxed text-fg-2">{t('trackers.empty')}</p> : null}
         </div>
       </div>

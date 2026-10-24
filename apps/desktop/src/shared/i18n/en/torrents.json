@@ -236,7 +236,6 @@
     "bookmarks": "Tracker bookmarks",
     "bookmarksTitle": "Bookmarks",
     "addBookmark": "Add a tracker",
-    "note": "Sign-in and captcha work as in a normal browser. Kino catches downloaded .torrent files and magnet links itself and keeps them in the archive with the release page.",
     "back": "Back",
     "forward": "Forward",
     "reload": "Reload the page",

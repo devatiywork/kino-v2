@@ -47,7 +47,7 @@ export function TextField({ label, showLabel = true, description, errorMessage, 
         data-hovered={isHovered || undefined}
         data-invalid={isInvalid || undefined}
         className={cn(
-          'flex min-w-0 gap-1 rounded-md border border-line-2 bg-bg pr-1 pl-3',
+          'flex min-w-0 gap-1 rounded-md border border-line-2 bg-field pr-1 pl-3',
           multiline ? 'items-start py-2' : 'h-[34px] items-center',
           'transition-[border-color] duration-(--duration-fast) data-[hovered]:border-fg-3 focus-within:border-accent!',
           'data-[invalid]:border-danger',

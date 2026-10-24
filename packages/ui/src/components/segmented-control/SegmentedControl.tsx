@@ -6,7 +6,7 @@ import { tv, type VariantProps } from '../../lib/tv'
 
 const segmentedStyles = tv({
   slots: {
-    root: 'inline-flex gap-0.5 rounded-md border border-line-2 bg-bg p-[3px]',
+    root: 'inline-flex gap-0.5 rounded-md border border-line-2 bg-field p-[3px]',
     item: [
       'relative inline-flex items-center justify-center rounded-[7px] whitespace-nowrap text-fg-2',
       'transition-[background-color,color] duration-(--duration-fast)',

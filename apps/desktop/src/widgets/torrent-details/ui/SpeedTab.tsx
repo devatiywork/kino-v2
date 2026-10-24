@@ -72,7 +72,7 @@ export function SpeedTab({ id }: { id: number }) {
           aria-label={t('details.speedChart')}
           viewBox={`0 0 ${span} 100`}
           preserveAspectRatio="none"
-          className="min-h-28 w-full flex-1 rounded-sm border border-line bg-bg"
+          className="min-h-28 w-full flex-1 rounded-sm border border-line bg-field"
         >
           <polyline points={line(up, span, top)} className="fill-none stroke-fg-3" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
           <polyline points={line(down, span, top)} className="fill-none stroke-accent" strokeWidth={2} vectorEffect="non-scaling-stroke" />

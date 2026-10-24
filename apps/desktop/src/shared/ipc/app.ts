@@ -22,7 +22,8 @@ export interface Release {
 
 export interface UpdateCheck {
   current: string
-  latest: Release
+  /** null — nothing is published yet */
+  latest: Release | null
   /** The latest is newer than this Kino */
   available: boolean
 }

@@ -18,6 +18,8 @@
   --color-raise-2: var(--kino-raise-2);
   --color-line: var(--kino-line);
   --color-line-2: var(--kino-line-2);
+  /* Поля, переключатели, строки внутри панели: полупрозрачная заливка, не сплошной фон */
+  --color-field: var(--kino-field);
 
   /* Текст: fg — основной, fg-2..fg-4 — по убыванию важности */
   --color-fg: var(--kino-fg);
@@ -155,6 +157,8 @@
   --kino-raise-2: rgb(255 255 255 / 0.16);
   --kino-line: rgb(255 255 255 / 0.1);
   --kino-line-2: rgb(255 255 255 / 0.18);
+  /* Заливка iOS (systemFill), как у полей Kino v1: сквозь неё видны панель и пятна */
+  --kino-field: rgb(120 120 128 / 0.2);
   --kino-fg: rgb(255 255 255 / 0.92);
   --kino-fg-2: rgb(255 255 255 / 0.6);
   --kino-fg-3: rgb(255 255 255 / 0.45);
@@ -212,6 +216,7 @@
   --kino-raise-2: rgb(0 0 0 / 0.09);
   --kino-line: rgb(60 60 67 / 0.16);
   --kino-line-2: rgb(60 60 67 / 0.3);
+  --kino-field: rgb(120 120 128 / 0.12);
   --kino-fg: rgb(0 0 0 / 0.9);
   --kino-fg-2: rgb(0 0 0 / 0.6);
   --kino-fg-3: rgb(0 0 0 / 0.48);

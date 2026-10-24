@@ -37,6 +37,14 @@ describe('UpdatesRow (ТЗ 6 «Обновления»)', () => {
     expect(mock.calls().at(-1)).toEqual(['app_open_url', { url: release.url }])
   })
 
+  it('опубликованных версий пока нет — так и сказано, это не ошибка', async () => {
+    const user = userEvent.setup()
+    mock.respond('app_check_update', { current: '0.25.1', latest: null, available: false })
+    render(<UpdatesRow />)
+    await user.click(screen.getByRole('button', { name: 'Проверить сейчас' }))
+    expect(await screen.findByText('Опубликованных версий пока нет')).toBeInTheDocument()
+  })
+
   it('последняя версия и ошибка сети — сказано словами', async () => {
     const user = userEvent.setup()
     mock.respond('app_check_update', { current: '0.22.0', latest: release, available: false })

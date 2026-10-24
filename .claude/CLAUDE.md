@@ -182,7 +182,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light in Kino v1's palette; accent presets
-                         blue (default)/ember/gold/lime/teal/violet with a shade per theme; utilities bg-wallpaper, glass,
+                         blue (default)/ember/gold/lime/teal/violet with a shade per theme; `field` — the translucent fill of
+                         fields and rows inside a panel, never a solid background; utilities bg-wallpaper, glass,
                          glass-titlebar), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
   src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,

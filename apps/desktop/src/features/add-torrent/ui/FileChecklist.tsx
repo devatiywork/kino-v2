@@ -25,7 +25,7 @@ export function FileChecklist({ files, selected, onChange, isDisabled }: FileChe
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-2 rounded-lg border border-line bg-bg">
+    <div className="flex min-h-0 flex-col gap-2 rounded-lg border border-line bg-field">
       <div className="flex items-center gap-3 border-b border-line px-3 py-2">
         <Checkbox
           isSelected={chosen.length === files.length}

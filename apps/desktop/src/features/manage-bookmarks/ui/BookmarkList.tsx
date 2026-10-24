@@ -1,4 +1,4 @@
-import { cn, ConfirmDialog, IconLock, IconMore, IconPlus, MenuButton, Pressable } from '@kino/ui'
+import { cn, ConfirmDialog, IconMore, IconPlus, MenuButton, Pressable } from '@kino/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { bookmarkOf, refreshBookmarks, useTrackers } from '../../../entities/tracker'
@@ -81,10 +81,6 @@ export function BookmarkList({ onOpen }: { onOpen: (bookmark: Bookmark) => void 
         <IconPlus size={16} />
         {t('trackers.addBookmark')}
       </Pressable>
-      <p className="mt-auto flex gap-2 rounded-md bg-hover p-3 text-xs leading-relaxed text-fg-3">
-        <IconLock size={14} className="mt-0.5 shrink-0 text-accent-fg" />
-        {t('trackers.note')}
-      </p>
       <BookmarkDialog
         isOpen={editing !== undefined}
         onOpenChange={(open) => !open && setEditing(undefined)}

@@ -24,7 +24,12 @@ export function UpdatesRow() {
   const hint = {
     idle: t('updates.hint'),
     checking: t('updates.checking'),
-    done: status.kind === 'done' && status.check.available ? t('updates.available', { version: status.check.latest.version }) : t('updates.latest'),
+    done:
+      status.kind !== 'done' || !status.check.latest
+        ? t('updates.none')
+        : status.check.available
+          ? t('updates.available', { version: status.check.latest.version })
+          : t('updates.latest'),
     failed: status.kind === 'failed' ? t('updates.failed', { message: status.message }) : '',
   }[status.kind]
   const release = status.kind === 'done' && status.check.available ? status.check.latest : null

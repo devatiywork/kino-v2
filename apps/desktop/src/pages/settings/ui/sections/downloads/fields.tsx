@@ -116,7 +116,7 @@ export function FolderField({ setting, title, empty, onChanged }: { setting: Tex
   }
   return (
     <div className="flex items-center gap-2">
-      <span className="min-w-0 flex-1 truncate rounded-md bg-bg px-3 py-2 font-mono text-xs text-fg-2">{value || empty}</span>
+      <span className="min-w-0 flex-1 truncate rounded-md bg-field px-3 py-2 font-mono text-xs text-fg-2">{value || empty}</span>
       <Button variant="outline" size="sm" onPress={() => void pick().catch((e: unknown) => console.error('[settings] folder', e))}>
         {t('downloads.change')}
       </Button>

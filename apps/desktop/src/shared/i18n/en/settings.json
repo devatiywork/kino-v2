@@ -259,6 +259,7 @@
     "latest": "You have the latest version",
     "available": "Kino {{version}} is out",
     "open": "Open the release page",
-    "failed": "Could not check: {{message}}"
+    "failed": "Could not check: {{message}}",
+    "none": "No version is published yet"
   }
 }

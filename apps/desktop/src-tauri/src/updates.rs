@@ -42,7 +42,8 @@ pub struct PendingUpdate(Mutex<Option<Release>>);
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCheck {
     pub current: String,
-    pub latest: Release,
+    /// None — nothing is published yet (GitHub answers 404)
+    pub latest: Option<Release>,
     /// The latest is newer than this Kino
     pub available: bool,
 }
@@ -85,10 +86,13 @@ fn release_of(json: &str) -> anyhow::Result<Release> {
 /// Asks the releases address for the latest release
 pub async fn check(url: &str, current: &str) -> anyhow::Result<UpdateCheck> {
     let client = reqwest::Client::builder().timeout(Duration::from_secs(15)).user_agent(format!("Kino/{current}")).build()?;
-    let response = client.get(url).header("Accept", "application/vnd.github+json").send().await?.error_for_status()?;
-    let latest = release_of(&response.text().await?)?;
+    let response = client.get(url).header("Accept", "application/vnd.github+json").send().await?;
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(UpdateCheck { current: current.to_string(), latest: None, available: false });
+    }
+    let latest = release_of(&response.error_for_status()?.text().await?)?;
     let available = is_newer(&latest.version, current);
-    Ok(UpdateCheck { current: current.to_string(), latest, available })
+    Ok(UpdateCheck { current: current.to_string(), latest: Some(latest), available })
 }
 
 fn latest_url() -> String {
@@ -117,7 +121,7 @@ pub fn spawn_checks(app: AppHandle, settings: std::sync::Arc<SettingsStore>) {
             if settings.read(|s| s.check_updates) {
                 let current = app.package_info().version.to_string();
                 match check(&latest_url(), &current).await {
-                    Ok(found) if found.available => tell_once(&app, found.latest),
+                    Ok(UpdateCheck { latest: Some(latest), available: true, .. }) => tell_once(&app, latest),
                     Ok(_) => {}
                     Err(e) => eprintln!("[updates] {e:#}"),
                 }
@@ -166,6 +170,24 @@ mod tests {
     }
 
     #[test]
+    fn nothing_published_yet_is_not_an_error() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/releases/latest", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let _ = stream.read(&mut [0u8; 2048]).unwrap();
+            let body = r#"{"message":"Not Found"}"#;
+            let reply = format!("HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+            stream.write_all(reply.as_bytes()).unwrap();
+        });
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        let found = runtime.block_on(check(&url, "0.25.1")).unwrap();
+        assert_eq!(found, UpdateCheck { current: "0.25.1".into(), latest: None, available: false });
+        server.join().unwrap();
+    }
+
+    #[test]
     fn the_check_asks_the_releases_address() {
         use std::io::{Read, Write};
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -181,7 +203,10 @@ mod tests {
         });
         let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
         let found = runtime.block_on(check(&url, "0.21.0")).unwrap();
-        assert_eq!(found, UpdateCheck { current: "0.21.0".into(), latest: Release { version: "9.9.9".into(), url: "https://example.org/r".into(), notes: String::new() }, available: true });
+        assert_eq!(
+            found,
+            UpdateCheck { current: "0.21.0".into(), latest: Some(Release { version: "9.9.9".into(), url: "https://example.org/r".into(), notes: String::new() }), available: true }
+        );
         let request = server.join().unwrap().to_lowercase();
         assert!(request.contains("user-agent: kino/0.21.0"), "GitHub wants a user agent: {request}");
     }

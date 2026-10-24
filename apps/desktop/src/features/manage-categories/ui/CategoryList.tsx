@@ -15,7 +15,7 @@ export function CategoryList() {
     <div className="flex flex-col gap-2">
       <ul aria-label={t('categories')} className="flex flex-col gap-1.5">
         {categories.map((category) => (
-          <li key={category.id} className="flex items-center gap-3 rounded-md bg-bg py-1.5 pr-1.5 pl-3">
+          <li key={category.id} className="flex items-center gap-3 rounded-md bg-field py-1.5 pr-1.5 pl-3">
             <b className="w-32 shrink-0 truncate text-sm font-medium text-fg">{category.name}</b>
             <IconFolder size={14} className="shrink-0 text-fg-3" />
             <span className="min-w-0 flex-1 truncate font-mono text-xs text-fg-2">{category.folder}</span>

@@ -5,7 +5,7 @@ import { tv } from '../../lib/tv'
 
 const recorderStyles = tv({
   base: [
-    'inline-flex h-[30px] min-w-16 items-center justify-center rounded-sm border border-line-2 bg-bg px-2.5',
+    'inline-flex h-[30px] min-w-16 items-center justify-center rounded-sm border border-line-2 bg-field px-2.5',
     'text-sm font-medium whitespace-nowrap text-fg',
     'transition-[border-color,color] duration-(--duration-fast)',
     'data-[hovered]:border-accent data-[disabled]:opacity-40',
