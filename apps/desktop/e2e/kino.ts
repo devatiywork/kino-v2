@@ -41,6 +41,8 @@ export interface Kino {
   settings: () => Promise<Record<string, unknown>>
   /** Another page of Kino's WebView2 — the site in the trackers browser — by its address */
   webPage: (prefix: string) => Promise<Page>
+  /** The mini player's window: Kino's own page in a window of its own, once it is open */
+  miniPage: () => Promise<Page>
   /** Kino started once more on the same data folder, as Explorer does: its exit code */
   startAgain: (...args: string[]) => Promise<number | null>
   /** The process ended by itself within `ms`: true; still running then — false */
@@ -84,17 +86,20 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
     env: {
       ...process.env,
       KINO_DATA_DIR: dataDir,
-      // Out of the way: almost silent, on the Full HD monitor and without taking the focus.
-      // KINO_E2E_MONITOR picks another monitor by resolution; with no match the window stays on the main one
+      // Out of the way: almost silent, without taking the focus, and unseen — its windows are
+      // cloaked (KINO_E2E_SHOW=1 shows them). KINO_E2E_MONITOR picks the monitor by resolution;
+      // with no match the window stays on the main one
       KINO_TEST_VOLUME: process.env.KINO_E2E_VOLUME ?? '1',
       KINO_TEST_MONITOR: process.env.KINO_E2E_MONITOR ?? '1920x1080',
+      ...(process.env.KINO_E2E_SHOW ? {} : { KINO_TEST_HIDDEN: '1' }),
       // Torrents without the network: no DHT, trackers or UPnP, loopback only — no firewall prompt
       KINO_TEST_OFFLINE: '1',
       ...(options.updatesUrl ? { KINO_UPDATES_URL: options.updatesUrl } : {}),
       ...(options.adblockList ? { KINO_ADBLOCK_LIST: options.adblockList } : {}),
       // Its own WebView2 browser: never joins another Kino, the CDP port is ours
       WEBVIEW2_USER_DATA_FOLDER: join(dataDir, 'webview2'),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+      // A cloaked window would count as covered: the page would stop drawing and its timers slow down
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --disable-features=CalculateNativeWinOcclusion`,
     },
     stdio: 'ignore',
   })
@@ -133,6 +138,19 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
           resolve(code)
         })
       }),
+    miniPage: async () => {
+      const deadline = Date.now() + 15_000
+      const origin = new URL(page.url()).origin
+      for (;;) {
+        const found = browser.contexts().flatMap((c) => c.pages()).find((p) => p !== page && p.url().startsWith(origin))
+        if (found) {
+          await found.waitForFunction(() => document.querySelector('#root')?.childElementCount)
+          return found
+        }
+        if (Date.now() > deadline) throw new Error('no mini player window')
+        await new Promise((r) => setTimeout(r, 200))
+      }
+    },
     webPage: async (prefix) => {
       const deadline = Date.now() + 15_000
       for (;;) {

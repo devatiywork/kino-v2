@@ -1,13 +1,14 @@
 //! Child window that mpv renders into. It sits at the bottom of the z-order, under the
 //! transparent WebView2, so the page draws the player UI on top of the video.
-//! Recipe and the failed variants: spikes/tauri-mpv/README.md
+//! Recipe and the failed variants: spikes/tauri-mpv/README.md. The mini player takes it into its
+//! own window and gives it back (mini.rs): mpv, a child of it, goes along
 
 use windows::core::w;
 use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH, HBRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, RegisterClassW, SetWindowPos, ShowWindow, HTTRANSPARENT,
+    CreateWindowExW, DefWindowProcW, RegisterClassW, SetParent, SetWindowPos, ShowWindow, HTTRANSPARENT,
     HWND_BOTTOM, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_HIDE, SW_SHOWNA, WINDOW_EX_STYLE,
     WM_NCHITTEST, WNDCLASSW, WS_CHILD, WS_CLIPCHILDREN, WS_DISABLED,
 };
@@ -74,6 +75,15 @@ impl VideoHost {
         if let Err(e) = r {
             eprintln!("[player] resize video host: {e}");
         }
+    }
+
+    /// Into another window of Kino — the mini player's or back into the main one — filling its
+    /// client area (physical pixels)
+    pub fn move_to(&self, parent: isize, width: i32, height: i32) {
+        if let Err(e) = unsafe { SetParent(self.hwnd(), Some(HWND(parent as *mut _))) } {
+            eprintln!("[player] move the video: {e}");
+        }
+        self.resize(width, height);
     }
 
     pub fn set_visible(&self, visible: bool) {

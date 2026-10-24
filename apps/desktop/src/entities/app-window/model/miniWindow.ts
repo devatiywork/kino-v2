@@ -1,57 +1,47 @@
-import { windowIpc, type WindowBounds } from '../../../shared/ipc/window'
+import { playerIpc } from '../../../shared/ipc/player'
+import { navigate } from '../../../shared/lib/router'
 import { setFullscreen, windowStore } from './windowState'
 
-/** The mini player's width in CSS pixels; the height follows the picture */
-const MINI_WIDTH = 480
-/** From the screen's bottom right corner, above the taskbar */
-const MARGIN = 24
-/** The main window's smallest (tauri.conf.json) and the mini player's */
-const MAIN_MIN = { width: 960, height: 600 }
-const MINI_MIN = { width: 256, height: 144 }
+const report = (what: string) => (e: unknown) => console.error(`[window] ${what}`, e)
 
-/** What the window was before the mini player: it comes back exactly so */
-let before: { bounds: WindowBounds; maximized: boolean; fullscreen: boolean } | null = null
-
-/** CSS pixels of the mini player for a picture of `width`×`height`: 16:9 when not known yet */
-export function miniSize(width: number | null, height: number | null): { width: number; height: number } {
-  const aspect = width && height ? Math.min(2.4, Math.max(1, width / height)) : 16 / 9
-  return { width: MINI_WIDTH, height: Math.round(MINI_WIDTH / aspect) }
-}
+/** The main window was fullscreen before the mini player: the video comes back so */
+let wasFullscreen = false
 
 /**
- * «Мини-плеер»: the window shrinks to the picture in the bottom right corner of its screen and
- * stays above the other windows; it is dragged by the picture and resized by its edges
+ * «Мини-плеер»: the video moves into a small window of its own in the corner of the screen, above
+ * the other windows; the main window stays free (src-tauri/src/player/mini.rs).
+ * `width`/`height` — the picture's, for the window's shape
  */
 export async function enterMini(width: number | null, height: number | null): Promise<void> {
-  const { maximized, fullscreen, mini } = windowStore.get()
-  if (mini) return
+  if (windowStore.get().mini) return
+  const fullscreen = windowStore.get().fullscreen
   windowStore.set({ mini: true })
+  try {
+    await playerIpc.enterMini(width, height)
+  } catch (e: unknown) {
+    windowStore.set({ mini: false })
+    throw e
+  }
+  wasFullscreen = fullscreen
   if (fullscreen) setFullscreen(false)
-  if (maximized) await windowIpc.unmaximize()
-  before = { bounds: await windowIpc.bounds(), maximized, fullscreen }
-  await windowIpc.setMinSize(MINI_MIN.width, MINI_MIN.height)
-  const area = await windowIpc.workArea()
-  const scale = area?.scale ?? 1
-  const size = miniSize(width, height)
-  const w = Math.round(size.width * scale)
-  const h = Math.round(size.height * scale)
-  const margin = Math.round(MARGIN * scale)
-  const x = area ? area.x + area.width - w - margin : before.bounds.x
-  const y = area ? area.y + area.height - h - margin : before.bounds.y
-  await windowIpc.setBounds({ x, y, width: w, height: h })
-  await windowIpc.setAlwaysOnTop(true)
 }
 
-/** Back to the window as it was: its place and size, maximized or fullscreen */
-export async function leaveMini(): Promise<void> {
-  if (!windowStore.get().mini) return
-  windowStore.set({ mini: false })
-  const was = before
-  before = null
-  await windowIpc.setAlwaysOnTop(false)
-  await windowIpc.setMinSize(MAIN_MIN.width, MAIN_MIN.height)
-  if (!was) return
-  await windowIpc.setBounds(was.bounds)
-  if (was.maximized) await windowIpc.maximize()
-  if (was.fullscreen) setFullscreen(true)
+/** The video back into the main window: onto its player screen (`expand`) or paused, out of sight */
+export function leaveMini(expand: boolean): Promise<void> {
+  return playerIpc.leaveMini(expand)
+}
+
+/** The main window follows the mini player closing: back to the player when it expands */
+export function startMiniSync(): () => void {
+  const unlisten = playerIpc.onMiniClosed((expand) => {
+    windowStore.set({ mini: false })
+    const fullscreen = wasFullscreen
+    wasFullscreen = false
+    if (!expand) return
+    navigate('player')
+    if (fullscreen) setFullscreen(true)
+  })
+  return () => {
+    unlisten.then((u) => u()).catch(report('mini player'))
+  }
 }

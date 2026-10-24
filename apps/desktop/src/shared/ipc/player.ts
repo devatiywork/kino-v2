@@ -100,6 +100,13 @@ export const playerIpc = {
   /** Share of the window width on the right that the video leaves free */
   setRightMargin: (ratio: number) => invoke<void>('player_set_right_margin', { ratio }),
   setVideoVisible: (visible: boolean) => invoke<void>('player_set_video_visible', { visible, seq: ++videoSeq }),
+  /** «Мини-плеер»: the video into a small window of its own; the picture's size shapes it */
+  enterMini: (width: number | null, height: number | null) => invoke<void>('player_enter_mini', { width, height }),
+  /** The video back into the main window: onto its player screen (`expand`) or paused, out of sight */
+  leaveMini: (expand: boolean) => invoke<void>('player_leave_mini', { expand }),
+  /** The mini player is gone; `expand` — the main window shows the player again */
+  onMiniClosed: (handler: (expand: boolean) => void): Promise<UnlistenFn> =>
+    listen<{ expand: boolean }>('player://mini-closed', (e) => handler(e.payload.expand)),
   onState: (handler: (state: PlayerSnapshot) => void): Promise<UnlistenFn> =>
     listen<PlayerSnapshot>('player://state', (e) => handler(e.payload)),
   onPosition: (handler: (position: number) => void): Promise<UnlistenFn> =>

@@ -3,6 +3,7 @@
 
 pub mod commands;
 mod events;
+pub mod mini;
 mod session;
 mod state;
 mod track_defaults;
@@ -63,6 +64,8 @@ pub struct Player {
     awake: Arc<KeepAwake>,
     /// Last applied show/hide request: IPC calls may arrive out of order
     video_seq: AtomicU64,
+    /// The video is in the mini player's window (mini.rs), not in the main one
+    in_mini: AtomicBool,
     /// «quit» was sent: once is enough
     quitting: AtomicBool,
     stopped: Arc<Stopped>,
@@ -173,6 +176,7 @@ impl Player {
             session,
             awake,
             video_seq: AtomicU64::new(0),
+            in_mini: AtomicBool::new(false),
             quitting: AtomicBool::new(false),
             stopped,
         })
@@ -324,16 +328,38 @@ impl Player {
         Ok(self.mpv.set_property("sub-margin-y", margin.clamp(0, 600))?)
     }
 
-    /// `seq` grows with every request from the renderer; an older request is ignored
+    /// `seq` grows with every request from the renderer; an older request is ignored. The main
+    /// window's screens say nothing while the video is in the mini player: it stays shown there
     pub fn set_video_visible(&self, visible: bool, seq: u64) {
-        if self.video_seq.fetch_max(seq, Ordering::SeqCst) > seq {
+        if self.video_seq.fetch_max(seq, Ordering::SeqCst) > seq || self.in_mini() {
             return;
         }
         self.host.set_visible(visible);
     }
 
-    pub fn resize_video(&self, width: u32, height: u32) {
-        self.host.resize(width as i32, height as i32);
+    /// A window was resized (`mini` — the mini player's): the video follows only its own window
+    pub fn resize_video(&self, width: u32, height: u32, mini: bool) {
+        if self.in_mini() == mini {
+            self.host.resize(width as i32, height as i32);
+        }
+    }
+
+    /// The video into `window` (HWND; client area in physical pixels): the mini player's (`mini`,
+    /// shown there at once) or back into the main one, as it was
+    pub fn move_video(&self, window: isize, width: u32, height: u32, mini: bool) {
+        self.in_mini.store(mini, Ordering::SeqCst);
+        self.host.move_to(window, width as i32, height as i32);
+        if mini {
+            self.host.set_visible(true);
+        }
+    }
+
+    pub fn hide_video(&self) {
+        self.host.set_visible(false);
+    }
+
+    pub fn in_mini(&self) -> bool {
+        self.in_mini.load(Ordering::SeqCst)
     }
 
     /// Save the position now (the window is closing)

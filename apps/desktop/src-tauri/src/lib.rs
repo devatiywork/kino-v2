@@ -22,7 +22,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, State, WindowEvent};
 
 use error::AppResult;
 use library::{commands as lc, Library};
-use player::{commands as pc, Player};
+use player::{commands as pc, mini, Player};
 use settings::{commands as sc, SettingsStore};
 use torrent::{commands as tc, Torrents, TorrentsOptions};
 use trackers::{commands as trc, Trackers};
@@ -116,9 +116,11 @@ fn app_clear_history(app: AppHandle, player: State<'_, Player>) -> AppResult<()>
 /// driver's DLL waits for itself on unload — and Kino stayed with no window: a dead tray icon,
 /// later starts handed over to it for nothing
 pub fn quit(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if let Err(e) = window.hide() {
-            eprintln!("[window] hide: {e}");
+    for label in ["main", mini::LABEL] {
+        if let Some(window) = app.get_webview_window(label) {
+            if let Err(e) = window.hide() {
+                eprintln!("[window] hide {label}: {e}");
+            }
         }
     }
     let handle = app.clone();
@@ -166,7 +168,7 @@ const EXIT_DEADLINE: Duration = Duration::from_secs(8);
 
 /// The main window in front: from the tray, minimized or behind others. The tests' Kino never
 /// takes the focus from whatever the user is doing
-fn bring_forward(app: &AppHandle) {
+pub(crate) fn bring_forward(app: &AppHandle) {
     if std::env::var_os("KINO_TEST_MONITOR").is_none() {
         return background::show_main(app);
     }
@@ -176,6 +178,38 @@ fn bring_forward(app: &AppHandle) {
                 eprintln!("[window] show: {e}");
             }
         }
+    }
+}
+
+/// KINO_TEST_HIDDEN: the E2E tests' windows are cloaked — Windows still draws them and the tests
+/// drive them, but the user sees none of them, fullscreen ones included, nor in the taskbar or
+/// Alt+Tab. Called on a window not shown yet
+pub(crate) fn hide_for_tests(window: &tauri::WebviewWindow) {
+    use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CLOAK};
+    if std::env::var_os("KINO_TEST_HIDDEN").is_none() {
+        return;
+    }
+    if let Err(e) = window.set_skip_taskbar(true) {
+        eprintln!("[window] skip taskbar: {e}");
+    }
+    let cloaked = match window.hwnd() {
+        Ok(hwnd) => {
+            let on = windows::core::BOOL(1);
+            // SAFETY: a window of this process, a BOOL of the size given
+            unsafe {
+                DwmSetWindowAttribute(
+                    windows::Win32::Foundation::HWND(hwnd.0 as *mut _),
+                    DWMWA_CLOAK,
+                    std::ptr::from_ref(&on).cast(),
+                    std::mem::size_of::<windows::core::BOOL>() as u32,
+                )
+            }
+            .map_err(|e| e.to_string())
+        }
+        Err(e) => Err(e.to_string()),
+    };
+    if let Err(e) = cloaked {
+        eprintln!("[window] cloak: {e}");
     }
 }
 
@@ -282,7 +316,15 @@ pub fn run() {
             if cfg!(debug_assertions) {
                 config.title = format!("{} · dev", config.title);
             }
+            let hidden = std::env::var_os("KINO_TEST_HIDDEN").is_some();
+            if hidden {
+                config.visible = false;
+            }
             let window = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
+            if hidden {
+                hide_for_tests(&window);
+                window.show()?;
+            }
             let size = window.inner_size()?;
             let hwnd = window.hwnd()?.0 as isize;
             // SPEC 6 «Медиаклавиши»; not in the tests, whose videos must not take the user's keys
@@ -319,17 +361,36 @@ pub fn run() {
         .on_window_event(|window, event| match event {
             WindowEvent::Resized(size) => {
                 if let Some(player) = window.try_state::<Player>() {
-                    player.resize_video(size.width, size.height);
+                    player.resize_video(size.width, size.height, window.label() == mini::LABEL);
                 }
             }
-            // SPEC 4.6: torrents at work — the window hides in the tray, the video stops
+            // Alt+F4 on the mini player: as its ✕ — paused, gone. With the main window in the tray
+            // and nothing at work, nothing of Kino is left to keep running
+            WindowEvent::CloseRequested { api, .. } if window.label() == mini::LABEL => {
+                api.prevent_close();
+                let app = window.app_handle();
+                mini::close(app, false);
+                let main_hidden = app.get_webview_window("main").is_some_and(|w| !w.is_visible().unwrap_or(true));
+                if main_hidden && !app.try_state::<Arc<Torrents>>().is_some_and(|t| t.busy()) {
+                    quit(app);
+                }
+            }
+            // SPEC 4.6: torrents at work, or the mini player playing — the window hides in the tray
             WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                let in_mini = mini::is_open(window.app_handle());
                 let to_tray = window.try_state::<Arc<SettingsStore>>().is_some_and(|s| s.read(|s| s.close_to_tray))
-                    && window.try_state::<Arc<Torrents>>().is_some_and(|t| t.busy());
+                    && (in_mini || window.try_state::<Arc<Torrents>>().is_some_and(|t| t.busy()));
                 // Either way the window is not destroyed under mpv: quitting stops it first
                 api.prevent_close();
                 if !to_tray {
                     return quit(window.app_handle());
+                }
+                // The mini player plays on: the main window just goes
+                if in_mini {
+                    if let Err(e) = window.hide() {
+                        eprintln!("[window] hide: {e}");
+                    }
+                    return;
                 }
                 if let Some(player) = window.try_state::<Player>() {
                     if let Err(e) = player.stop() {
@@ -374,6 +435,8 @@ pub fn run() {
             pc::player_set_subtitle_margin,
             pc::player_set_right_margin,
             pc::player_set_video_visible,
+            pc::player_enter_mini,
+            pc::player_leave_mini,
             lc::library_continue_watching,
             lc::library_history,
             lc::library_series,

@@ -1,7 +1,7 @@
 import { useToast } from '@kino/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { startWindowSync } from '../../entities/app-window'
+import { startMiniSync, startWindowSync } from '../../entities/app-window'
 import { startLibrarySync } from '../../entities/library'
 import { startPlaybackSync } from '../../entities/playback'
 import { startSettingsSync } from '../../entities/settings'
@@ -38,6 +38,7 @@ export function useAppStartup(): { dropping: boolean } {
   useEffect(() => {
     const stopPlayback = startPlaybackSync()
     const stopWindow = startWindowSync()
+    const stopMini = startMiniSync()
     const stopLibrary = startLibrarySync()
     const stopSettings = startSettingsSync()
     const stopTorrents = startTorrentsSync()
@@ -65,6 +66,7 @@ export function useAppStartup(): { dropping: boolean } {
       stopOpen.then((u) => u()).catch(report('unlisten'))
       stopPlayback()
       stopWindow()
+      stopMini()
       stopLibrary()
       stopSettings()
       stopTorrents()

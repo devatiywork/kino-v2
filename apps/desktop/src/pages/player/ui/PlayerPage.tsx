@@ -1,10 +1,9 @@
 import { cn } from '@kino/ui'
 import { useState, type MouseEvent, type WheelEvent } from 'react'
-import { leaveMini, useWindowState } from '../../../entities/app-window'
 import { changeVolume, clickVideo, Osd, usePlayback, VOLUME_STEP } from '../../../entities/playback'
 import { useMediaKeys, usePlayerHotkeys } from '../../../features/player-hotkeys'
 import { useIdle } from '../../../shared/lib/useIdle'
-import { EpisodesPanel, MiniPlayer, PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
+import { EpisodesPanel, PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
 import { usePanelMargin } from '../model/usePanelMargin'
 import { useSubtitleLift } from '../model/useSubtitleLift'
 import { useVideoLayer } from '../model/useVideoLayer'
@@ -24,13 +23,11 @@ export function PlayerPage() {
   const paused = usePlayback((s) => s.paused)
   const buffering = usePlayback((s) => s.buffering)
   const isEpisode = usePlayback((s) => s.seriesKey != null)
-  const mini = useWindowState((s) => s.mini)
   const { idle } = useIdle(IDLE_MS, menuOpen || paused || episodesOpen)
   usePlayerHotkeys()
   useMediaKeys()
-  // The mini player has no controls to lift the subtitles over and no episodes panel
-  useSubtitleLift(!idle && !mini)
-  usePanelMargin(episodesOpen && isEpisode && !mini)
+  useSubtitleLift(!idle)
+  usePanelMargin(episodesOpen && isEpisode)
 
   // A click pauses or plays; a quick second click puts it back — a double click changes nothing
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -38,16 +35,6 @@ export function PlayerPage() {
   }
   const onWheel = (e: WheelEvent<HTMLDivElement>) => {
     if (e.deltaY !== 0) changeVolume(e.deltaY < 0 ? VOLUME_STEP : -VOLUME_STEP)
-  }
-
-  const expand = () => void leaveMini().catch((e: unknown) => console.error('[window] mini player', e))
-
-  if (mini) {
-    return (
-      <div data-theme="dark" className="relative h-full overflow-hidden text-fg select-none">
-        <MiniPlayer onExpand={expand} onClose={leave} />
-      </div>
-    )
   }
 
   return (

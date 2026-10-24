@@ -4,7 +4,7 @@ import { createStore, useStore } from '../../../shared/lib/createStore'
 interface WindowState {
   maximized: boolean
   fullscreen: boolean
-  /** «Мини-плеер»: the window is the picture alone, small and above the rest */
+  /** «Мини-плеер»: the video is in a small window of its own, above the rest (miniWindow.ts) */
   mini: boolean
 }
 

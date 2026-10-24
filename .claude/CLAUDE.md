@@ -74,8 +74,10 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ```
 apps/desktop/          — Tauri app (@kino/desktop)
   src/                 — React renderer, Feature-Sliced Design:
-    app/               — entry (main.tsx: settings loaded before the first render), App (screen switch, drop overlay),
-                         startup sync and notices, appearance (theme, accent, language follow the settings), styles
+    app/               — entry (main.tsx: settings loaded before the first render; the mini player's window gets
+                         MiniApp instead of App), App (screen switch, drop overlay), MiniApp (the mini player's page:
+                         playback and settings sync, the player's keys), startup sync and notices, appearance (theme,
+                         accent, language follow the settings), styles
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, library (chips «Все» /
                          «Сериалы» / «Фильмы» / torrent categories on disk + folders), show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
                          settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
@@ -139,7 +141,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title),
                          sources (files a source brought: linked, moved to their new place, season files, sidecar tracks),
                          search (series and played files, every word, any case), commands
-    src/player/        — Player (libmpv; apply_settings, clear_history), video_host (child HWND), events (mpv event thread →
+    src/player/        — Player (libmpv; apply_settings, clear_history), video_host (child HWND; moves between windows),
+                         mini (the mini player's own window «mini»: the video host goes in and back, player://mini-closed),
+                         events (mpv event thread →
                          player://state, player://position, player://notice, player://autoplay; registers files, chooses tracks:
                          series memory first, then track_defaults; scans the series folder of an opened episode, autoplays the
                          next episode of the season), session (saves the position, takes frames), state (snapshot, pure +
@@ -283,6 +287,10 @@ Each launch gets its own temp folder; the core reads these variables:
   (a later start brings it forward without the focus too). The harness sets 1% and Full HD; override with
   `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
   prompt
+- `KINO_TEST_HIDDEN` — the windows are cloaked by DWM (lib.rs `hide_for_tests`): drawn and driven by the tests, but nobody
+  sees them, fullscreen and the mini player included, nor in the taskbar or Alt+Tab. The harness sets it, with
+  `--disable-features=CalculateNativeWinOcclusion` for WebView2 (a cloaked page would count as covered and stop drawing);
+  `KINO_E2E_SHOW=1` shows the windows. The owner works on this machine during the runs: test windows stay unseen
 - No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys.
   `KINO_TEST_TRAY` — the tray anyway, to check the way back from it (a hand check: the tray icon's window takes
   WM_USER 6002 + WM_LBUTTONUP as a click)

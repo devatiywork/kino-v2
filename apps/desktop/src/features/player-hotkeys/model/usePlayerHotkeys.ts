@@ -13,7 +13,7 @@ import {
 import { keymapOf, resolveHotkeys, settingsStore, type PlayerAction } from '../../../entities/settings'
 import { resolvePlayerKey } from './playerKeymap'
 
-const expand = () => void leaveMini().catch((e: unknown) => console.error('[window] mini player', e))
+const expand = () => void leaveMini(true).catch((e: unknown) => console.error('[window] mini player', e))
 
 const RUN: Record<PlayerAction, () => void> = {
   togglePause,
@@ -21,7 +21,7 @@ const RUN: Record<PlayerAction, () => void> = {
   seekForward: () => seekBy(SEEK_STEP),
   volumeUp: () => changeVolume(VOLUME_STEP),
   volumeDown: () => changeVolume(-VOLUME_STEP),
-  // In the mini player both bring the full window back
+  // In the mini player's window both bring the video back into the main one
   toggleFullscreen: () => (windowStore.get().mini ? expand() : toggleFullscreen()),
   exitFullscreen: () => (windowStore.get().mini ? expand() : setFullscreen(false)),
   toggleMute,

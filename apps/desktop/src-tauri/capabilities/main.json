@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Main window only. Remote pages (trackers) never get IPC: they live in other webviews without capabilities.",
-  "windows": ["main"],
+  "description": "Kino's own windows: the main one and the mini player. Remote pages (trackers) never get IPC: they live in other webviews without capabilities.",
+  "windows": ["main", "mini"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -14,12 +14,6 @@
     "core:window:allow-set-fullscreen",
     "core:window:allow-is-fullscreen",
     "core:window:allow-set-focus",
-    "core:window:allow-maximize",
-    "core:window:allow-unmaximize",
-    "core:window:allow-set-always-on-top",
-    "core:window:allow-set-min-size",
-    "core:window:allow-set-size",
-    "core:window:allow-set-position",
     "dialog:allow-open",
     "dialog:allow-save"
   ]

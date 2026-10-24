@@ -3,7 +3,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { loadSettings } from '../entities/settings'
 import { initI18n } from '../shared/i18n'
+import { windowIpc } from '../shared/ipc/window'
 import { App } from './App'
+import { MiniApp } from './MiniApp'
 import { startAppearance } from './model/appearance'
 import './styles/app.css'
 
@@ -18,7 +20,8 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <ToastProvider>
-        <App />
+        {/* The mini player's window loads the same page: only its own part runs there */}
+        {windowIpc.isMini() ? <MiniApp /> : <App />}
       </ToastProvider>
     </StrictMode>,
   )

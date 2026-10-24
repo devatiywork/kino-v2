@@ -1,6 +1,6 @@
 //! Tauri commands of the player; the renderer calls them only through src/shared/ipc/player.ts
 
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use super::{OpenResult, Player, PlayerSnapshot, SeekMode};
 use crate::error::AppResult;
@@ -76,6 +76,20 @@ pub fn player_set_right_margin(player: State<'_, Player>, ratio: f64) -> AppResu
 #[tauri::command]
 pub fn player_set_subtitle_margin(player: State<'_, Player>, margin: i64) -> AppResult<()> {
     player.set_subtitle_margin(margin)
+}
+
+/// «Мини-плеер»: the video into a small window of its own above the others; the main window stays
+/// free. `width`/`height` — the picture's, for the window's shape
+#[tauri::command]
+pub async fn player_enter_mini(app: AppHandle, width: Option<u32>, height: Option<u32>) -> AppResult<()> {
+    super::mini::open(&app, width.zip(height)).await
+}
+
+/// The mini player's buttons, or the main window opening a video: the video back into the main
+/// window — onto its player screen (`expand`) or paused, out of sight
+#[tauri::command]
+pub fn player_leave_mini(app: AppHandle, expand: bool) {
+    super::mini::close(&app, expand);
 }
 
 /// The player screen shows the video window, other screens hide it.

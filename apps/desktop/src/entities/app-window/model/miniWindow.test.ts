@@ -1,61 +1,57 @@
+import { act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const ipc = vi.hoisted(() => ({
-  unmaximize: vi.fn(async () => undefined),
-  maximize: vi.fn(async () => undefined),
-  setFullscreen: vi.fn(async () => undefined),
-  setAlwaysOnTop: vi.fn(async () => undefined),
-  setMinSize: vi.fn(async () => undefined),
-  bounds: vi.fn(async () => ({ x: 100, y: 80, width: 1600, height: 900 })),
-  setBounds: vi.fn(async () => undefined),
-  workArea: vi.fn(async () => ({ x: 0, y: 0, width: 2560, height: 1392, scale: 1.25 })),
-}))
-vi.mock('../../../shared/ipc/window', () => ({ windowIpc: ipc }))
+const tauri = vi.hoisted(async () => (await import('../../../test/tauriMock')).createTauriMock())
+vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
-const { enterMini, leaveMini, miniSize } = await import('./miniWindow')
+const { enterMini, leaveMini, startMiniSync } = await import('./miniWindow')
 const { windowStore } = await import('./windowState')
+const { routerStore } = await import('../../../shared/lib/router')
+const mock = await tauri
 
-describe('мини-плеер: окно', () => {
+const commands = () => mock.calls().map(([command]) => command)
+
+describe('мини-плеер: своё окно', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mock.reset()
     windowStore.set({ maximized: false, fullscreen: false, mini: false })
+    routerStore.set({ screen: 'home', previous: 'home', seriesKey: null })
   })
 
-  it('размер — по кадру: 480 в ширину, высота по пропорции; неизвестный кадр — 16:9', () => {
-    expect(miniSize(1920, 800)).toEqual({ width: 480, height: 200 })
-    expect(miniSize(1920, 1080)).toEqual({ width: 480, height: 270 })
-    expect(miniSize(null, null)).toEqual({ width: 480, height: 270 })
-    // portrait: a square at most
-    expect(miniSize(1080, 1920)).toEqual({ width: 480, height: 480 })
-  })
-
-  it('развёрнутое окно сжимается в правый нижний угол экрана, поверх остальных; возвращается как было', async () => {
-    windowStore.set({ maximized: true })
-    await enterMini(1920, 1080)
+  it('видео уходит в окно мини-плеера по размеру кадра; второй раз — не открывается', async () => {
+    await enterMini(1920, 800)
+    expect(mock.calls()).toContainEqual(['player_enter_mini', { width: 1920, height: 800 }])
     expect(windowStore.get().mini).toBe(true)
-    expect(ipc.unmaximize).toHaveBeenCalled()
-    expect(ipc.setMinSize).toHaveBeenCalledWith(256, 144)
-    // 480×270 CSS at 125%: 600×338, 30 px from the work area's corner
-    expect(ipc.setBounds).toHaveBeenCalledWith({ x: 2560 - 600 - 30, y: 1392 - 338 - 30, width: 600, height: 338 })
-    expect(ipc.setAlwaysOnTop).toHaveBeenCalledWith(true)
 
-    await enterMini(1920, 1080)
-    expect(ipc.setBounds).toHaveBeenCalledTimes(1)
-
-    await leaveMini()
-    expect(windowStore.get().mini).toBe(false)
-    expect(ipc.setAlwaysOnTop).toHaveBeenLastCalledWith(false)
-    expect(ipc.setMinSize).toHaveBeenLastCalledWith(960, 600)
-    expect(ipc.setBounds).toHaveBeenLastCalledWith({ x: 100, y: 80, width: 1600, height: 900 })
-    expect(ipc.maximize).toHaveBeenCalled()
+    await enterMini(1920, 800)
+    expect(commands().filter((c) => c === 'player_enter_mini')).toHaveLength(1)
   })
 
-  it('из полноэкранного — обратно в полноэкранный', async () => {
+  it('ядро не открыло окно — мини-плеера нет', async () => {
+    mock.invoke.mockRejectedValueOnce(new Error('no window'))
+    await expect(enterMini(null, null)).rejects.toThrow('no window')
+    expect(windowStore.get().mini).toBe(false)
+  })
+
+  it('«Развернуть» — снова экран плеера, полноэкранный, если был; «✕» — экран не меняется', async () => {
+    const stop = startMiniSync()
     windowStore.set({ fullscreen: true })
-    await enterMini(null, null)
-    expect(ipc.setFullscreen).toHaveBeenCalledWith(false)
-    await leaveMini()
-    expect(ipc.setFullscreen).toHaveBeenLastCalledWith(true)
+    await enterMini(1920, 1080)
+    // The main window is free: out of fullscreen
+    expect(windowStore.get().fullscreen).toBe(false)
+
+    await leaveMini(true)
+    expect(mock.calls()).toContainEqual(['player_leave_mini', { expand: true }])
+    act(() => mock.fire('player://mini-closed', { expand: true }))
+    expect(windowStore.get().mini).toBe(false)
+    expect(routerStore.get().screen).toBe('player')
     expect(windowStore.get().fullscreen).toBe(true)
+
+    act(() => routerStore.set({ screen: 'downloads' }))
+    await enterMini(1920, 1080)
+    act(() => mock.fire('player://mini-closed', { expand: false }))
+    expect(windowStore.get().mini).toBe(false)
+    expect(routerStore.get().screen).toBe('downloads')
+    stop()
   })
 })

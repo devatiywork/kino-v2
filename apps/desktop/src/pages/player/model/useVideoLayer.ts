@@ -11,12 +11,14 @@ let pendingHide: ReturnType<typeof setTimeout> | undefined
 /**
  * While the player screen is open: the native video window is shown and the page is
  * see-through (html[data-video]). Leaving pauses playback and returns to the previous screen.
+ * A video opened while the mini player plays comes back here, into the main window
  */
 export function useVideoLayer(): { leave: () => void } {
   useEffect(() => {
     clearTimeout(pendingHide)
     document.documentElement.dataset.video = ''
     playerIpc.setVideoVisible(true).catch(report('show video'))
+    if (windowStore.get().mini) leaveMini(true).catch(report('mini player'))
     return () => {
       pendingHide = setTimeout(() => {
         delete document.documentElement.dataset.video
@@ -27,7 +29,6 @@ export function useVideoLayer(): { leave: () => void } {
 
   const leave = useCallback(() => {
     playerIpc.setPaused(true).catch(report('pause'))
-    if (windowStore.get().mini) leaveMini().catch(report('mini player'))
     if (windowStore.get().fullscreen) setFullscreen(false)
     goBack()
   }, [])

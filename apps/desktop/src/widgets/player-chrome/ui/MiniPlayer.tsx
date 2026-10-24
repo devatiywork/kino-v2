@@ -16,8 +16,9 @@ interface MiniPlayerProps {
 }
 
 /**
- * «Мини-плеер»: the window is the picture alone. Dragging it moves the window, a click pauses,
- * a double click (or Escape) brings the full window back; the buttons show under the mouse
+ * «Мини-плеер», the page of its own window: the picture alone. Dragging it moves the window, a click
+ * pauses, a double click (or Escape) brings the video back into the main window; the buttons show
+ * under the mouse
  */
 export function MiniPlayer({ onExpand, onClose }: MiniPlayerProps) {
   const { t } = useTranslation('player')
@@ -70,8 +71,9 @@ export function MiniPlayer({ onExpand, onClose }: MiniPlayerProps) {
             <IconClose size={16} />
           </IconButton>
         </div>
-        <div className="absolute inset-0 grid place-items-center">
-          <IconButton label={paused ? t('play') : t('pause')} variant="overlay" size="lg" onPress={togglePause}>
+        {/* Over the whole picture, but only its button takes the mouse: the corner ones stay reachable */}
+        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+          <IconButton label={paused ? t('play') : t('pause')} variant="overlay" size="lg" onPress={togglePause} className="pointer-events-auto">
             {paused ? <IconPlay size={28} /> : <IconPause size={28} />}
           </IconButton>
         </div>

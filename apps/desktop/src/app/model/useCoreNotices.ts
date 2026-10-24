@@ -1,7 +1,7 @@
 import { useToast } from '@kino/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { leaveMini, setFullscreen, windowStore } from '../../entities/app-window'
+import { setFullscreen, windowStore } from '../../entities/app-window'
 import { onAutoplayed } from '../../entities/playback'
 import { showStatus } from '../../entities/tracker'
 import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
@@ -23,7 +23,6 @@ export function useCoreNotices(): void {
   // with the screen before the player — not an empty player, black over the whole screen
   useEffect(() => {
     const unlisten = appIpc.onToTray(() => {
-      if (windowStore.get().mini) leaveMini().catch(report('mini player'))
       if (windowStore.get().fullscreen) setFullscreen(false)
       if (routerStore.get().screen === 'player') goBack()
     })
