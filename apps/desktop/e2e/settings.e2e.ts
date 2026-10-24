@@ -109,4 +109,22 @@ test.describe('настройки', () => {
     expect(await kino.invoke('library_continue_watching', { limit: 10 })).toEqual([])
     await expect(folders).toContainText('series')
   })
+
+  test('переключатели внизу настроек не уводят страницу из окна', async ({ launch }) => {
+    const kino = await launch()
+    const { page } = kino
+    await openSettings(page)
+    await page.getByRole('navigation', { name: 'Разделы настроек' }).getByText('Загрузки').click()
+    const section = page.getByRole('region', { name: 'Загрузки' })
+    // The menu scrolls smoothly: the section comes to the top
+    await expect.poll(async () => (await section.boundingBox())?.y).toBeLessThan(100)
+    for (const name of ['Не начинать загрузку сразу', 'Не раздавать после загрузки — сразу в архив']) {
+      // A person's click on the switch: the focus goes to the hidden input inside it
+      const box = await page.locator('label', { has: page.getByRole('switch', { name }) }).boundingBox()
+      await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2)
+      await expect(page.getByRole('switch', { name })).toBeChecked()
+      await expect(section).toBeInViewport()
+    }
+    expect(await kino.settings()).toMatchObject({ startPaused: true, noSeeding: true })
+  })
 })

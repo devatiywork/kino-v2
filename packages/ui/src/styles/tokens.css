@@ -140,20 +140,24 @@
   --duration-popover-out: 150ms;
 }
 
-/* ---------- Тёмная тема (по умолчанию) ---------- */
+/* ---------- Тёмная тема (по умолчанию) ----------
+ * Тёплый графит, а не почти чёрный: на OLED глубокий чёрный фон с ярким текстом режет глаза
+ * и смазывается при прокрутке. Фон на уровне тёмной темы Windows 11, текст чуть приглушён.
+ * Контраст текста ≥ 4.5:1 на всех поверхностях до raise; видео — всегда на чёрном (--kino-video).
+ */
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
-  --kino-bg: #0e0d0c;
-  --kino-panel: #161514;
-  --kino-raise: #1f1d1b;
-  --kino-raise-2: #2a2724;
-  --kino-line: #221f1c;
-  --kino-line-2: #2f2b27;
-  --kino-fg: #f2ede6;
-  --kino-fg-2: #b8afa4;
-  --kino-fg-3: #8c847a;
-  --kino-fg-4: #a39a90;
+  --kino-bg: #1f1d1b;
+  --kino-panel: #272523;
+  --kino-raise: #302d2a;
+  --kino-raise-2: #3b3733;
+  --kino-line: #34312d;
+  --kino-line-2: #45403b;
+  --kino-fg: #ede8e1;
+  --kino-fg-2: #c3bbb0;
+  --kino-fg-3: #a0988d;
+  --kino-fg-4: #b0a79c;
   /* Набор акцентов (applyAccent): яркие, текст на них тёмный */
   --kino-accent-ember: #ff7a2e;
   --kino-accent-gold: #e8c26a;
@@ -170,12 +174,12 @@
   --kino-accent-soft: color-mix(in oklab, var(--kino-accent) 16%, transparent);
   --kino-accent-fg: color-mix(in oklab, var(--kino-accent), white 22%);
   --kino-on-accent: var(--kino-on-accent-ember);
-  --kino-danger: #f2555a;
+  --kino-danger: #ff7478;
   --kino-on-danger: #1a0506;
-  --kino-hover: rgb(242 237 230 / 0.07);
-  --kino-hover-2: rgb(242 237 230 / 0.13);
-  --kino-glass: rgb(18 17 16 / 0.88);
-  --kino-glass-line: rgb(242 237 230 / 0.1);
+  --kino-hover: rgb(237 232 225 / 0.07);
+  --kino-hover-2: rgb(237 232 225 / 0.13);
+  --kino-glass: rgb(31 29 27 / 0.9);
+  --kino-glass-line: rgb(237 232 225 / 0.1);
   --kino-track: rgb(242 237 230 / 0.22);
   --kino-track-buffer: rgb(242 237 230 / 0.34);
   --kino-scrim: rgb(0 0 0 / 0.78);

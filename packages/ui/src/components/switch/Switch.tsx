@@ -6,7 +6,8 @@ import { tv } from '../../lib/tv'
 
 const switchStyles = tv({
   slots: {
-    root: 'group inline-flex items-center gap-3 data-[disabled]:opacity-40',
+    // relative: скрытый input остаётся на месте переключателя — фокус не уводит прокрутку
+    root: 'group relative inline-flex items-center gap-3 data-[disabled]:opacity-40',
     track: [
       'relative h-6 w-10 shrink-0 rounded-full bg-raise-2 transition-colors duration-(--duration-fast)',
       'group-data-[selected]:bg-accent',

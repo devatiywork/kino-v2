@@ -112,14 +112,17 @@ export function ScrollArea({
     el.scrollBy({ top: direction * el.clientHeight * 0.9, behavior: 'smooth' })
   }
 
+  // Корень — overflow: clip, а не hidden: hidden-блок браузер прокручивает сам, чтобы показать
+  // элемент в фокусе, и весь контент уезжает из окна. Viewport — relative: скрытые поля
+  // (VisuallyHidden в Switch, Checkbox) позиционируются в прокручиваемом контенте, рядом со своим контролом
   return (
-    <div className={cn('group/scroll relative min-h-0 overflow-hidden', className)}>
+    <div className={cn('group/scroll relative min-h-0 overflow-clip', className)}>
       <div
         ref={viewportRef}
         onScroll={onScroll}
         aria-label={ariaLabel}
         style={viewportStyle}
-        className={cn('h-full overflow-x-hidden overflow-y-auto', viewportClassName)}
+        className={cn('relative h-full overflow-x-hidden overflow-y-auto', viewportClassName)}
       >
         {children}
       </div>

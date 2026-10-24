@@ -25,7 +25,7 @@ One window, two independent modules:
 
 The player never depends on the torrent module. The only link is optional: "this video file came from that torrent". See `.claude/SPEC.md`.
 
-Visual direction: **«Проектор»** — warm near-black, amber accent, Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
+Visual direction: **«Проектор»** — warm graphite dark theme (not near-black: easy on OLED), amber accent, Unbounded + Golos Text + JetBrains Mono, logo `kin●`. Window controls on the right (Windows convention).
 Themes: dark (default), light, system. The video area and controls over video are always dark (`data-theme="dark"` scope).
 
 ## Tech Stack

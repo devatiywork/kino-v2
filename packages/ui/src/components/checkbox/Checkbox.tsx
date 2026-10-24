@@ -7,7 +7,8 @@ import { tv } from '../../lib/tv'
 
 const checkboxStyles = tv({
   slots: {
-    root: 'group inline-flex min-w-0 items-center gap-2.5 data-[disabled]:opacity-40',
+    // relative: скрытый input остаётся на месте флажка — фокус не уводит прокрутку
+    root: 'group relative inline-flex min-w-0 items-center gap-2.5 data-[disabled]:opacity-40',
     box: [
       'grid size-[18px] shrink-0 place-items-center rounded-[5px] border border-line-2 bg-bg text-on-accent',
       'transition-[background-color,border-color,scale] duration-(--duration-fast)',
