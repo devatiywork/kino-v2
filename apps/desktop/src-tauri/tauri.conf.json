@@ -82,7 +82,7 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "currentUser",
+        "installMode": "perMachine",
         "languages": [
           "Russian",
           "English"

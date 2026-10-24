@@ -181,7 +181,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          window from the config, media session, player), closing the window while torrents work hides it
                          in the tray, app_clear_history, app_open_url (http(s) only), app_reveal_path
     windows/hooks.nsh  — the installer's own steps: Kino's capabilities for «Приложения по умолчанию»
-                         (bundle settings, file associations and the `magnet:` scheme are in tauri.conf.json)
+                         (bundle settings, file associations and the `magnet:` scheme are in tauri.conf.json; the
+                         installer is per machine: C:\Program Files\Kino v2, asks for admin rights, the registry under HKLM)
   data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)
