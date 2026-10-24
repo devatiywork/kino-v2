@@ -214,6 +214,8 @@ pub struct Settings {
     pub media_keys: bool,
     /// «Проверять обновления» (SPEC 4.7: Kino goes online for it only when it is on)
     pub check_updates: bool,
+    /// «Блокировать рекламу» on the trackers' pages (SPEC 4.5)
+    pub block_ads: bool,
     // Downloads (torrents)
     /// «Папка по умолчанию»; empty — the system Downloads folder
     pub downloads_folder: String,
@@ -296,6 +298,7 @@ impl Default for Settings {
             keep_awake: true,
             media_keys: true,
             check_updates: false,
+            block_ads: true,
             downloads_folder: String::new(),
             show_add_dialog: true,
             delete_torrent_file: false,

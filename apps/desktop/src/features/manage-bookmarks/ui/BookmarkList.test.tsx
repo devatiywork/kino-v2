@@ -36,7 +36,7 @@ const menuOf = (title: string) => screen.getByRole('button', { name: `Дейст
 describe('BookmarkList (integration)', () => {
   beforeEach(() => {
     mock.reset()
-    act(() => trackersStore.set({ bookmarks, page: { url: 'https://rutor.info/torrent/1', loading: false, canGoBack: true, canGoForward: false } }))
+    act(() => trackersStore.set({ bookmarks, page: { url: 'https://rutor.info/torrent/1', loading: false, canGoBack: true, canGoForward: false, blockedAds: 0 } }))
     mock.respond('tracker_bookmarks', bookmarks)
   })
 
@@ -50,7 +50,7 @@ describe('BookmarkList (integration)', () => {
     expect(onOpen).toHaveBeenCalledWith(bookmarks[0])
 
     // A page of a site without a bookmark: nothing is marked
-    act(() => trackersStore.set({ page: { url: 'https://www.imdb.com/title/tt1', loading: false, canGoBack: true, canGoForward: false } }))
+    act(() => trackersStore.set({ page: { url: 'https://www.imdb.com/title/tt1', loading: false, canGoBack: true, canGoForward: false, blockedAds: 0 } }))
     expect(within(nav).getByRole('button', { name: /^RuTor/ })).not.toHaveAttribute('aria-current')
   })
 

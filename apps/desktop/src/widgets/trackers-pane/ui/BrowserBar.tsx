@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useTrackers } from '../../../entities/tracker'
 import { appIpc } from '../../../shared/ipc/app'
 import { trackersIpc, type BrowserAction } from '../../../shared/ipc/trackers'
+import { AdBlockButton } from './AdBlockButton'
 
 /** The browser's own buttons over the site (SPEC 4.5): back, forward, reload, address, «в браузере» */
 export function BrowserBar({ onNavigate }: { onNavigate: (url: string) => void }) {
@@ -42,6 +43,7 @@ export function BrowserBar({ onNavigate }: { onNavigate: (url: string) => void }
         <IconLock size={14} />
         {t('trackers.isolated')}
       </span>
+      <AdBlockButton />
       <IconButton
         label={t('trackers.openInBrowser')}
         isDisabled={!page.url}

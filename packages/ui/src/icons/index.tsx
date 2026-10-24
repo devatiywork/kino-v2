@@ -204,6 +204,13 @@ export const IconGauge = createIcon(
     <path d="M8.5 19.5h7" />
   </>,
 )
+export const IconShield = createIcon(
+  'Shield',
+  <>
+    <path d="M12 3.5l7 2.6v5.4c0 4.3-2.9 7.9-7 9-4.1-1.1-7-4.7-7-9V6.1z" />
+    <path d="M9 12l2.2 2.2L15.5 10" />
+  </>,
+)
 export const IconLock = createIcon(
   'Lock',
   <>

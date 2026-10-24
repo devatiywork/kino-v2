@@ -42,6 +42,17 @@ describe('useCoreNotices: перехваты браузера трекеров',
     expect(mock.calls().at(-1)).toEqual(['app_open_url', { url }])
   })
 
+  it('не .torrent с трекера — не скачан, сказано почему; окно добавления не открывается', () => {
+    renderHook(useCoreNotices, { wrapper })
+    act(() => mock.fire('trackers://refused', { name: 'setup.exe' }))
+    expect(trackersStore.get().status).toEqual({
+      kind: 'refused',
+      text: '«setup.exe» не скачан: здесь Kino сохраняет только .torrent. Нужен этот файл — «Открыть в браузере»',
+    })
+    expect(addTorrentStore.get().preview).toBeNull()
+    expect(mock.calls().some(([command]) => command === 'torrent_preview')).toBe(false)
+  })
+
   it('.torrent с трекера — в окно добавления вместе со страницей раздачи', async () => {
     renderHook(useCoreNotices, { wrapper })
     mock.respond('torrent_preview', preview())

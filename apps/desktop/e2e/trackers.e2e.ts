@@ -81,6 +81,54 @@ test.describe('трекеры', () => {
     expect(existsSync(join(homedir(), 'Downloads', DOWNLOADED))).toBe(false)
   })
 
+  test('из окна трекеров сохраняется только .torrent: программа не качается, подделка удаляется, dl.php с торрентом открывается', async ({ launch, site }) => {
+    const kino = await launch()
+    const { page } = kino
+    await openTrackers(page)
+    await addBookmark(page, `${site.url}/topic/1`, 'Тестовый трекер')
+    const tracker = await kino.webPage(site.url)
+    const kept = () => readdirSync(join(kino.dataDir, 'trackers', 'downloads'))
+
+    await tracker.locator('#ad').click()
+    await expect(page.getByText('«setup.exe» не скачан: здесь Kino сохраняет только .torrent. Нужен этот файл — «Открыть в браузере»')).toBeVisible()
+    expect(kept()).toEqual([])
+    expect(existsSync(join(homedir(), 'Downloads', 'setup.exe'))).toBe(false)
+
+    await tracker.locator('#fake').click()
+    await expect(page.getByText('«fake.torrent» не скачан: здесь Kino сохраняет только .torrent. Нужен этот файл — «Открыть в браузере»')).toBeVisible()
+    await expect.poll(kept).toEqual([])
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await tracker.locator('#script').click()
+    await expect(page.getByRole('dialog', { name: 'Добавить торрент' }).getByText('Film.2014.mkv').first()).toBeVisible()
+    expect(kept()).toEqual([expect.stringMatching(/^\d+-dl\.torrent$/)])
+  })
+
+  test('реклама: запрос к рекламной сети остановлен, блоки скрыты, щит считает; выключение возвращает всё', async ({ launch, site, workdir }) => {
+    const list = join(workdir, 'ads.txt')
+    writeFileSync(list, ['||127.0.0.2^$image', '127.0.0.1##.top-banner', '##.adsbox'].join('\n'))
+    const kino = await launch({ adblockList: list })
+    const { page } = kino
+    await openTrackers(page)
+    await addBookmark(page, `${site.url}/topic/1`, 'Тестовый трекер')
+    const tracker = await kino.webPage(site.url)
+    const banner = () => tracker.locator('#banner').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)
+    await expect(tracker.locator('#site-ad')).toBeHidden()
+    await expect(tracker.locator('#generic-ad')).toBeHidden()
+    await expect.poll(banner).toBe(0)
+    await expect(tracker.locator('#dl')).toBeVisible()
+    const shield = page.getByRole('button', { name: 'Блокировать рекламу' })
+    await expect(shield).toHaveAttribute('aria-pressed', 'true')
+    await expect(shield).toHaveText('1')
+
+    await shield.click()
+    await expect(shield).toHaveAttribute('aria-pressed', 'false')
+    await expect.poll(banner).toBe(1)
+    await expect(tracker.locator('#site-ad')).toBeVisible()
+    await expect(tracker.locator('#generic-ad')).toBeVisible()
+    expect((await kino.settings()).blockAds).toBe(false)
+  })
+
   test('страница раздачи из архива — во вкладке; magnet того же торрента — «Уже в архиве»; другой сайт — внутри, назад и вперёд между сайтами', async ({ launch, site, workdir }) => {
     // The film already in place and its .torrent from the tracker, opened as if from Explorer
     const folder = join(workdir, 'downloads')

@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.22.0"
+version = "0.23.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -26,6 +26,9 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 # Torrent engine (SPEC 4): TLS for HTTP trackers through Windows' own schannel
 librqbit = { version = "9", default-features = false, features = ["default-tls"] }
 anyhow = "1"
+# «Блокировать рекламу» in the trackers browser: Brave's engine for EasyList-style lists
+# (without single-thread: the engine is shared with WebView2's handlers)
+adblock = { version = "0.13", default-features = false, features = ["embedded-domain-resolver", "full-regex-handling"] }
 # «Проверять обновления»: GitHub Releases, over the same HTTP client and TLS the torrent engine uses
 reqwest = { version = "0.13", default-features = false, features = ["default-tls", "json"] }
 bytes = "1"

@@ -77,6 +77,7 @@ export function DownloadsSection() {
       <SwitchRow setting="notifyFinished" label={t('downloads.notifyFinished')} hint={t('downloads.notifyFinishedHint')} />
       <SwitchRow setting="keepAwakeDownloads" label={t('downloads.keepAwake')} hint={t('downloads.keepAwakeHint')} />
       <DefaultAppsRow kinds={['torrent', 'magnet']} label={t('downloads.handler')} />
+      <SwitchRow setting="blockAds" label={t('downloads.blockAds')} hint={t('downloads.blockAdsHint')} />
     </SettingsSection>
   )
 }

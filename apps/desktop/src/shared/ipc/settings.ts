@@ -42,6 +42,8 @@ export interface Settings {
   mediaKeys: boolean
   /** «Проверять обновления»: GitHub Releases at start and once a day (SPEC 4.7: only when on) */
   checkUpdates: boolean
+  /** «Блокировать рекламу» on the trackers' pages */
+  blockAds: boolean
   /** «Папка по умолчанию» of the downloads; empty — the system Downloads folder */
   downloadsFolder: string
   /** «Не начинать загрузку сразу» */
@@ -116,6 +118,7 @@ export const DEFAULT_SETTINGS: Settings = {
   keepAwake: true,
   mediaKeys: true,
   checkUpdates: false,
+  blockAds: true,
   downloadsFolder: '',
   startPaused: false,
   noSeeding: false,

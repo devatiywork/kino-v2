@@ -260,7 +260,13 @@
     "save": "Save",
     "deleteTitle": "Delete “{{title}}”?",
     "deleteText": "The bookmark goes. The site sign-in and the torrent archive stay.",
-    "deleteConfirm": "Delete bookmark"
+    "deleteConfirm": "Delete bookmark",
+    "refused": "“{{name}}” was not downloaded: Kino keeps only .torrent files here. Need it? Use “Open in browser”",
+    "refusedUnnamed": "The file was not downloaded: it is not a .torrent. Need it? Use “Open in browser”",
+    "adBlock": "Block ads",
+    "adBlockOn_one": "Ads are blocked: {{count}} request stopped on this page. Press to turn off",
+    "adBlockOn_other": "Ads are blocked: {{count}} requests stopped on this page. Press to turn off",
+    "adBlockOff": "Ad blocking is off. Press to turn on"
   },
   "backup": {
     "menu": "Backup",

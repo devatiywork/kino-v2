@@ -1,7 +1,8 @@
 import { siteKey, trackersIpc, type Bookmark, type PageState } from '../../../shared/ipc/trackers'
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
-export type TrackerStatus = { kind: 'torrent' | 'magnet'; text: string } | null
+/** `refused` — a download that is not a .torrent was not kept */
+export type TrackerStatus = { kind: 'torrent' | 'magnet' | 'refused'; text: string } | null
 
 interface TrackersState {
   bookmarks: Bookmark[]
@@ -17,7 +18,7 @@ interface TrackersState {
 export const trackersStore = createStore<TrackersState>({
   bookmarks: [],
   opened: false,
-  page: { url: null, loading: false, canGoBack: false, canGoForward: false },
+  page: { url: null, loading: false, canGoBack: false, canGoForward: false, blockedAds: 0 },
   status: null,
   pending: null,
 })

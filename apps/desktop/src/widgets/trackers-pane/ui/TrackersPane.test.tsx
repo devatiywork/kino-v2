@@ -25,11 +25,12 @@ vi.stubGlobal(
 )
 
 const commands = (name: string) => mock.calls().filter(([command]) => command === name)
-const page = (url: string, history: { canGoBack?: boolean; canGoForward?: boolean } = {}) => ({
+const page = (url: string, history: { canGoBack?: boolean; canGoForward?: boolean; blockedAds?: number } = {}) => ({
   url,
   loading: false,
   canGoBack: history.canGoBack ?? false,
   canGoForward: history.canGoForward ?? false,
+  blockedAds: history.blockedAds ?? 0,
 })
 
 function renderPane() {
@@ -41,7 +42,7 @@ describe('TrackersPane (integration)', () => {
   beforeEach(() => {
     mock.reset()
     localStorage.clear()
-    act(() => trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false }, status: null, pending: null }))
+    act(() => trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false, blockedAds: 0 }, status: null, pending: null }))
     mock.respond('tracker_bookmarks', bookmarks)
   })
 

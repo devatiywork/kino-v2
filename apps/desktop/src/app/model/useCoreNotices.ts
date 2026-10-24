@@ -64,6 +64,8 @@ export function useCoreNotices(): void {
         openMagnetDialog(target, sourceUrl)
         void submitMagnet(target, tt('magnet.invalid'))
       }),
+      // Only a .torrent is kept: setup.exe from an ad never reaches the disk
+      trackersIpc.onRefused(({ name }) => showStatus({ kind: 'refused', text: tt(name ? 'trackers.refused' : 'trackers.refusedUnnamed', { name }) })),
     ]
     return () => {
       for (const p of unlisteners) p.then((u) => u()).catch(report('trackers'))

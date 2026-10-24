@@ -184,7 +184,9 @@
     "maxTotalHint": "Downloads take the places first",
     "skipSlow": "Slow torrents don’t count",
     "skipSlowHint": "A torrent slower than 2 KB/s both ways for over a minute takes no place — the next one starts",
-    "handler": "Kino as the handler of .torrent and magnet:"
+    "handler": "Kino as the handler of .torrent and magnet:",
+    "blockAds": "Block ads on trackers",
+    "blockAdsHint": "By RU AdList and EasyList: ad requests do not load, ad blocks are hidden. The lists update with a new version of Kino"
   },
   "hotkeys": {
     "title": "Hotkeys",

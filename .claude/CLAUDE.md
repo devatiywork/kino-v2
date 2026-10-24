@@ -56,6 +56,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino_<version>_x64-setup.exe`
   (per user, no admin; libmpv next to the exe, file associations, `magnet:`, Kino in Windows' «Приложения по умолчанию»)
 - `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
+- `bun scripts/fetch-filters.ts` — refresh the ad blocker's list (RU AdList + EasyList) in `apps/desktop/src-tauri/filters/` before a release
 - `bun scripts/make-icons.ts` — Kino's icon from `apps/desktop/src-tauri/icons/source/*.svg`: icon.ico (16–32 px from icon-small.svg, 48–256 px from icon.svg) and icon.png
 - `powershell -ExecutionPolicy Bypass -File scripts/fetch-libmpv.ps1` — download libmpv into `vendor/libmpv` and generate `mpv.lib` (needs 7-Zip and VS Build Tools)
 - `cargo run --manifest-path spikes/tauri-mpv/src-tauri/Cargo.toml -- <video>` — the libmpv + WebView2 spike
@@ -149,8 +150,12 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          the limits). Engine network options (port, UPnP, protocol, peers, SOCKS5, DHT, LSD) are read at
                          start only. Knows nothing about the player
     src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
-                         .torrent download → <data>\trackers\downloads + trackers://torrent; trackers://state with the
-                         address and can-go-back / forward), history (WebView2 HistoryChanged, GoBack / GoForward), rules
+                         a download named .torrent or unknown (dl.php) → <data>\trackers\downloads, kept and sent as
+                         trackers://torrent only if it is a .torrent inside, anything else not downloaded or deleted →
+                         trackers://refused; trackers://state with the address, can-go-back / forward and the ads
+                         stopped), history (WebView2 HistoryChanged, GoBack / GoForward), adblock (Brave's engine over
+                         the shipped filters/ list), blocking (WebResourceRequested → 403 for ads, hiding styles after
+                         DOMContentLoaded via ExecuteScript — the page never gets a way to call Kino), rules
                          (any web page allowed, app URLs and other schemes blocked, address normalization — pure), store
                          (BookmarkStore: bookmarks with positions), commands
     src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are
@@ -252,6 +257,7 @@ Each launch gets its own temp folder; the core reads these variables:
   `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
   prompt
 - No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys
+- `KINO_ADBLOCK_LIST` — the ad blocker's rules from this file instead of the shipped list (the tests' own)
 - `KINO_UPDATES_URL` — where Kino asks for its latest release instead of GitHub (the tests' own server; the first check
   then runs after a second). Under `KINO_TEST_OFFLINE` without it Kino never asks GitHub
 - Test media is generated, never the user's own files

@@ -13,12 +13,19 @@ export interface PageState {
   /** WebView2's own history, across sites */
   canGoBack: boolean
   canGoForward: boolean
+  /** Ad requests stopped on this page */
+  blockedAds: number
 }
 
 /** A .torrent (its path) or a magnet link the tracker gave, and the release page it came from */
 export interface Intercepted {
   target: string
   sourceUrl: string | null
+}
+
+/** A download the trackers browser did not keep: it is not a .torrent */
+export interface Refused {
+  name: string
 }
 
 /** Where the page lies in the window, in CSS pixels */
@@ -51,6 +58,8 @@ export const trackersIpc = {
     listen<Intercepted>('trackers://torrent', (e) => handler(e.payload)),
   onMagnet: (handler: (got: Intercepted) => void): Promise<UnlistenFn> =>
     listen<Intercepted>('trackers://magnet', (e) => handler(e.payload)),
+  onRefused: (handler: (refused: Refused) => void): Promise<UnlistenFn> =>
+    listen<Refused>('trackers://refused', (e) => handler(e.payload)),
 }
 
 /** rutracker.org for bt.rutracker.org, three labels for co.uk-like zones: the bookmark of a page */

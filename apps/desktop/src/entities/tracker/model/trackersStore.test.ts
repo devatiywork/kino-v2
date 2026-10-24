@@ -15,7 +15,7 @@ describe('trackersStore', () => {
   beforeEach(() => {
     mock.reset()
     localStorage.clear()
-    trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false }, status: null, pending: null })
+    trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false, blockedAds: 0 }, status: null, pending: null })
   })
 
   afterEach(() => {
@@ -27,7 +27,7 @@ describe('trackersStore', () => {
     mock.respond('tracker_bookmarks', bookmarks)
     const stop = startTrackersSync()
     await vi.waitFor(() => expect(trackersStore.get().bookmarks).toHaveLength(2))
-    const page = { url: 'https://rutor.info/torrent/1', loading: true, canGoBack: true, canGoForward: false }
+    const page = { url: 'https://rutor.info/torrent/1', loading: true, canGoBack: true, canGoForward: false, blockedAds: 0 }
     mock.fire('trackers://state', page)
     expect(trackersStore.get().page).toEqual(page)
     stop()
