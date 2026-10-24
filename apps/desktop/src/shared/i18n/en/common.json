@@ -43,5 +43,16 @@
   },
   "actions": {
     "cancel": "Cancel"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search series, history and archive",
+    "empty": "Nothing found for “{{query}}”",
+    "clear": "Clear",
+    "series": "Series",
+    "history": "History",
+    "archive": "Torrent archive",
+    "seriesInfo": "{{watched}} of {{episodes}} watched",
+    "fileGone": "file deleted"
   }
 }

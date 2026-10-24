@@ -1,21 +1,30 @@
 import { Tabs } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { EpisodeRow } from '../../../entities/library'
+import { canFreeSeason, FreeSeasonButton } from '../../../features/free-season'
 import { useOpenVideo } from '../../../features/open-video'
 import type { Season, SeriesDetail } from '../../../shared/ipc/library'
 
 const seasonId = (s: Season) => (s.season == null ? 'none' : String(s.season))
 
-function Episodes({ season, nextUp }: { season: Season; nextUp: number | null }) {
+/** A season's episodes; a watched one offers «Освободить место» (SPEC 3.3) */
+function Episodes({ season, detail }: { season: Season; detail: SeriesDetail }) {
   const { openFile } = useOpenVideo()
   return (
-    <ol className="flex flex-col gap-0.5">
-      {season.episodes.map((file) => (
-        <li key={file.id}>
-          <EpisodeRow file={file} isCurrent={file.id === nextUp} onOpen={(f) => void openFile(f)} />
-        </li>
-      ))}
-    </ol>
+    <div className="flex flex-col gap-2">
+      {canFreeSeason(season) ? (
+        <div className="flex justify-end">
+          <FreeSeasonButton seriesKey={detail.key} season={season} />
+        </div>
+      ) : null}
+      <ol className="flex flex-col gap-0.5">
+        {season.episodes.map((file) => (
+          <li key={file.id}>
+            <EpisodeRow file={file} isCurrent={file.id === detail.nextUp} onOpen={(f) => void openFile(f)} />
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }
 
@@ -43,10 +52,10 @@ export function EpisodeList({ detail }: { detail: SeriesDetail }) {
           }))}
           defaultSelectedKey={current ? seasonId(current) : undefined}
         >
-          {(item) => <Episodes season={item.season} nextUp={detail.nextUp} />}
+          {(item) => <Episodes season={item.season} detail={detail} />}
         </Tabs>
       ) : only ? (
-        <Episodes season={only} nextUp={detail.nextUp} />
+        <Episodes season={only} detail={detail} />
       ) : null}
     </section>
   )

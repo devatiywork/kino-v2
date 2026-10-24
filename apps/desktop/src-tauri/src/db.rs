@@ -133,6 +133,14 @@ const MIGRATIONS: &[&str] = &[
         ('Рутрекер', 'https://rutracker.org/forum/index.php', 1),
         ('RuTor', 'https://rutor.info/', 2);
     "#,
+    // 6 — the one link between the sections (SPEC 5, 7): «this video file came from that torrent».
+    // The player keeps an opaque source id (the torrent's info hash) and the file's path inside
+    // it; it never reads the torrent tables
+    r#"
+    ALTER TABLE player_files ADD COLUMN source TEXT;
+    ALTER TABLE player_files ADD COLUMN source_path TEXT;
+    CREATE INDEX player_files_source ON player_files (source, source_path);
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {

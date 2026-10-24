@@ -11,6 +11,7 @@ import { SettingsPage } from '../pages/settings'
 import { ShowPage } from '../pages/show'
 import { useScreen, type Screen } from '../shared/lib/router'
 import { AppTitleBar } from '../widgets/app-title-bar'
+import { GlobalSearch } from '../widgets/global-search'
 import { useAppStartup } from './model/useAppStartup'
 import { useCoreNotices } from './model/useCoreNotices'
 
@@ -56,7 +57,7 @@ export function App() {
         <PlayerPage />
       ) : (
         <div className="flex h-full flex-col bg-bg">
-          <AppTitleBar />
+          <AppTitleBar search={<GlobalSearch />} />
           <main className="min-h-0 flex-1">
             <Page screen={screen} />
           </main>

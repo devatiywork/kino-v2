@@ -24,6 +24,7 @@ export { TitleBar, TitleBarSpacer, type TitleBarProps } from './components/title
 export { WindowControls, type WindowControlsProps } from './components/title-bar/WindowControls'
 export { TitleBarNav, type NavItem, type TitleBarNavProps } from './components/title-bar/TitleBarNav'
 export { SearchField, type SearchFieldProps } from './components/search-field/SearchField'
+export { SearchCombo, type SearchComboItem, type SearchComboProps, type SearchComboSection } from './components/search-combo/SearchCombo'
 export { Tabs, type TabItem, type TabsProps } from './components/tabs/Tabs'
 export { useTooltipFor, type TooltipOptions } from './components/tooltip/Tooltip'
 export { MenuList, type MenuItemData, type MenuListProps } from './components/menu/MenuList'

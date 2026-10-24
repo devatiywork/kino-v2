@@ -43,5 +43,16 @@
   },
   "actions": {
     "cancel": "Отмена"
+  },
+  "search": {
+    "label": "Поиск",
+    "placeholder": "Поиск по сериалам, истории и архиву",
+    "empty": "Ничего не найдено по запросу «{{query}}»",
+    "clear": "Очистить",
+    "series": "Сериалы",
+    "history": "История",
+    "archive": "Архив торрентов",
+    "seriesInfo": "Просмотрено {{watched}} из {{episodes}}",
+    "fileGone": "файл удалён"
   }
 }

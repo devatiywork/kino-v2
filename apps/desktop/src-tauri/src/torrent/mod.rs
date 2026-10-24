@@ -104,6 +104,14 @@ pub enum ArchiveStatus {
     FilesDeleted,
 }
 
+/// A torrent that has just finished: all its files are on disk; `archived` — it went to the
+/// archive at once («Не раздавать после загрузки»)
+#[derive(Debug, Clone)]
+pub struct Finished {
+    pub item: Item,
+    pub archived: bool,
+}
+
 /// A record of the archive (SPEC 4.4)
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -489,7 +497,7 @@ impl Torrents {
     /// its completion date; with «Не раздавать после загрузки» it goes to the archive at once
     /// (SPEC 4.3). Returns the list and the names that finished just now (and whether they
     /// went to the archive) — exactly once each
-    pub async fn tick(&self) -> anyhow::Result<(TorrentsUpdate, Vec<(String, bool)>)> {
+    pub async fn tick(&self) -> anyhow::Result<(TorrentsUpdate, Vec<Finished>)> {
         let mut finished = Vec::new();
         let no_seeding = self.settings.read(|s| s.no_seeding);
         for item in self.store.in_downloads()? {
@@ -500,9 +508,27 @@ impl Torrents {
             if no_seeding {
                 self.leave(&item, false).await?;
             }
-            finished.push((item.name.clone(), no_seeding));
+            finished.push(Finished { item, archived: no_seeding });
         }
         Ok((self.snapshot()?, finished))
+    }
+
+    /// The files a record downloads (all, or the chosen ones): where each lies and its path
+    /// inside the torrent
+    pub fn content_files(&self, item: &Item) -> anyhow::Result<Vec<(PathBuf, String)>> {
+        let out = item.output_folder();
+        Ok(self
+            .store
+            .files(item.id)?
+            .into_iter()
+            .filter(|f| item.only_files.as_ref().is_none_or(|only| only.contains(&f.index)))
+            .map(|f| (out.join(&f.path), f.path))
+            .collect())
+    }
+
+    /// The archive's record of a torrent, by its info hash
+    pub fn entry_by_hash(&self, info_hash: &str) -> anyhow::Result<Option<ArchiveEntry>> {
+        Ok(self.store.item_by_hash(info_hash)?.as_ref().map(ArchiveEntry::of))
     }
 
     /// Uploaded in this run of the engine: the counter starts over after a pause and a restart

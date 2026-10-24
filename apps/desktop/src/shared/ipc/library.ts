@@ -71,6 +71,13 @@ export interface Folder {
   exists: boolean
 }
 
+/** The library's part of the title bar search (SPEC 2) */
+export interface LibrarySearch {
+  series: SeriesSummary[]
+  /** Played films and episodes, the latest first */
+  files: LibraryFile[]
+}
+
 export interface AddedFolder {
   folder: Folder
   /** Keys of the series found in it */
@@ -82,6 +89,8 @@ export const libraryIpc = {
   history: (limit = 300) => invoke<HistoryEntry[]>('library_history', { limit }),
   series: () => invoke<SeriesSummary[]>('library_series'),
   seriesDetail: (key: string) => invoke<SeriesDetail | null>('library_series_detail', { key }),
+  /** Every word must match, in any case */
+  search: (query: string, limit = 6) => invoke<LibrarySearch>('library_search', { query, limit }),
   folders: () => invoke<Folder[]>('library_folders'),
   /** Scans the folder; rejects when the path is not a folder */
   addFolder: (path: string) => invoke<AddedFolder>('library_add_folder', { path }),

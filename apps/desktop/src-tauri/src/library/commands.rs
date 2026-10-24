@@ -6,6 +6,7 @@ use std::sync::Arc;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
+use super::search::LibrarySearch;
 use super::series::SeriesSummary;
 use super::{Folder, HistoryEntry, Library, LibraryFile, SeriesDetail};
 use crate::error::{AppError, AppResult};
@@ -30,6 +31,12 @@ pub fn library_series(library: State<'_, Arc<Library>>) -> AppResult<Vec<SeriesS
 #[tauri::command]
 pub fn library_series_detail(library: State<'_, Arc<Library>>, key: String) -> AppResult<Option<SeriesDetail>> {
     Ok(library.series_detail(&key)?)
+}
+
+/// The library's part of the title bar search (SPEC 2)
+#[tauri::command]
+pub fn library_search(library: State<'_, Arc<Library>>, query: String, limit: usize) -> AppResult<LibrarySearch> {
+    Ok(library.search(&query, limit.clamp(1, 50))?)
 }
 
 #[tauri::command]

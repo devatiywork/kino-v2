@@ -1,6 +1,7 @@
 mod db;
 mod error;
 mod library;
+mod links;
 mod player;
 mod settings;
 mod torrent;
@@ -107,20 +108,28 @@ pub fn run() {
                 offline,
             }))
             .map_err(|e| format!("torrents: {e:#}"))?;
-            tc::spawn_updates(app.handle().clone(), torrents.clone());
-            app.manage(torrents);
+            // A finished torrent's episodes join the library (SPEC 5): the app links them, the
+            // torrents and the library never meet
+            let (linker, from) = (library.clone(), torrents.clone());
+            let notify = app.handle().clone();
+            tc::spawn_updates(app.handle().clone(), torrents.clone(), move |done| links::link_finished(&notify, &linker, &from, done));
+            app.manage(torrents.clone());
             // The trackers browser (SPEC 4.5): made when the tab is first opened
             app.manage(Arc::new(Trackers::new(app.handle(), &data.join("kino.db"), &data.join("trackers"))?));
 
-            // New episodes in the library folders since the last run
-            let (handle, rescan) = (app.handle().clone(), library.clone());
-            std::thread::Builder::new().name("library-rescan".into()).spawn(move || match rescan.rescan_folders() {
-                Ok(()) => {
-                    if let Err(e) = handle.emit(lc::CHANGED_EVENT, ()) {
-                        eprintln!("[library] emit: {e}");
-                    }
+            // New episodes in the library folders since the last run; torrents finished before
+            // the library knew where their files came from
+            let (handle, rescan, finished) = (app.handle().clone(), library.clone(), torrents);
+            std::thread::Builder::new().name("library-rescan".into()).spawn(move || {
+                if let Err(e) = rescan.rescan_folders() {
+                    eprintln!("[library] rescan: {e}");
                 }
-                Err(e) => eprintln!("[library] rescan: {e}"),
+                if let Err(e) = links::link_all(&rescan, &finished) {
+                    eprintln!("[links] link all: {e:#}");
+                }
+                if let Err(e) = handle.emit(lc::CHANGED_EVENT, ()) {
+                    eprintln!("[library] emit: {e}");
+                }
             })?;
 
             // The main window is made here and not by Tauri itself, so the E2E tests can place it
@@ -164,6 +173,10 @@ pub fn run() {
             lc::library_history,
             lc::library_series,
             lc::library_series_detail,
+            lc::library_search,
+            links::app_series_sources,
+            links::app_season_space,
+            links::app_free_season,
             lc::library_folders,
             lc::library_add_folder,
             lc::library_remove_folder,

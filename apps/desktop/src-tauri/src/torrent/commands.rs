@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
-use super::{AddRequest, ArchiveEntry, CategoryView, Preview, PreviewSource, TorrentDetails, Torrents, TorrentsUpdate};
+use super::{AddRequest, ArchiveEntry, CategoryView, Finished, Preview, PreviewSource, TorrentDetails, Torrents, TorrentsUpdate};
 use crate::error::{AppError, AppResult};
 
 /// Every second: the downloads with their numbers
@@ -42,8 +42,9 @@ fn changed(app: &AppHandle) {
     }
 }
 
-/// The update loop: numbers every second, finished torrents announced
-pub fn spawn_updates(app: AppHandle, torrents: Arc<Torrents>) {
+/// The update loop: numbers every second, finished torrents announced. `on_finished` — what the
+/// app does with a torrent's files on disk (the torrents know nothing of the player)
+pub fn spawn_updates(app: AppHandle, torrents: Arc<Torrents>, on_finished: impl Fn(&Finished) + Send + 'static) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(1));
         loop {
@@ -53,8 +54,10 @@ pub fn spawn_updates(app: AppHandle, torrents: Arc<Torrents>) {
                     if let Err(e) = app.emit(UPDATE_EVENT, update) {
                         eprintln!("[torrents] emit: {e}");
                     }
-                    for (name, archived) in finished {
-                        if let Err(e) = app.emit(NOTICE_EVENT, TorrentNotice::Finished { name, archived }) {
+                    for done in finished {
+                        on_finished(&done);
+                        let notice = TorrentNotice::Finished { name: done.item.name.clone(), archived: done.archived };
+                        if let Err(e) = app.emit(NOTICE_EVENT, notice) {
                             eprintln!("[torrents] emit: {e}");
                         }
                         changed(&app);

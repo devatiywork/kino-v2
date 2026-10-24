@@ -69,7 +69,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
                          hotkeys, system), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds, category bar, details
                          panel, Ctrl V with a magnet link), placeholder
-    widgets/           — app-title-bar, player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
+    widgets/           — app-title-bar (a `search` slot the app fills), global-search (Ctrl K: series, played files,
+                         the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
                          torrent-details (General / Files / Peers / Trackers, polled every second, resizable),
                          archive-list (search, sort, month groups), trackers-pane (bookmarks + browser bar + the place the
@@ -79,7 +80,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
                          torrent-actions (pause, menu, delete with files), archive-actions (download / seed again, delete
                          record), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
-                         manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog)
+                         manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog),
+                         free-season («Освободить место» of a watched season), download-series-again (episodes gone from
+                         the disk whose torrent is in the archive: «Скачать снова»)
     entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
                          settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
                          rebind with swap, key labels, useHotkeyLabel),
@@ -90,25 +93,28 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          tracker (bookmarks, the page's address and history, the interception status line, a release page
                          waiting for the trackers tab, the bookmark of the open page's site, the last bookmark remembered)
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
-                         settings, torrents, trackers, window, app), lib/ (store, router, media, time, sizes and rates,
+                         settings, torrents, trackers, links (library ↔ torrents), window, app), lib/ (store, router, media, time, sizes and rates,
                          nativeLayer — dialogs hide the native trackers page while open), i18n/ (ru, en:
                          common, player, library, settings, torrents)
     test/              — Vitest setup, Tauri bridge mock (mock shared/ipc/bridge; it also stands behind
                          window.__TAURI_INTERNALS__, so a module that got the real bridge still reaches the mock), track,
                          library and torrent fixtures
   e2e/                 — Playwright: kino.ts (launches kino-desktop.exe, connects over CDP, `launch` fixture), player/history/
-                         series/settings/torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
+                         series/settings/torrents/series-torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
                          page by address), global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
                          templates, torrent.ts — a .torrent of a file or folder and its magnet link, trackerSite.ts — a tiny
                          tracker on the loopback, media/ — tiny generated clips: a series of 2 seasons and a film)
   src-tauri/           — Rust core:
-    src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`
+    src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`;
+                         the only link between them: player_files.source / source_path (an opaque torrent hash)
     src/settings/      — Settings (typed, SPEC 6; one JSON row in app_settings, a broken value falls back alone), SettingsStore,
                          commands (get / update with a partial patch / reset → settings://changed; applied at once)
     src/library/       — Library (folders, positions, viewings, continue watching, history, clear history, series, key-value
                          storage, track memory; Policy from the settings: keep history, watched threshold),
                          episode (S02E05 / 2x05 / «Серия 5» → series key and folder), scan (video files, natural order),
-                         series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title), commands
+                         series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title),
+                         sources (files a source brought: linked, moved to their new place, season files, sidecar tracks),
+                         search (series and played files, every word, any case), commands
     src/player/        — Player (libmpv; apply_settings, clear_history), video_host (child HWND), events (mpv event thread →
                          player://state, player://position, player://notice, player://autoplay; registers files, chooses tracks:
                          series memory first, then track_defaults; scans the series folder of an opened episode, autoplays the
@@ -126,6 +132,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          address and can-go-back / forward), history (WebView2 HistoryChanged, GoBack / GoForward), rules
                          (any web page allowed, app URLs and other schemes blocked, address normalization — pure), store
                          (BookmarkStore: bookmarks with positions), commands
+    src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are
+                         linked to the library (and all finished ones at start), series sources for «Скачать снова»,
+                         «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»)
     src/lib.rs         — setup (data dir, library, settings, torrents, trackers, main window from the config, player), app_clear_history,
                          app_open_url (http(s) only), app_reveal_path
     later              — tray
@@ -138,7 +147,8 @@ packages/ui/           — @kino/ui, our UI library
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
   src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
                          PopoverButton, Kbd, KeyRecorder, Checkbox (indeterminate), TextField (description, error, addon),
-                         ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, Tabs (toolbar, panelClassName),
+                         ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, SearchCombo (search with grouped
+                         results, react-aria combobox), Tabs (toolbar, panelClassName),
                          Tooltip (useTooltipFor),
                          MenuButton, ContextMenu, Dialog/Modal, ConfirmDialog, ToastProvider/useToast
   src/lib/             — cn, tv, focusRing, desktopGuards, theme (applyTheme, ACCENTS, applyAccent), usePresence

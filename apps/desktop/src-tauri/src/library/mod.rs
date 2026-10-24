@@ -4,7 +4,9 @@
 pub mod commands;
 pub mod episode;
 pub mod scan;
+pub mod search;
 pub mod series;
+pub mod sources;
 pub mod track_pref;
 
 use std::path::{Path, PathBuf};
@@ -321,7 +323,7 @@ impl Library {
     fn episodes(&self, key: Option<&str>) -> rusqlite::Result<Vec<Episode>> {
         let conn = self.conn();
         let sql = format!(
-            "SELECT {FILE_COLUMNS}, f.series_key, f.series_title, f.series_dir, f.folder_id
+            "SELECT {FILE_COLUMNS}, f.series_key, f.series_title, f.series_dir, f.folder_id, f.source IS NOT NULL
              FROM player_files f WHERE f.series_key IS NOT NULL AND (?1 IS NULL OR f.series_key = ?1)"
         );
         let mut stmt = conn.prepare(&sql)?;
@@ -332,6 +334,7 @@ impl Library {
                 series_title: r.get::<_, Option<String>>(12)?.unwrap_or_default(),
                 series_dir: r.get(13)?,
                 in_folder: r.get::<_, Option<i64>>(14)?.is_some(),
+                sourced: r.get(15)?,
             })
         })?;
         rows.collect()

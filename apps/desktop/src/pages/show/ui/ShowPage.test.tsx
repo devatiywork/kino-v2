@@ -24,6 +24,7 @@ describe('ShowPage (integration)', () => {
   beforeEach(() => {
     mock.reset()
     routerStore.set({ screen: 'show', previous: 'series', seriesKey: 'show:kino test' })
+    mock.respond('app_series_sources', [])
   })
 
   it('что смотреть дальше, запомненные дорожки и серии по порядку', async () => {

@@ -1,11 +1,12 @@
 import { Button, IconArrowLeft, ScrollArea } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { useSeriesDetail } from '../../../entities/library'
+import { SeriesSources } from '../../../features/download-series-again'
 import { navigate, useSeriesKey } from '../../../shared/lib/router'
 import { EpisodeList } from '../../../widgets/episode-list'
 import { SeriesHero } from '../../../widgets/series-hero'
 
-/** One series (SPEC 3.3): what to watch next, the track memory, seasons and episodes */
+/** One series (SPEC 3.3, 5): what to watch next, the track memory, deleted episodes to download again, seasons */
 export function ShowPage() {
   const { t } = useTranslation('library')
   const key = useSeriesKey()
@@ -22,6 +23,7 @@ export function ShowPage() {
         ) : (
           <>
             <SeriesHero detail={detail} />
+            <SeriesSources seriesKey={detail.key} />
             <EpisodeList detail={detail} />
           </>
         )}

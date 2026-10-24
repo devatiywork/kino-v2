@@ -69,5 +69,26 @@
     "audio": "Audio “{{wanted}}” not found, using: {{chosen}}",
     "audioNone": "Audio “{{wanted}}” not found",
     "sub": "Subtitles “{{wanted}}” not found — turned off"
+  },
+  "filesGone": "Files deleted",
+  "filesCount_one": "{{count}} file",
+  "filesCount_other": "{{count}} files",
+  "freeSpace": {
+    "button": "Free up space",
+    "title": "Delete the season’s files?",
+    "text": "{{season}}: {{files}}, {{size}} leave the disk. The viewing history and the stop places stay.",
+    "seeding": "Seeding of “{{names}}” stops: the torrent leaves the downloads, its record stays in the archive.",
+    "confirm": "Delete files",
+    "done": "{{size}} freed",
+    "failed": "Could not delete {{count}} files — they are open in another program"
+  },
+  "sources": {
+    "label": "Deleted episodes",
+    "missing_one": "{{count}} episode deleted from the disk",
+    "missing_other": "{{count}} episodes deleted from the disk",
+    "torrent": "Torrent “{{name}}” is in the archive",
+    "again": "Download again",
+    "downloading": "Already downloading",
+    "done": "“{{name}}” is downloading again — the episodes will be back in place"
   }
 }

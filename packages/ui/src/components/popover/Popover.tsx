@@ -21,6 +21,8 @@ export interface PopoverProps extends Omit<AriaPopoverProps, 'popoverRef' | 'tri
   isExiting?: boolean
   /** Ширина не меньше ширины кнопки, которая открыла окно */
   matchTriggerWidth?: boolean
+  /** Свой ref окна — когда он нужен снаружи (комбобокс следит, куда ушёл фокус) */
+  popoverRef?: RefObject<HTMLDivElement | null>
   className?: string
 }
 
@@ -34,12 +36,14 @@ export function Popover({
   children,
   isExiting,
   matchTriggerWidth,
+  popoverRef: outerRef,
   className,
   offset = 6,
   placement = 'bottom start',
   ...props
 }: PopoverProps) {
-  const popoverRef = useRef<HTMLDivElement>(null)
+  const ownRef = useRef<HTMLDivElement>(null)
+  const popoverRef = outerRef ?? ownRef
   const { popoverProps, underlayProps, placement: actual } = usePopover(
     { ...props, offset, placement, triggerRef, popoverRef },
     state,

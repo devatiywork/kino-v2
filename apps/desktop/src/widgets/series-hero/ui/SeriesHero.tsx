@@ -53,7 +53,9 @@ export function SeriesHero({ detail }: { detail: SeriesDetail }) {
             </div>
           ) : null}
           <div className="mt-1.5 flex flex-wrap gap-2.5">
-            {next ? (
+            {next && !next.exists ? (
+              <span className="self-center text-base text-fg-2">{t('filesGone')}</span>
+            ) : next ? (
               <Button variant="primary" size="lg" icon={<IconPlay size={16} />} onPress={() => void openFile(next)}>
                 {next.position >= 10 && next.episode != null
                   ? t('playEpisodeFrom', { episode: next.episode, time: formatTime(next.position) })

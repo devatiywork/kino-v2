@@ -17,6 +17,8 @@ pub struct Episode {
     pub series_dir: Option<String>,
     /// Found by scanning a library folder (not only opened once)
     pub in_folder: bool,
+    /// A source (a torrent) brought it: gone from the disk, it can come back
+    pub sourced: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -115,7 +117,8 @@ pub fn summaries(episodes: Vec<Episode>) -> Vec<SeriesSummary> {
     }
     let mut list: Vec<SeriesSummary> = by_key
         .into_iter()
-        .filter(|(_, eps)| eps.iter().any(|e| e.in_folder || e.file.last_played_at.is_some()) && eps.iter().any(|e| e.file.exists))
+        // On disk, or gone but its torrent can bring it back (SPEC 5 «Скачать снова»)
+        .filter(|(_, eps)| eps.iter().any(|e| e.in_folder || e.file.last_played_at.is_some()) && eps.iter().any(|e| e.file.exists || e.sourced))
         .map(|(key, eps)| {
             let title = eps[0].series_title.clone();
             let dir = eps.iter().find_map(|e| e.series_dir.clone());
@@ -224,6 +227,7 @@ mod tests {
             series_title: "Show".into(),
             series_dir: Some(r"D:\Show".into()),
             in_folder,
+            sourced: false,
         };
         let list = summaries(vec![
             make(played(ep(1, Some(1), 1), 10, 1000.0, true), true),
@@ -246,6 +250,7 @@ mod tests {
             series_title: "X".into(),
             series_dir: None,
             in_folder: false,
+            sourced: false,
         }]);
         assert!(list.is_empty());
     }

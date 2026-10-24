@@ -317,15 +317,15 @@ impl TorrentStore {
     }
 
     /// The archive, newest first; `query` — words of the name or of a file path, any case
+    /// Every word of the query is somewhere in the name or the file paths: «kino test» finds
+    /// «Kino.Test.S01» (release names have dots, not spaces)
     pub fn archive(&self, query: &str) -> StoreResult<Vec<Item>> {
-        let query = query.trim().to_lowercase();
-        let sql = format!(
-            "SELECT {ITEM_COLUMNS} FROM torrent_items i
-             WHERE ?1 = '' OR instr(i.search_text, ?1) > 0 ORDER BY i.added_at DESC, i.id DESC"
-        );
+        let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
+        let filter: String = (1..=words.len()).map(|n| format!(" AND instr(i.search_text, ?{n}) > 0")).collect();
+        let sql = format!("SELECT {ITEM_COLUMNS} FROM torrent_items i WHERE 1 = 1{filter} ORDER BY i.added_at DESC, i.id DESC");
         let conn = self.conn();
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([query], item_from_row)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(words.iter()), item_from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
@@ -454,6 +454,8 @@ mod tests {
         assert_eq!(store.archive("PEACEMAKER").unwrap().len(), 1);
         assert_eq!(store.archive("rus.srt").unwrap().len(), 1, "a file inside");
         assert!(store.archive("goblin").unwrap().is_empty());
+        assert_eq!(store.archive("peacemaker 2160p").unwrap().len(), 1, "every word, dots between them");
+        assert!(store.archive("peacemaker goblin").unwrap().is_empty());
         let files = files(&[("Сезон 1\\Серия 1.mkv", 1)]);
         store
             .insert(&NewItem {
