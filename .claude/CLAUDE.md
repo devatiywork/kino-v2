@@ -155,7 +155,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          trackers://refused; trackers://state with the address, can-go-back / forward and the ads
                          stopped), history (WebView2 HistoryChanged, GoBack / GoForward), adblock (Brave's engine over
                          the shipped filters/ list), blocking (WebResourceRequested → 403 for ads, hiding styles after
-                         DOMContentLoaded via ExecuteScript — the page never gets a way to call Kino), rules
+                         DOMContentLoaded via ExecuteScript — the page never gets a way to call Kino), autofill
+                         (WebView2's own password manager: saving on/off, clearing through the shared profile), rules
                          (any web page allowed, app URLs and other schemes blocked, address normalization — pure), store
                          (BookmarkStore: bookmarks with positions), commands
     src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are

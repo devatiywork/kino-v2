@@ -186,7 +186,18 @@
     "skipSlowHint": "A torrent slower than 2 KB/s both ways for over a minute takes no place — the next one starts",
     "handler": "Kino as the handler of .torrent and magnet:",
     "blockAds": "Block ads on trackers",
-    "blockAdsHint": "By RU AdList and EasyList: ad requests do not load, ad blocks are hidden. The lists update with a new version of Kino"
+    "blockAdsHint": "By RU AdList and EasyList: ad requests do not load, ad blocks are hidden. The lists update with a new version of Kino",
+    "savePasswords": "Save site passwords",
+    "savePasswordsHint": "After a login the trackers browser offers to save the password and fills the form in next time. WebView2 keeps the passwords in Kino’s data folder, encrypted by Windows for your account; Kino itself never sees them",
+    "savedPasswords": "Saved passwords",
+    "savedPasswordsHint": "Passwords and form data of every site in the trackers browser. Your logins stay",
+    "clearPasswords": "Delete…",
+    "clearPasswordsTitle": "Delete saved passwords?",
+    "clearPasswordsText": "Passwords and form data of every site in the trackers browser will be deleted. The login you are in now stays.",
+    "clearPasswordsConfirm": "Delete",
+    "clearPasswordsKeep": "Keep",
+    "passwordsCleared": "Saved passwords deleted",
+    "clearPasswordsFailed": "Could not delete the passwords: {{message}}"
   },
   "hotkeys": {
     "title": "Hotkeys",

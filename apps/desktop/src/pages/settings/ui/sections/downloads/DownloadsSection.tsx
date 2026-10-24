@@ -6,6 +6,7 @@ import { SettingGroup, SettingRow, SettingsSection } from '../../SettingsLayout'
 import { badTrackerLines } from './checks'
 import { ConnectionRows } from './ConnectionRows'
 import { FolderField, NumberField, SwitchRow, TextSetting } from './fields'
+import { PasswordRows } from './PasswordRows'
 import { SeedingRows } from './SeedingRows'
 import { SpeedRows } from './SpeedRows'
 
@@ -78,6 +79,7 @@ export function DownloadsSection() {
       <SwitchRow setting="keepAwakeDownloads" label={t('downloads.keepAwake')} hint={t('downloads.keepAwakeHint')} />
       <DefaultAppsRow kinds={['torrent', 'magnet']} label={t('downloads.handler')} />
       <SwitchRow setting="blockAds" label={t('downloads.blockAds')} hint={t('downloads.blockAdsHint')} />
+      <PasswordRows />
     </SettingsSection>
   )
 }

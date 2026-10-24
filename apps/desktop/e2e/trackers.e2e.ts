@@ -129,6 +129,24 @@ test.describe('трекеры', () => {
     expect((await kino.settings()).blockAds).toBe(false)
   })
 
+  test('пароли: браузер трекеров предлагает их сохранять, переключатель меняет это сразу; удаление паролей не сбрасывает вход', async ({ launch, site }) => {
+    const kino = await launch()
+    const { page } = kino
+    expect(await kino.invoke('tracker_password_saving')).toBeNull()
+    await openTrackers(page)
+    await addBookmark(page, site.url, 'Тестовый трекер')
+    const tracker = await kino.webPage(site.url)
+    await expect.poll(() => kino.invoke('tracker_password_saving')).toBe(true)
+    await kino.invoke('settings_update', { patch: { savePasswords: false } })
+    await expect.poll(() => kino.invoke('tracker_password_saving')).toBe(false)
+
+    await tracker.getByRole('link', { name: 'Войти' }).click()
+    await expect(tracker.locator('#who')).toHaveText('Вы вошли')
+    await kino.invoke('tracker_clear_passwords')
+    await tracker.reload()
+    await expect(tracker.locator('#who')).toHaveText('Вы вошли')
+  })
+
   test('страница раздачи из архива — во вкладке; magnet того же торрента — «Уже в архиве»; другой сайт — внутри, назад и вперёд между сайтами', async ({ launch, site, workdir }) => {
     // The film already in place and its .torrent from the tracker, opened as if from Explorer
     const folder = join(workdir, 'downloads')

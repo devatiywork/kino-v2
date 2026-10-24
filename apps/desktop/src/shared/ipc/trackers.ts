@@ -52,6 +52,8 @@ export const trackersIpc = {
   layout: (bounds: Bounds | null) => invoke<void>('tracker_layout', { bounds }),
   go: (action: BrowserAction) => invoke<void>('tracker_go', { action }),
   page: () => invoke<PageState>('tracker_page'),
+  /** «Удалить сохранённые пароли» of every site (WebView2 keeps them, Kino never sees them) */
+  clearPasswords: () => invoke<void>('tracker_clear_passwords'),
   onState: (handler: (state: PageState) => void): Promise<UnlistenFn> =>
     listen<PageState>('trackers://state', (e) => handler(e.payload)),
   onTorrent: (handler: (got: Intercepted) => void): Promise<UnlistenFn> =>

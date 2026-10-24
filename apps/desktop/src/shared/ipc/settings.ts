@@ -44,6 +44,8 @@ export interface Settings {
   checkUpdates: boolean
   /** «Блокировать рекламу» on the trackers' pages */
   blockAds: boolean
+  /** «Сохранять пароли сайтов»: WebView2's password manager in the trackers browser */
+  savePasswords: boolean
   /** «Папка по умолчанию» of the downloads; empty — the system Downloads folder */
   downloadsFolder: string
   /** «Не начинать загрузку сразу» */
@@ -119,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mediaKeys: true,
   checkUpdates: false,
   blockAds: true,
+  savePasswords: true,
   downloadsFolder: '',
   startPaused: false,
   noSeeding: false,

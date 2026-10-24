@@ -25,6 +25,18 @@ fn title_of(title: &str, url: &tauri::Url) -> String {
     }
 }
 
+/// Whether the trackers browser offers to save passwords now; null — it is not open yet
+#[tauri::command]
+pub async fn tracker_password_saving(trackers: Service<'_>) -> AppResult<Option<bool>> {
+    trackers.password_saving().await
+}
+
+/// «Удалить сохранённые пароли» of every site
+#[tauri::command]
+pub async fn tracker_clear_passwords(trackers: Service<'_>) -> AppResult<()> {
+    trackers.clear_passwords().await
+}
+
 #[tauri::command]
 pub fn tracker_bookmarks(trackers: Service<'_>) -> AppResult<Vec<Bookmark>> {
     Ok(trackers.store().list()?)

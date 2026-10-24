@@ -6,6 +6,7 @@
 //! (rules.rs). Back and forward go through WebView2's own history (history.rs).
 
 mod adblock;
+mod autofill;
 mod blocking;
 pub mod commands;
 mod history;
@@ -277,6 +278,7 @@ impl Trackers {
                 }),
             },
         )?;
+        autofill::set_saving(&created, self.shared.app.state::<Arc<SettingsStore>>().read(|s| s.save_passwords))?;
         history::watch(&created, move |back, forward| {
             on_history.update_page(|page| {
                 page.can_go_back = back;
@@ -285,6 +287,31 @@ impl Trackers {
         })?;
         *webview = Some(created);
         Ok(())
+    }
+
+    /// «Сохранять пароли сайтов» switched in the settings
+    pub fn set_password_saving(&self, on: bool) {
+        if let Some(webview) = lock(&self.webview).as_ref() {
+            if let Err(e) = autofill::set_saving(webview, on) {
+                eprintln!("[trackers] password saving: {e}");
+            }
+        }
+    }
+
+    /// Whether the trackers browser offers to save passwords now; None — it is not open yet
+    pub async fn password_saving(&self) -> AppResult<Option<bool>> {
+        let webview = lock(&self.webview).clone();
+        Ok(match webview {
+            Some(webview) => Some(autofill::is_saving(&webview).await?),
+            None => None,
+        })
+    }
+
+    /// «Удалить сохранённые пароли»: through Kino's own window, whose WebView2 profile the trackers
+    /// browser shares — also before the tab was ever opened
+    pub async fn clear_passwords(&self) -> AppResult<()> {
+        let main = self.shared.app.get_webview("main").ok_or(tauri::Error::WebviewNotFound)?;
+        Ok(autofill::clear(&main).await?)
     }
 
     /// Over the tab (`Some`) or hidden: another screen, a dialog over it

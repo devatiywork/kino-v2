@@ -216,6 +216,8 @@ pub struct Settings {
     pub check_updates: bool,
     /// «Блокировать рекламу» on the trackers' pages (SPEC 4.5)
     pub block_ads: bool,
+    /// «Сохранять пароли сайтов»: WebView2's password manager in the trackers browser
+    pub save_passwords: bool,
     // Downloads (torrents)
     /// «Папка по умолчанию»; empty — the system Downloads folder
     pub downloads_folder: String,
@@ -299,6 +301,7 @@ impl Default for Settings {
             media_keys: true,
             check_updates: false,
             block_ads: true,
+            save_passwords: true,
             downloads_folder: String::new(),
             show_add_dialog: true,
             delete_torrent_file: false,

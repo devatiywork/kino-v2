@@ -9,6 +9,7 @@ use super::{Settings, SettingsStore};
 use crate::error::AppResult;
 use crate::library::{Library, Policy};
 use crate::media_keys::MediaSession;
+use crate::trackers::Trackers;
 use crate::player::Player;
 use crate::torrent::Torrents;
 
@@ -62,6 +63,11 @@ fn apply(app: &AppHandle, library: &Library, player: &Player, torrents: &Torrent
     torrents.refresh_limits();
     if let Some(media) = app.try_state::<Arc<MediaSession>>() {
         media.set_enabled(new.media_keys);
+    }
+    if old.save_passwords != new.save_passwords {
+        if let Some(trackers) = app.try_state::<Arc<Trackers>>() {
+            trackers.set_password_saving(new.save_passwords);
+        }
     }
     if let Err(e) = app.emit(CHANGED_EVENT, new) {
         eprintln!("[settings] emit: {e}");

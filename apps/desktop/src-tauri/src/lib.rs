@@ -330,6 +330,8 @@ pub fn run() {
             tc::torrent_speed_history,
             links::app_move_torrent,
             trc::tracker_bookmarks,
+            trc::tracker_password_saving,
+            trc::tracker_clear_passwords,
             trc::tracker_bookmark_create,
             trc::tracker_bookmark_update,
             trc::tracker_bookmark_delete,
