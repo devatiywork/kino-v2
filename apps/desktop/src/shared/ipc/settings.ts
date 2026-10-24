@@ -42,6 +42,11 @@ export interface Settings {
   /** KB/s; 0 — no limit */
   downloadLimit: number
   uploadLimit: number
+  /** SPEC 4.6: closing the window while torrents work hides Kino in the tray */
+  closeToTray: boolean
+  notifyFinished: boolean
+  /** The computer does not sleep while something downloads */
+  keepAwakeDownloads: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -66,6 +71,9 @@ export const DEFAULT_SETTINGS: Settings = {
   noSeeding: false,
   downloadLimit: 0,
   uploadLimit: 0,
+  closeToTray: true,
+  notifyFinished: true,
+  keepAwakeDownloads: true,
 }
 
 /** Typed wrappers over the settings commands; every change applies and is stored at once */

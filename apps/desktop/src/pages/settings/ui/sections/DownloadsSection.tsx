@@ -34,7 +34,7 @@ function LimitField({ label, setting }: { label: string; setting: 'downloadLimit
   )
 }
 
-/** SPEC 6 «Загрузки»: what works now — folders, categories, the start, seeding, limits */
+/** SPEC 6 «Загрузки»: what works now — folders, categories, the start, seeding, limits, behaviour (SPEC 4.6) */
 export function DownloadsSection() {
   const { t } = useTranslation('settings')
   const { t: tt } = useTranslation('torrents')
@@ -42,6 +42,9 @@ export function DownloadsSection() {
   const custom = useSettings((s) => s.downloadsFolder)
   const startPaused = useSettings((s) => s.startPaused)
   const noSeeding = useSettings((s) => s.noSeeding)
+  const closeToTray = useSettings((s) => s.closeToTray)
+  const notifyFinished = useSettings((s) => s.notifyFinished)
+  const keepAwake = useSettings((s) => s.keepAwakeDownloads)
   const folder = useTorrents((s) => s.downloadsFolder)
   const seeding = useTorrents((s) => s.active.filter((x) => x.state === 'seeding').length)
   const [asking, setAsking] = useState(0)
@@ -96,6 +99,15 @@ export function DownloadsSection() {
       </SettingRow>
       <SettingRow label={t('downloads.uploadLimit')} hint={t('downloads.limitHint')}>
         <LimitField label={t('downloads.uploadLimit')} setting="uploadLimit" />
+      </SettingRow>
+      <SettingRow label={t('downloads.closeToTray')} hint={t('downloads.closeToTrayHint')}>
+        <Switch aria-label={t('downloads.closeToTray')} isSelected={closeToTray} onChange={(on) => void updateSettings({ closeToTray: on })} />
+      </SettingRow>
+      <SettingRow label={t('downloads.notifyFinished')} hint={t('downloads.notifyFinishedHint')}>
+        <Switch aria-label={t('downloads.notifyFinished')} isSelected={notifyFinished} onChange={(on) => void updateSettings({ notifyFinished: on })} />
+      </SettingRow>
+      <SettingRow label={t('downloads.keepAwake')} hint={t('downloads.keepAwakeHint')}>
+        <Switch aria-label={t('downloads.keepAwake')} isSelected={keepAwake} onChange={(on) => void updateSettings({ keepAwakeDownloads: on })} />
       </SettingRow>
       <ConfirmDialog
         isOpen={asking > 0}

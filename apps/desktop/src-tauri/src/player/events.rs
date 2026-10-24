@@ -11,7 +11,7 @@ use libmpv2::{Format, Mpv};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-use super::keep_awake::KeepAwake;
+use crate::power::KeepAwake;
 use super::session::{self, Session};
 use super::state::{Change, ObservedFormat, PlayerSnapshot, Prop, OBSERVED};
 use super::track_defaults::{self, SubtitleChoice};

@@ -147,6 +147,12 @@ pub struct Settings {
     /// KB/s; 0 — no limit
     pub download_limit: u32,
     pub upload_limit: u32,
+    /// SPEC 4.6: closing the window while torrents download or seed hides Kino in the tray
+    pub close_to_tray: bool,
+    /// A Windows notification when a torrent finishes
+    pub notify_finished: bool,
+    /// The computer does not sleep while something downloads (the screen may go off)
+    pub keep_awake_downloads: bool,
 }
 
 impl Default for Settings {
@@ -173,6 +179,9 @@ impl Default for Settings {
             no_seeding: false,
             download_limit: 0,
             upload_limit: 0,
+            close_to_tray: true,
+            notify_finished: true,
+            keep_awake_downloads: true,
         }
     }
 }

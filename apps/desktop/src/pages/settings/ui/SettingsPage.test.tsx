@@ -62,6 +62,19 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: /Сохранить/ })).not.toBeInTheDocument()
   })
 
+  it('поведение загрузок (ТЗ 4.6): трей, уведомления, сон', async () => {
+    const user = renderPage()
+    for (const name of ['При закрытии окна — в трей', 'Уведомлять о завершении', 'Не засыпать во время загрузок']) {
+      expect(screen.getByRole('switch', { name })).toBeChecked()
+      await user.click(screen.getByRole('switch', { name }))
+    }
+    expect(mock.calls()).toEqual([
+      ['settings_update', { patch: { closeToTray: false } }],
+      ['settings_update', { patch: { notifyFinished: false } }],
+      ['settings_update', { patch: { keepAwakeDownloads: false } }],
+    ])
+  })
+
   it('папки сериалов — те же, что на экране «Сериалы»', () => {
     act(() => libraryStore.set({ folders: [{ id: 1, path: 'D:\\Сериалы', exists: true }] }))
     renderPage()

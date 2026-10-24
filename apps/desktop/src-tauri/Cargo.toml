@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -13,9 +13,11 @@ crate-type = ["rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# unstable: a second webview in the main window (the trackers browser)
-tauri = { version = "2", features = ["protocol-asset", "unstable"] }
+# unstable: a second webview in the main window (the trackers browser); tray-icon: Kino in the tray (SPEC 4.6)
+tauri = { version = "2", features = ["protocol-asset", "unstable", "tray-icon"] }
 tauri-plugin-dialog = "2"
+# «Скачан» as a Windows notification (SPEC 4.6)
+tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

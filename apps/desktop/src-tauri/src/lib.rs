@@ -1,8 +1,10 @@
+mod background;
 mod db;
 mod error;
 mod library;
 mod links;
 mod player;
+mod power;
 mod settings;
 mod torrent;
 mod trackers;
@@ -79,6 +81,7 @@ fn place_for_tests(app: &tauri::AppHandle, config: &mut tauri::utils::config::Wi
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // %APPDATA%\local.kino.app: kino.db and thumbs\ (SPEC 7). KINO_DATA_DIR — a separate
             // folder, so the E2E tests never touch the real history
@@ -108,11 +111,27 @@ pub fn run() {
                 offline,
             }))
             .map_err(|e| format!("torrents: {e:#}"))?;
+            // SPEC 4.6: the tray, unless the E2E tests run (a killed test would leave a dead icon)
+            let tray = if offline { None } else { Some(background::Tray::create(app.handle(), torrents.clone(), settings.clone())?) };
             // A finished torrent's episodes join the library (SPEC 5): the app links them, the
-            // torrents and the library never meet
-            let (linker, from) = (library.clone(), torrents.clone());
-            let notify = app.handle().clone();
-            tc::spawn_updates(app.handle().clone(), torrents.clone(), move |done| links::link_finished(&notify, &linker, &from, done));
+            // torrents and the library never meet. And a Windows notification «Скачан»
+            let (linker, from, notices) = (library.clone(), torrents.clone(), settings.clone());
+            let handle = app.handle().clone();
+            tc::spawn_updates(
+                app.handle().clone(),
+                torrents.clone(),
+                move |update| {
+                    if let Some(tray) = &tray {
+                        tray.update(update);
+                    }
+                },
+                move |done| {
+                    links::link_finished(&handle, &linker, &from, done);
+                    if !offline {
+                        background::notify_finished(&handle, &notices, done);
+                    }
+                },
+            );
             app.manage(torrents.clone());
             // The trackers browser (SPEC 4.5): made when the tab is first opened
             app.manage(Arc::new(Trackers::new(app.handle(), &data.join("kino.db"), &data.join("trackers"))?));
@@ -142,12 +161,30 @@ pub fn run() {
             app.manage(player);
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::Resized(size) = event {
+        .on_window_event(|window, event| match event {
+            WindowEvent::Resized(size) => {
                 if let Some(player) = window.try_state::<Player>() {
                     player.resize_video(size.width, size.height);
                 }
             }
+            // SPEC 4.6: torrents at work — the window hides in the tray, the video stops
+            WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                let to_tray = window.try_state::<Arc<SettingsStore>>().is_some_and(|s| s.read(|s| s.close_to_tray))
+                    && window.try_state::<Arc<Torrents>>().is_some_and(|t| t.busy());
+                if !to_tray {
+                    return;
+                }
+                api.prevent_close();
+                if let Some(player) = window.try_state::<Player>() {
+                    if let Err(e) = player.stop() {
+                        eprintln!("[window] stop the video: {e}");
+                    }
+                }
+                if let Err(e) = window.hide() {
+                    eprintln!("[window] hide: {e}");
+                }
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             app_launch_files,

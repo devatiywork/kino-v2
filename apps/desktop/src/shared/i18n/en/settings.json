@@ -103,7 +103,13 @@
     "noSeedingKeep": "Let them seed",
     "downloadLimit": "Download limit",
     "uploadLimit": "Upload limit",
-    "limitHint": "kB/s; 0 — no limit"
+    "limitHint": "kB/s; 0 — no limit",
+    "closeToTray": "Closing the window — to the tray",
+    "closeToTrayHint": "While torrents download or seed, Kino stays in the tray: an icon with the speed, “Pause all”, “Quit”",
+    "notifyFinished": "Notify when finished",
+    "notifyFinishedHint": "A Windows notification when a torrent is downloaded",
+    "keepAwake": "Stay awake while downloading",
+    "keepAwakeHint": "The computer does not sleep while something downloads; the screen goes off as usual"
   },
   "hotkeys": {
     "title": "Hotkeys",

@@ -17,6 +17,7 @@ use librqbit::TorrentStatsState;
 use serde::{Deserialize, Serialize};
 
 use crate::db::now_ms;
+use crate::power::KeepAwake;
 use crate::settings::SettingsStore;
 use engine::{Engine, EngineOptions, Metainfo};
 use store::{Category, FileEntry, Item, NewItem, TorrentStore};
@@ -259,6 +260,8 @@ pub struct Torrents {
     pending: Mutex<HashMap<String, Metainfo>>,
     /// Files of the records in the downloads (they never change)
     files: Mutex<HashMap<i64, Vec<FileEntry>>>,
+    /// «Не засыпать во время загрузок»
+    awake: KeepAwake,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -286,6 +289,7 @@ impl Torrents {
             settings: options.settings,
             pending: Mutex::default(),
             files: Mutex::default(),
+            awake: KeepAwake::for_downloads(),
         });
         torrents.reconcile().await?;
         Ok(torrents)
@@ -511,7 +515,15 @@ impl Torrents {
             }
             finished.push(Finished { item, archived: no_seeding });
         }
-        Ok((self.snapshot()?, finished))
+        let update = self.snapshot()?;
+        let downloading = update.torrents.iter().any(|t| t.state == TorrentState::Downloading);
+        self.awake.set(downloading && self.settings.read(|s| s.keep_awake_downloads));
+        Ok((update, finished))
+    }
+
+    /// Something downloads or seeds: closing the window hides Kino in the tray (SPEC 4.6)
+    pub fn busy(&self) -> bool {
+        self.store.in_downloads().map(|items| items.iter().any(|i| !i.paused)).unwrap_or(false)
     }
 
     /// The files a record downloads (all, or the chosen ones): where each lies and its path

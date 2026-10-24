@@ -1,5 +1,6 @@
-//! SPEC 6 «Не давать компьютеру засыпать»: a Windows power request while a video plays.
-//! Unlike SetThreadExecutionState it belongs to no thread, so any thread may switch it.
+//! SPEC 6 «Не давать компьютеру засыпать»: a Windows power request — while a video plays (the
+//! screen too) or while torrents download (only the computer). Unlike SetThreadExecutionState it
+//! belongs to no thread, so any thread may switch it.
 
 use std::sync::Mutex;
 
@@ -12,18 +13,31 @@ use windows::Win32::System::Power::{
 use windows::Win32::System::Threading::{POWER_REQUEST_CONTEXT_SIMPLE_STRING, REASON_CONTEXT, REASON_CONTEXT_0};
 
 /// The screen stays on and the computer does not sleep
-const KINDS: [POWER_REQUEST_TYPE; 2] = [PowerRequestDisplayRequired, PowerRequestSystemRequired];
+const SCREEN_AND_SYSTEM: &[POWER_REQUEST_TYPE] = &[PowerRequestDisplayRequired, PowerRequestSystemRequired];
+/// Only the computer: the screen may go off
+const SYSTEM: &[POWER_REQUEST_TYPE] = &[PowerRequestSystemRequired];
 
 pub struct KeepAwake {
     /// The request handle as a number (HANDLE is not Send); None — Windows refused one
     request: Option<isize>,
+    kinds: &'static [POWER_REQUEST_TYPE],
     active: Mutex<bool>,
 }
 
 impl KeepAwake {
-    pub fn new() -> Self {
+    /// A video: the screen stays on
+    pub fn for_video() -> Self {
+        Self::new("Kino: video is playing", SCREEN_AND_SYSTEM)
+    }
+
+    /// Downloads: the computer stays on, the screen may go off
+    pub fn for_downloads() -> Self {
+        Self::new("Kino: torrents are downloading", SYSTEM)
+    }
+
+    fn new(reason: &str, kinds: &'static [POWER_REQUEST_TYPE]) -> Self {
         // `powercfg /requests` shows this reason
-        let mut reason: Vec<u16> = "Kino: video is playing".encode_utf16().chain([0]).collect();
+        let mut reason: Vec<u16> = reason.encode_utf16().chain([0]).collect();
         let context = REASON_CONTEXT {
             // POWER_REQUEST_CONTEXT_VERSION
             Version: 0,
@@ -37,10 +51,10 @@ impl KeepAwake {
                 None
             }
         };
-        Self { request, active: Mutex::new(false) }
+        Self { request, kinds, active: Mutex::new(false) }
     }
 
-    /// On while a video plays (and the setting allows it), off otherwise; repeats are free
+    /// On while the reason lasts (and the setting allows it), off otherwise; repeats are free
     pub fn set(&self, on: bool) {
         let Some(request) = self.request else { return };
         let mut active = self.active.lock().unwrap_or_else(|p| p.into_inner());
@@ -48,7 +62,7 @@ impl KeepAwake {
             return;
         }
         let handle = HANDLE(request as *mut _);
-        for kind in KINDS {
+        for &kind in self.kinds {
             let result = unsafe { if on { PowerSetRequest(handle, kind) } else { PowerClearRequest(handle, kind) } };
             if let Err(e) = result {
                 eprintln!("[power] {} request {}: {e}", if on { "set" } else { "clear" }, kind.0);

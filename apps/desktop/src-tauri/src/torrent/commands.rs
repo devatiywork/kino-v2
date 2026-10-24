@@ -43,15 +43,22 @@ fn changed(app: &AppHandle) {
     }
 }
 
-/// The update loop: numbers every second, finished torrents announced. `on_finished` — what the
-/// app does with a torrent's files on disk (the torrents know nothing of the player)
-pub fn spawn_updates(app: AppHandle, torrents: Arc<Torrents>, on_finished: impl Fn(&Finished) + Send + 'static) {
+/// The update loop: numbers every second, finished torrents announced. `on_update` — the app's
+/// own use of the numbers (the tray), `on_finished` — what the app does with a torrent's files on
+/// disk (the torrents know nothing of the player)
+pub fn spawn_updates(
+    app: AppHandle,
+    torrents: Arc<Torrents>,
+    on_update: impl Fn(&TorrentsUpdate) + Send + 'static,
+    on_finished: impl Fn(&Finished) + Send + 'static,
+) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(1));
         loop {
             interval.tick().await;
             match torrents.tick().await {
                 Ok((update, finished)) => {
+                    on_update(&update);
                     if let Err(e) = app.emit(UPDATE_EVENT, update) {
                         eprintln!("[torrents] emit: {e}");
                     }

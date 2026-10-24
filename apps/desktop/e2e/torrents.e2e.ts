@@ -182,4 +182,23 @@ test.describe('торренты', () => {
     await expect(restored).toBeVisible()
     await expect(page.getByRole('button', { name: 'Резервная копия' })).toBeVisible()
   })
+
+  test('закрытие окна при раздаче — Kino уходит в трей и раздаёт дальше; без раздач — закрывается', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect.poll(() => kino.invoke<boolean>('plugin:window|is_visible', { label: 'main' })).toBe(false)
+    // Still running and seeding
+    await expect.poll(async () => (await kino.invoke<{ torrents: { state: string }[] }>('torrent_list')).torrents[0]?.state).toBe('seeding')
+
+    // Nothing at work: closing quits
+    await kino.invoke('torrent_pause_all', { paused: true })
+    const closed = page.waitForEvent('close', { timeout: 15_000 })
+    await kino.invoke('plugin:window|close', { label: 'main' }).catch(() => undefined)
+    await closed
+  })
 })

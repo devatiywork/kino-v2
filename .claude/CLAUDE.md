@@ -35,7 +35,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `librqbit` 9 — BitTorrent engine in the Rust core (torrent module), with fast resume; TLS through Windows' schannel
 - Trackers browser — a child webview of the main window (`window.add_child`, Tauri feature `unstable`), laid over the «Трекеры» tab by bounds the renderer reports; a remote origin gets no Tauri IPC (no `remote.urls` in the capabilities). It shares the main WebView2 profile, so logins persist. `.torrent` downloads (`on_download`) and `magnet:` navigations (`on_navigation`) are turned into the "add torrent" flow on the Rust side; any other web page, of any site, stays inside (new windows open in place), nothing goes to the default browser by itself. Back / forward use WebView2's own history (`webview2-com`, the version wry is built on, through `with_webview`)
 - SQLite via `rusqlite` — two independent schemas: player (library, positions, history, track preferences) and torrents (categories, archive records, files, download state); the archive's `.torrent` files lie in `<data>\torrents\files`
-- Tauri plugins: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video), tray, notifications
+- Tauri plugins: dialog, notification (`tauri-plugin-notification`); the tray through Tauri's `tray-icon` feature. Planned: single-instance, deep-link (`magnet:`), file associations (`.torrent`, video)
 - React 19 + TypeScript 7 + Vite 8
 - Tailwind CSS v4 — only through design tokens, default palette disabled
 - react-aria / react-stately — accessible behavior for our own components (no native widgets)
@@ -122,7 +122,10 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          series memory first, then track_defaults; scans the series folder of an opened episode, autoplays the
                          next episode of the season), session (saves the position, takes frames), state (snapshot, pure +
                          tested), tracks (track-list parsing), track_defaults (preferred audio, subtitles with a Russian dub —
-                         pure), keep_awake (Windows power request while playing), commands
+                         pure), commands
+    src/power.rs       — KeepAwake: a Windows power request — for a video (screen + system) or for downloads (system)
+    src/background.rs  — SPEC 4.6: the tray (speeds in the tooltip, «Пауза всех», «Открыть», «Выйти»), «Скачан»
+                         notifications; none in the E2E tests (a killed test leaves a dead tray icon)
     src/torrent/       — Torrents (the engine + the archive + settings: preview, add, pause, remove, download / seed again,
                          details; the update loop is the only place where torrents finish — «Не раздавать» archives there),
                          engine (librqbit session with fast resume, reconcile with the archive, offline mode for tests,
@@ -138,9 +141,10 @@ apps/desktop/          — Tauri app (@kino/desktop)
     src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are
                          linked to the library (and all finished ones at start), series sources for «Скачать снова»,
                          «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»)
-    src/lib.rs         — setup (data dir, library, settings, torrents, trackers, main window from the config, player), app_clear_history,
+    src/lib.rs         — setup (data dir, library, settings, torrents, trackers, tray, main window from the config, player),
+                         closing the window while torrents work hides it in the tray, app_clear_history,
                          app_open_url (http(s) only), app_reveal_path
-    later              — tray
+    later              — single instance, file associations, `magnet:` / `.torrent` handlers, the installer
   data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)

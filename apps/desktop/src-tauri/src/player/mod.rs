@@ -3,7 +3,6 @@
 
 pub mod commands;
 mod events;
-mod keep_awake;
 mod session;
 mod state;
 mod track_defaults;
@@ -23,8 +22,8 @@ use crate::library::commands::CHANGED_EVENT;
 use crate::library::episode::describe;
 use crate::library::track_pref::TrackPref;
 use crate::library::Library;
+use crate::power::KeepAwake;
 use crate::settings::{Settings, SettingsStore};
-use keep_awake::KeepAwake;
 use session::Session;
 pub use state::PlayerSnapshot;
 use tracks::TrackKind;
@@ -124,7 +123,7 @@ impl Player {
         })?;
         let snapshot = Arc::new(Mutex::new(PlayerSnapshot::default()));
         let session = Arc::new(Mutex::new(None));
-        let awake = Arc::new(KeepAwake::new());
+        let awake = Arc::new(KeepAwake::for_video());
         events::spawn(events::Context {
             app: app.clone(),
             // No name: libmpv2 6.0 drops the name's CString before mpv_create_client reads it
