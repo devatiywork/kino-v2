@@ -26,9 +26,9 @@ export function togglePause(): void {
 let pausedBeforeClick: boolean | null = null
 
 /**
- * A click on the picture pauses or plays. The second click of a double click (fullscreen, the
- * full window) puts back what the first one changed — from what it found, not from the state,
- * which the core may not have reported yet
+ * A click on the picture pauses or plays. The second click of a double click puts back what the
+ * first one changed — from what it found, not from the state, which the core may not have reported
+ * yet — so a double click leaves playback as it was (in the mini player it brings the window back)
  */
 export function clickVideo(detail: number): void {
   if (detail === 1) {

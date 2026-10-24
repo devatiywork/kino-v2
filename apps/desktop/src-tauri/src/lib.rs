@@ -15,6 +15,7 @@ mod trackers;
 mod updates;
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State, WindowEvent};
@@ -107,6 +108,62 @@ fn app_clear_history(app: AppHandle, player: State<'_, Player>) -> AppResult<()>
     Ok(())
 }
 
+/// Kino quits (the window closed with nothing at work, «Выйти» of the tray). The window hides at
+/// once; the rest happens on a thread of its own while the main thread keeps pumping messages:
+/// mpv stops (its video thread talks to the window), the torrents save their state and stop, the
+/// tray icon goes — then the process ends right there. The usual way out (tao tearing the windows
+/// down, then ExitProcess unloading the DLLs) hangs for good once a video was shown — the video
+/// driver's DLL waits for itself on unload — and Kino stayed with no window: a dead tray icon,
+/// later starts handed over to it for nothing
+pub fn quit(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        if let Err(e) = window.hide() {
+            eprintln!("[window] hide: {e}");
+        }
+    }
+    let handle = app.clone();
+    let spawned = std::thread::Builder::new().name("quit".into()).spawn(move || {
+        let app = handle;
+        if let Some(player) = app.try_state::<Player>() {
+            player.shutdown();
+            if !player.wait_stopped(Duration::from_secs(4)) {
+                eprintln!("[player] mpv did not stop in time");
+            }
+        }
+        if let Some(torrents) = app.try_state::<Arc<Torrents>>() {
+            let torrents = torrents.inner().clone();
+            // The timer is made on the runtime: it needs its clock
+            let stopped = tauri::async_runtime::block_on(async move { tokio::time::timeout(Duration::from_secs(6), torrents.shutdown()).await });
+            if stopped.is_err() {
+                eprintln!("[torrents] did not stop in time");
+            }
+        }
+        end_process(&app);
+    });
+    if let Err(e) = spawned {
+        eprintln!("[app] quit thread: {e}");
+        app.exit(0);
+    }
+}
+
+/// The end, past the DLL unloading that may hang: the tray icon is taken away first (a killed
+/// process leaves a dead one), WebView2's own processes see Kino gone and close by themselves
+fn end_process(app: &AppHandle) -> ! {
+    if let Some(tray) = app.remove_tray_by_id("kino") {
+        if let Err(e) = tray.set_visible(false) {
+            eprintln!("[tray] remove: {e}");
+        }
+    }
+    // SAFETY: ends this very process; everything worth keeping is saved by now
+    unsafe {
+        let _ = windows::Win32::System::Threading::TerminateProcess(windows::Win32::System::Threading::GetCurrentProcess(), 0);
+    }
+    std::process::exit(0)
+}
+
+/// However the exit goes, a Kino with no window does not live on: past this it ends anyway
+const EXIT_DEADLINE: Duration = Duration::from_secs(8);
+
 /// The main window in front: from the tray, minimized or behind others. The tests' Kino never
 /// takes the focus from whatever the user is doing
 fn bring_forward(app: &AppHandle) {
@@ -177,7 +234,9 @@ pub fn run() {
             }))
             .map_err(|e| format!("torrents: {e:#}"))?;
             // SPEC 4.6: the tray, unless the E2E tests run (a killed test would leave a dead icon)
-            let tray = if offline { None } else { Some(background::Tray::create(app.handle(), torrents.clone(), settings.clone())?) };
+            // KINO_TEST_TRAY: the tray in a test run too, to check the way back from it
+            let with_tray = !offline || std::env::var_os("KINO_TEST_TRAY").is_some();
+            let tray = if with_tray { Some(background::Tray::create(app.handle(), torrents.clone(), settings.clone())?) } else { None };
             // A finished torrent's episodes join the library (SPEC 5): the app links them, the
             // torrents and the library never meet. And a Windows notification «Скачан»
             let (linker, from, notices) = (library.clone(), torrents.clone(), settings.clone());
@@ -267,10 +326,11 @@ pub fn run() {
             WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
                 let to_tray = window.try_state::<Arc<SettingsStore>>().is_some_and(|s| s.read(|s| s.close_to_tray))
                     && window.try_state::<Arc<Torrents>>().is_some_and(|t| t.busy());
-                if !to_tray {
-                    return;
-                }
+                // Either way the window is not destroyed under mpv: quitting stops it first
                 api.prevent_close();
+                if !to_tray {
+                    return quit(window.app_handle());
+                }
                 if let Some(player) = window.try_state::<Player>() {
                     if let Err(e) = player.stop() {
                         eprintln!("[window] stop the video: {e}");
@@ -379,6 +439,16 @@ pub fn run() {
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
+            let handle = app.clone();
+            let watchdog = std::thread::Builder::new().name("exit-deadline".into()).spawn(move || {
+                std::thread::sleep(EXIT_DEADLINE);
+                eprintln!("[app] the exit hangs: ending the process");
+                end_process(&handle);
+            });
+            if let Err(e) = watchdog {
+                eprintln!("[app] exit deadline: {e}");
+            }
+            // Already done when Kino quit through `quit`; not when Windows ends the session
             if let Some(player) = app.try_state::<Player>() {
                 player.shutdown();
             }

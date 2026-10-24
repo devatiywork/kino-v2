@@ -1,6 +1,6 @@
 import { cn } from '@kino/ui'
 import { useState, type MouseEvent, type WheelEvent } from 'react'
-import { leaveMini, toggleFullscreen, useWindowState } from '../../../entities/app-window'
+import { leaveMini, useWindowState } from '../../../entities/app-window'
 import { changeVolume, clickVideo, Osd, usePlayback, VOLUME_STEP } from '../../../entities/playback'
 import { useMediaKeys, usePlayerHotkeys } from '../../../features/player-hotkeys'
 import { useIdle } from '../../../shared/lib/useIdle'
@@ -32,7 +32,7 @@ export function PlayerPage() {
   useSubtitleLift(!idle && !mini)
   usePanelMargin(episodesOpen && isEpisode && !mini)
 
-  // A click pauses or plays; a double click leaves it as it was and goes fullscreen
+  // A click pauses or plays; a quick second click puts it back — a double click changes nothing
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.button === 0) clickVideo(e.detail)
   }
@@ -52,8 +52,8 @@ export function PlayerPage() {
 
   return (
     <div data-theme="dark" className={cn('relative h-full overflow-hidden text-fg select-none', idle && 'cursor-none')}>
-      {/* Surface over the video: click — pause, double click — fullscreen, wheel — volume */}
-      <div className="absolute inset-0" onClick={onClick} onDoubleClick={toggleFullscreen} onWheel={onWheel} />
+      {/* Surface over the video: click — pause, wheel — volume. Fullscreen is F and its button only */}
+      <div className="absolute inset-0" onClick={onClick} onWheel={onWheel} />
       {buffering ? (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <span className="size-10 animate-spin rounded-full border-4 border-track border-t-accent" />

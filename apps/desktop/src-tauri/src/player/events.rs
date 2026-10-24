@@ -60,6 +60,7 @@ pub struct Context {
     pub library: Arc<Library>,
     pub settings: Arc<SettingsStore>,
     pub awake: Arc<KeepAwake>,
+    pub stopped: Arc<super::Stopped>,
 }
 
 pub fn spawn(ctx: Context) -> libmpv2::Result<()> {
@@ -83,6 +84,7 @@ fn run(ctx: &Context) {
         match event {
             Ok(Event::Shutdown) => {
                 finish(ctx);
+                ctx.stopped.set();
                 break;
             }
             // Not StartFile: property changes of the new file can be delivered before it, so

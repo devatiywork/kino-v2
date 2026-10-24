@@ -109,7 +109,7 @@ impl Tray {
                         }
                     });
                 }
-                "quit" => app.exit(0),
+                "quit" => crate::quit(app),
                 _ => {}
             })
             .on_tray_icon_event(|icon, event| {

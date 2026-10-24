@@ -189,7 +189,10 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          and daily, a newer version told once (PendingUpdate, taken by the renderer); reqwest
     src/lib.rs         — single instance first, then setup (data dir, library, settings, torrents, trackers, tray, main
                          window from the config, media session, player), closing the window while torrents work hides it
-                         in the tray, app_clear_history, app_open_url (http(s) only), app_reveal_path
+                         in the tray (the renderer leaves the player: app://to-tray), otherwise `quit`: the window hides,
+                         mpv stops and the torrents save on a thread of their own, the tray icon goes, then TerminateProcess —
+                         the usual exit hangs in the video driver's DLL unload once a video was shown; an exit deadline
+                         (8 s) for any other way out; app_clear_history, app_open_url (http(s) only), app_reveal_path
     windows/hooks.nsh  — the installer's own steps: Kino's capabilities for «Приложения по умолчанию»
                          (bundle settings, file associations and the `magnet:` scheme are in tauri.conf.json; the
                          installer is per machine: C:\Program Files\Kino v2, asks for admin rights, the registry under HKLM)
@@ -275,7 +278,9 @@ Each launch gets its own temp folder; the core reads these variables:
   (a later start brings it forward without the focus too). The harness sets 1% and Full HD; override with
   `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
   prompt
-- No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys
+- No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys.
+  `KINO_TEST_TRAY` — the tray anyway, to check the way back from it (a hand check: the tray icon's window takes
+  WM_USER 6002 + WM_LBUTTONUP as a click)
 - `KINO_ADBLOCK_LIST` — the ad blocker's rules from this file instead of the shipped list (the tests' own)
 - `KINO_UPDATES_URL` — where Kino asks for its latest release instead of GitHub (the tests' own server; the first check
   then runs after a second). Under `KINO_TEST_OFFLINE` without it Kino never asks GitHub

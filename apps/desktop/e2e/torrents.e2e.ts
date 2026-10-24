@@ -285,6 +285,21 @@ test.describe('торренты', () => {
     await expect(row(page, 'Film.2014.mkv')).toBeVisible()
   })
 
+  test('видео играло, раздачи на паузе — закрытие завершает Kino, а не оставляет процесс без окна', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    await row(page, 'Film.2014.mkv').getByRole('button', { name: /Смотреть/ }).click()
+    await expect.poll(async () => (await kino.snapshot()).position).toBeGreaterThan(0.5)
+    await kino.invoke('torrent_pause_all', { paused: true })
+
+    // As Alt+F4: nothing at work — Kino quits. It used to hang there for good once a video was shown
+    await kino.invoke('plugin:window|close', { label: 'main' }).catch(() => undefined)
+    expect(await kino.exits(10_000)).toBe(true)
+  })
+
   test('подробности: части, трекеры, скорость; параметры — до рейтинга, проверка, перенос; правый клик', async ({ launch, workdir }) => {
     const { torrent, film, folder } = filmTorrent(workdir)
     const kino = await launch({ file: torrent })

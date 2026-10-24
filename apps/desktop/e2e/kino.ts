@@ -43,6 +43,8 @@ export interface Kino {
   webPage: (prefix: string) => Promise<Page>
   /** Kino started once more on the same data folder, as Explorer does: its exit code */
   startAgain: (...args: string[]) => Promise<number | null>
+  /** The process ended by itself within `ms`: true; still running then — false */
+  exits: (ms: number) => Promise<boolean>
   close: () => Promise<void>
 }
 
@@ -140,6 +142,15 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
         await new Promise((r) => setTimeout(r, 200))
       }
     },
+    exits: (ms) =>
+      new Promise((resolve) => {
+        if (child.exitCode != null) return resolve(true)
+        const timer = setTimeout(() => resolve(false), ms)
+        child.once('exit', () => {
+          clearTimeout(timer)
+          resolve(true)
+        })
+      }),
     close: async () => {
       await browser.close().catch((e: unknown) => console.warn('[e2e] disconnect', e))
       child.kill()

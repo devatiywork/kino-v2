@@ -10,8 +10,9 @@ pub(crate) mod tracks;
 mod video_host;
 
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 
 use libmpv2::{Mpv, SetData};
 use serde::Serialize;
@@ -62,6 +63,30 @@ pub struct Player {
     awake: Arc<KeepAwake>,
     /// Last applied show/hide request: IPC calls may arrive out of order
     video_seq: AtomicU64,
+    /// «quit» was sent: once is enough
+    quitting: AtomicBool,
+    stopped: Arc<Stopped>,
+}
+
+/// mpv's core has stopped: its event thread saw Shutdown
+#[derive(Default)]
+pub struct Stopped {
+    done: Mutex<bool>,
+    changed: Condvar,
+}
+
+impl Stopped {
+    fn set(&self) {
+        *self.done.lock().unwrap_or_else(|p| p.into_inner()) = true;
+        self.changed.notify_all();
+    }
+
+    /// true — stopped within `timeout`
+    fn wait(&self, timeout: Duration) -> bool {
+        let done = self.done.lock().unwrap_or_else(|p| p.into_inner());
+        let (done, _) = self.changed.wait_timeout_while(done, timeout, |done| !*done).unwrap_or_else(|p| p.into_inner());
+        *done
+    }
 }
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
@@ -125,6 +150,7 @@ impl Player {
         let snapshot = Arc::new(Mutex::new(PlayerSnapshot::default()));
         let session = Arc::new(Mutex::new(None));
         let awake = Arc::new(KeepAwake::for_video());
+        let stopped = Arc::new(Stopped::default());
         events::spawn(events::Context {
             app: app.clone(),
             // No name: libmpv2 6.0 drops the name's CString before mpv_create_client reads it
@@ -135,8 +161,21 @@ impl Player {
             library: library.clone(),
             settings: settings.clone(),
             awake: awake.clone(),
+            stopped: stopped.clone(),
         })?;
-        Ok(Self { mpv, host, app: app.clone(), library, settings, snapshot, session, awake, video_seq: AtomicU64::new(0) })
+        Ok(Self {
+            mpv,
+            host,
+            app: app.clone(),
+            library,
+            settings,
+            snapshot,
+            session,
+            awake,
+            video_seq: AtomicU64::new(0),
+            quitting: AtomicBool::new(false),
+            stopped,
+        })
     }
 
     pub fn snapshot(&self) -> PlayerSnapshot {
@@ -309,10 +348,20 @@ impl Player {
         }
     }
 
+    /// The position saved, mpv told to quit (once). It must happen while the window it draws into
+    /// still exists and the main thread still runs: its video thread talks to that window
     pub fn shutdown(&self) {
+        if self.quitting.swap(true, Ordering::SeqCst) {
+            return;
+        }
         self.flush();
         if let Err(e) = self.mpv.command("quit", &[]) {
             eprintln!("[player] quit: {e}");
         }
+    }
+
+    /// After shutdown: waits for mpv's core to stop; false — it did not within `timeout`
+    pub fn wait_stopped(&self, timeout: Duration) -> bool {
+        self.stopped.wait(timeout)
     }
 }
