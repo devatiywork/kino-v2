@@ -3,11 +3,12 @@
 use std::sync::Arc;
 
 use serde_json::{Map, Value};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::{Settings, SettingsStore};
 use crate::error::AppResult;
 use crate::library::{Library, Policy};
+use crate::media_keys::MediaSession;
 use crate::player::Player;
 use crate::torrent::Torrents;
 
@@ -59,6 +60,9 @@ fn apply(app: &AppHandle, library: &Library, player: &Player, torrents: &Torrent
     player.apply_settings(old, new);
     // The limits, the alternative ones, the schedule: the engine gets what holds now
     torrents.refresh_limits();
+    if let Some(media) = app.try_state::<Arc<MediaSession>>() {
+        media.set_enabled(new.media_keys);
+    }
     if let Err(e) = app.emit(CHANGED_EVENT, new) {
         eprintln!("[settings] emit: {e}");
     }

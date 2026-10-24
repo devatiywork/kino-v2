@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.20.0"
+version = "0.21.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -34,11 +34,18 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"
 webview2-com = "0.39"
 windows-core = "0.62"
 windows = { version = "0.61", features = [
+  # Media keys: Windows' media session (System Media Transport Controls)
+  "Foundation",
+  "Media",
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
+  "Win32_Security",
+  "Win32_System_DataExchange",
   "Win32_System_LibraryLoader",
   "Win32_System_Power",
   "Win32_System_SystemInformation",
   "Win32_System_Threading",
+  "Win32_System_WinRT",
+  "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }

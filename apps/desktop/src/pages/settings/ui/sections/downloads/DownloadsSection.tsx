@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { refreshCategories, useTorrents } from '../../../../../entities/torrent'
 import { CategoryList } from '../../../../../features/manage-categories'
+import { DefaultAppsRow } from '../../DefaultAppsRow'
 import { SettingGroup, SettingRow, SettingsSection } from '../../SettingsLayout'
 import { badTrackerLines } from './checks'
 import { ConnectionRows } from './ConnectionRows'
@@ -75,6 +76,7 @@ export function DownloadsSection() {
       <SwitchRow setting="closeToTray" label={t('downloads.closeToTray')} hint={t('downloads.closeToTrayHint')} />
       <SwitchRow setting="notifyFinished" label={t('downloads.notifyFinished')} hint={t('downloads.notifyFinishedHint')} />
       <SwitchRow setting="keepAwakeDownloads" label={t('downloads.keepAwake')} hint={t('downloads.keepAwakeHint')} />
+      <DefaultAppsRow kinds={['torrent', 'magnet']} label={t('downloads.handler')} />
     </SettingsSection>
   )
 }

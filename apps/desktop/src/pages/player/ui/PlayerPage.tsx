@@ -2,7 +2,7 @@ import { cn } from '@kino/ui'
 import { useState, type WheelEvent } from 'react'
 import { toggleFullscreen } from '../../../entities/app-window'
 import { changeVolume, Osd, usePlayback, VOLUME_STEP } from '../../../entities/playback'
-import { usePlayerHotkeys } from '../../../features/player-hotkeys'
+import { useMediaKeys, usePlayerHotkeys } from '../../../features/player-hotkeys'
 import { useIdle } from '../../../shared/lib/useIdle'
 import { EpisodesPanel, PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
 import { usePanelMargin } from '../model/usePanelMargin'
@@ -26,6 +26,7 @@ export function PlayerPage() {
   const isEpisode = usePlayback((s) => s.seriesKey != null)
   const { idle } = useIdle(IDLE_MS, menuOpen || paused || episodesOpen)
   usePlayerHotkeys()
+  useMediaKeys()
   useSubtitleLift(!idle)
   usePanelMargin(episodesOpen && isEpisode)
 

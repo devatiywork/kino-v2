@@ -1,14 +1,18 @@
 mod background;
 mod db;
+mod defaults;
 mod error;
+mod instance;
 mod library;
 mod links;
+mod media_keys;
 mod player;
 mod power;
 mod settings;
 mod torrent;
 mod trackers;
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State, WindowEvent};
@@ -20,10 +24,36 @@ use settings::{commands as sc, SettingsStore};
 use torrent::{commands as tc, Torrents, TorrentsOptions};
 use trackers::{commands as trc, Trackers};
 
-/// Files passed on the command line (Explorer "Open with", file associations)
+/// A later start of Kino handed over what it was started with (SPEC 6 «Одно окно»)
+pub const OPEN_EVENT: &str = "app://open";
+
+/// What Kino was started with: files (Explorer "Open with", file associations) and magnet links.
+/// A relative path is taken from the folder it was started in
+fn launch_args() -> Vec<String> {
+    let cwd = std::env::current_dir().ok();
+    std::env::args().skip(1).filter(|a| !a.starts_with('-')).map(|arg| absolute(arg, cwd.as_deref())).collect()
+}
+
+fn absolute(arg: String, cwd: Option<&Path>) -> String {
+    match cwd {
+        Some(cwd) if !arg.starts_with("magnet:") && Path::new(&arg).is_relative() => cwd.join(&arg).to_string_lossy().into_owned(),
+        _ => arg,
+    }
+}
+
+/// %APPDATA%\<identifier>: kino.db and thumbs\ (SPEC 7). KINO_DATA_DIR — a separate folder, so
+/// the E2E tests never touch the real history
+fn data_dir(identifier: &str) -> PathBuf {
+    match std::env::var_os("KINO_DATA_DIR") {
+        Some(dir) => PathBuf::from(dir),
+        None => std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_default().join(identifier),
+    }
+}
+
+/// The files Kino was started with: the renderer opens them once it is up
 #[tauri::command]
 fn app_launch_files() -> Vec<String> {
-    std::env::args().skip(1).filter(|a| !a.starts_with('-')).collect()
+    launch_args()
 }
 
 /// A release page in the default browser; only web links, never a program or a file
@@ -59,9 +89,23 @@ fn app_clear_history(app: AppHandle, player: State<'_, Player>) -> AppResult<()>
     Ok(())
 }
 
-/// KINO_TEST_MONITOR=1920x1080 (debug builds): the E2E tests open the window on that monitor
-/// and never take the focus from whatever the user is doing
-#[cfg(debug_assertions)]
+/// The main window in front: from the tray, minimized or behind others. The tests' Kino never
+/// takes the focus from whatever the user is doing
+fn bring_forward(app: &AppHandle) {
+    if std::env::var_os("KINO_TEST_MONITOR").is_none() {
+        return background::show_main(app);
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        for result in [window.show(), window.unminimize()] {
+            if let Err(e) = result {
+                eprintln!("[window] show: {e}");
+            }
+        }
+    }
+}
+
+/// KINO_TEST_MONITOR=1920x1080: the E2E tests open the window on that monitor and never take
+/// the focus from whatever the user is doing
 fn place_for_tests(app: &tauri::AppHandle, config: &mut tauri::utils::config::WindowConfig) -> tauri::Result<()> {
     let Ok(wanted) = std::env::var("KINO_TEST_MONITOR") else { return Ok(()) };
     config.focus = false;
@@ -79,16 +123,17 @@ fn place_for_tests(app: &tauri::AppHandle, config: &mut tauri::utils::config::Wi
 }
 
 pub fn run() {
+    let context = tauri::generate_context!();
+    let data = data_dir(&context.config().identifier);
+    // SPEC 6 «Одно окно»: a second start hands its files to the running Kino and quits
+    let listener = match instance::claim(&data, &launch_args()) {
+        instance::Instance::First(listener) => listener,
+        instance::Instance::Handed => return,
+    };
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .setup(|app| {
-            // %APPDATA%\local.kino.app: kino.db and thumbs\ (SPEC 7). KINO_DATA_DIR — a separate
-            // folder, so the E2E tests never touch the real history
-            let data = match std::env::var_os("KINO_DATA_DIR") {
-                Some(dir) => std::path::PathBuf::from(dir),
-                None => app.path().app_data_dir()?,
-            };
+        .setup(move |app| {
             let thumbs = data.join("thumbs");
             std::fs::create_dir_all(&thumbs)?;
             // The page shows the frames through the asset protocol: only this folder
@@ -100,8 +145,8 @@ pub fn run() {
             app.manage(settings.clone());
 
             // Torrents (SPEC 4): their own connection to the same database, the engine on the
-            // async runtime. KINO_TEST_OFFLINE (debug builds): no DHT, trackers or UPnP, loopback only
-            let offline = cfg!(debug_assertions) && std::env::var_os("KINO_TEST_OFFLINE").is_some();
+            // async runtime. KINO_TEST_OFFLINE: no DHT, trackers or UPnP, loopback only
+            let offline = std::env::var_os("KINO_TEST_OFFLINE").is_some();
             // The tests never download into the real «Загрузки» of Windows
             let system_downloads = if offline { data.join("downloads") } else { app.path().download_dir().unwrap_or_else(|_| data.join("downloads")) };
             let torrents = tauri::async_runtime::block_on(Torrents::start(TorrentsOptions {
@@ -154,12 +199,32 @@ pub fn run() {
 
             // The main window is made here and not by Tauri itself, so the E2E tests can place it
             let mut config = app.config().app.windows.first().cloned().expect("main window config");
-            #[cfg(debug_assertions)]
             place_for_tests(app.handle(), &mut config)?;
             let window = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
             let size = window.inner_size()?;
-            let player = Player::new(app.handle(), library, settings, window.hwnd()?.0 as isize, size.width, size.height)?;
+            let hwnd = window.hwnd()?.0 as isize;
+            // SPEC 6 «Медиаклавиши»; not in the tests, whose videos must not take the user's keys
+            if !offline {
+                match media_keys::MediaSession::attach(app.handle(), hwnd, settings.read(|s| s.media_keys)) {
+                    Ok(session) => {
+                        let session = Arc::new(session);
+                        media_keys::follow_player(app.handle(), session.clone());
+                        app.manage(session);
+                    }
+                    Err(e) => eprintln!("[media] session: {e}"),
+                }
+            }
+            let player = Player::new(app.handle(), library, settings, hwnd, size.width, size.height)?;
             app.manage(player);
+
+            // Later starts of Kino: the window comes forward, what they were given opens here
+            let handle = app.handle().clone();
+            listener.listen(move |args| {
+                bring_forward(&handle);
+                if let Err(e) = handle.emit(OPEN_EVENT, args) {
+                    eprintln!("[instance] emit: {e}");
+                }
+            });
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -189,6 +254,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_launch_files,
+            defaults::app_default_handlers,
+            defaults::app_open_default_apps,
             app_clear_history,
             app_open_url,
             app_reveal_path,
@@ -262,7 +329,7 @@ pub fn run() {
             trc::tracker_go,
             trc::tracker_page,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building Kino");
 
     app.run(|app, event| {

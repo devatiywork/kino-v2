@@ -42,26 +42,27 @@ export function useAppStartup(): { dropping: boolean } {
     const stopSettings = startSettingsSync()
     const stopTorrents = startTorrentsSync()
     const stopTrackers = startTrackersSync()
+    // SPEC 4.1: a .torrent or a magnet link opens the add dialog, a video the player
+    const openGiven = async (files: string[]) => {
+      const torrent = files.find(isTorrentPath)
+      if (torrent) return openTorrentFile(torrent)
+      const magnet = files.map(findMagnet).find((m) => m != null)
+      if (magnet) {
+        openMagnetDialog(magnet)
+        return submitMagnet(magnet, t('magnet.invalid', { ns: 'torrents' }))
+      }
+      const video = files.find(isVideoPath)
+      if (video) return open.current(video)
+    }
     if (!launchHandled) {
       // Once per process: StrictMode runs this effect twice in development
       launchHandled = true
-      appIpc
-        .launchFiles()
-        .then((files) => {
-          // SPEC 4.1: a .torrent or a magnet link opens the add dialog
-          const torrent = files.find(isTorrentPath)
-          if (torrent) return openTorrentFile(torrent)
-          const magnet = files.map(findMagnet).find((m) => m != null)
-          if (magnet) {
-            openMagnetDialog(magnet)
-            return submitMagnet(magnet, t('magnet.invalid', { ns: 'torrents' }))
-          }
-          const video = files.find(isVideoPath)
-          if (video) return open.current(video)
-        })
-        .catch(report('launch files'))
+      appIpc.launchFiles().then(openGiven).catch(report('launch files'))
     }
+    // SPEC 6 «Одно окно»: a later start of Kino hands its files here
+    const stopOpen = appIpc.onOpen((files) => void openGiven(files).catch(report('open')))
     return () => {
+      stopOpen.then((u) => u()).catch(report('unlisten'))
       stopPlayback()
       stopWindow()
       stopLibrary()

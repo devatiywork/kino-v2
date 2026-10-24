@@ -183,7 +183,8 @@
     "maxTotal": "Active in total",
     "maxTotalHint": "Downloads take the places first",
     "skipSlow": "Slow torrents don’t count",
-    "skipSlowHint": "A torrent slower than 2 KB/s both ways for over a minute takes no place — the next one starts"
+    "skipSlowHint": "A torrent slower than 2 KB/s both ways for over a minute takes no place — the next one starts",
+    "handler": "Kino as the handler of .torrent and magnet:"
   },
   "hotkeys": {
     "title": "Hotkeys",
@@ -213,7 +214,10 @@
   "system": {
     "title": "System",
     "keepAwake": "Keep the computer awake",
-    "keepAwakeHint": "Only while a video plays: the screen stays on, no sleep"
+    "keepAwakeHint": "Only while a video plays: the screen stays on, no sleep",
+    "openVideo": "Open videos with Kino",
+    "mediaKeys": "Media keys",
+    "mediaKeysHint": "Pause, next and previous episode from the keyboard and the Windows media overlay — even when Kino is not in front"
   },
   "reset": {
     "button": "Reset settings",
@@ -222,5 +226,15 @@
     "text": "All settings, hotkeys included, return to the defaults.",
     "confirm": "Reset",
     "done": "Settings reset"
+  },
+  "defaultApps": {
+    "kinds": {
+      "video": "Videos",
+      "torrent": ".torrent",
+      "magnet": "magnet links"
+    },
+    "kino": "Kino",
+    "none": "no program chosen",
+    "choose": "Choose in Windows…"
   }
 }

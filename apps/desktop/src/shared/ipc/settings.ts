@@ -38,6 +38,8 @@ export interface Settings {
   hotkeys: Record<string, string>
   /** No sleep while a video plays */
   keepAwake: boolean
+  /** «Медиаклавиши»: also when Kino is not in front */
+  mediaKeys: boolean
   /** «Папка по умолчанию» of the downloads; empty — the system Downloads folder */
   downloadsFolder: string
   /** «Не начинать загрузку сразу» */
@@ -110,6 +112,7 @@ export const DEFAULT_SETTINGS: Settings = {
   watchedPercent: 90,
   hotkeys: {},
   keepAwake: true,
+  mediaKeys: true,
   downloadsFolder: '',
   startPaused: false,
   noSeeding: false,

@@ -39,6 +39,8 @@ export interface Kino {
   settings: () => Promise<Record<string, unknown>>
   /** Another page of Kino's WebView2 — the site in the trackers browser — by its address */
   webPage: (prefix: string) => Promise<Page>
+  /** Kino started once more on the same data folder, as Explorer does: its exit code */
+  startAgain: (...args: string[]) => Promise<number | null>
   close: () => Promise<void>
 }
 
@@ -109,6 +111,18 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
     snapshot,
     playing: async () => (await snapshot()).path?.split(/[\\/]/).pop() ?? null,
     settings: () => invoke<Record<string, unknown>>('settings_get'),
+    startAgain: (...args) =>
+      new Promise((resolve, reject) => {
+        const again = spawn(EXE, args, { env: { ...process.env, KINO_DATA_DIR: dataDir, KINO_TEST_OFFLINE: '1', KINO_TEST_MONITOR: '1920x1080' }, stdio: 'ignore' })
+        const timer = setTimeout(() => {
+          again.kill()
+          reject(new Error('the second Kino did not quit'))
+        }, 20_000)
+        again.on('exit', (code) => {
+          clearTimeout(timer)
+          resolve(code)
+        })
+      }),
     webPage: async (prefix) => {
       const deadline = Date.now() + 15_000
       for (;;) {

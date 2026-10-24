@@ -20,6 +20,8 @@ function installInternals(invoke: (command: string, args?: Record<string, unknow
       },
       unregisterCallback: (id: number) => internals.callbacks.delete(id),
       convertFileSrc,
+      // getCurrentWindow() / getCurrentWebview(): the main window
+      metadata: { currentWindow: { label: 'main' }, currentWebview: { label: 'main', windowLabel: 'main' } },
       invoke: async (command: string, args?: Record<string, unknown>) => {
         if (command === 'plugin:event|listen') {
           const callback = internals.callbacks.get(args?.handler as number)

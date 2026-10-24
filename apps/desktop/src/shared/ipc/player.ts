@@ -69,6 +69,9 @@ export const VOLUME_MAX = 130
 let videoSeq = 0
 
 /** Typed wrappers over the player's Tauri commands and events */
+/** Keys of the keyboard and of Windows' media overlay */
+export type MediaKey = 'togglePause' | 'next' | 'previous' | 'stop'
+
 export const playerIpc = {
   snapshot: () => invoke<PlayerSnapshot>('player_snapshot'),
   /** Continues from the saved position when there is one */
@@ -96,4 +99,6 @@ export const playerIpc = {
     listen<PlayerNotice>('player://notice', (e) => handler(e.payload)),
   onAutoplay: (handler: (event: AutoplayEvent) => void): Promise<UnlistenFn> =>
     listen<AutoplayEvent>('player://autoplay', (e) => handler(e.payload)),
+  /** SPEC 6 «Медиаклавиши»: a key of Windows' media session (src-tauri/src/media_keys.rs) */
+  onMediaKey: (handler: (key: MediaKey) => void): Promise<UnlistenFn> => listen<MediaKey>('media://key', (e) => handler(e.payload)),
 }

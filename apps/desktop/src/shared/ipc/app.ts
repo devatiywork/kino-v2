@@ -1,13 +1,35 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { VIDEO_EXTENSIONS } from '../lib/media'
-import { invoke, type UnlistenFn } from './bridge'
+import { invoke, listen, type UnlistenFn } from './bridge'
 
 export type DropPhase = 'over' | 'drop' | 'leave'
+
+/** What opens a kind of thing now (src-tauri/src/defaults.rs) */
+export interface DefaultHandler {
+  /** «Kino», «qBittorrent»; null — nothing opens it */
+  name: string | null
+  isKino: boolean
+}
+
+export interface DefaultHandlers {
+  video: DefaultHandler
+  torrent: DefaultHandler
+  magnet: DefaultHandler
+}
 
 export const appIpc = {
   /** Files passed on the command line: "Open with Kino" in Explorer */
   launchFiles: () => invoke<string[]>('app_launch_files'),
+
+  /** SPEC 6 «Одно окно»: what a later start of Kino was given (it quit, this window came forward) */
+  onOpen: (handler: (files: string[]) => void): Promise<UnlistenFn> => listen<string[]>('app://open', (e) => handler(e.payload)),
+
+  /** What Windows opens video, .torrent files and magnet links with now */
+  defaultHandlers: () => invoke<DefaultHandlers>('app_default_handlers'),
+
+  /** Windows' «Приложения по умолчанию»: only the user may choose the program there */
+  openDefaultApps: () => invoke<void>('app_open_default_apps'),
 
   /** Files dragged onto the window (paths come from Tauri, HTML drag events are off) */
   onDragDrop: (handler: (phase: DropPhase, paths: string[]) => void): Promise<UnlistenFn> =>

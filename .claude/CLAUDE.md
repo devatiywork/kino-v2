@@ -53,6 +53,8 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
 - `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`)
+- `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino_<version>_x64-setup.exe`
+  (per user, no admin; libmpv next to the exe, file associations, `magnet:`, Kino in Windows' «Приложения по умолчанию»)
 - `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
 - `powershell -ExecutionPolicy Bypass -File scripts/fetch-libmpv.ps1` — download libmpv into `vendor/libmpv` and generate `mpv.lib` (needs 7-Zip and VS Build Tools)
 - `cargo run --manifest-path spikes/tauri-mpv/src-tauri/Cargo.toml -- <video>` — the libmpv + WebView2 spike
@@ -154,10 +156,18 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          linked to the library (and all finished ones at start), series sources for «Скачать снова»,
                          «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»),
                          moving a torrent's files (the library's episodes move with them)
-    src/lib.rs         — setup (data dir, library, settings, torrents, trackers, tray, main window from the config, player),
-                         closing the window while torrents work hides it in the tray, app_clear_history,
-                         app_open_url (http(s) only), app_reveal_path
-    later              — single instance, file associations, `magnet:` / `.torrent` handlers, the installer
+    src/instance.rs    — one Kino per data folder (SPEC 6 «Одно окно»): a named mutex; a later start hands its arguments
+                         to the running one over WM_COPYDATA to a message-only window and quits → app://open. Keyed by the
+                         data folder, so the tests' and a debug build's Kinos never meet the user's one
+    src/media_keys.rs  — Windows' media session (System Media Transport Controls): follows player://state, keys →
+                         media://key; off in the tests
+    src/defaults.rs    — what Windows opens video, .torrent and magnet: with now (read only), its «Приложения по
+                         умолчанию» page: a program may not choose itself
+    src/lib.rs         — single instance first, then setup (data dir, library, settings, torrents, trackers, tray, main
+                         window from the config, media session, player), closing the window while torrents work hides it
+                         in the tray, app_clear_history, app_open_url (http(s) only), app_reveal_path
+    windows/hooks.nsh  — the installer's own steps: Kino's capabilities for «Приложения по умолчанию»
+                         (bundle settings, file associations and the `magnet:` scheme are in tauri.conf.json)
   data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)
@@ -229,13 +239,16 @@ E2E runs the real debug build: Playwright connects to WebView2 over CDP (`WEBVIE
 Each launch gets its own temp folder; the core reads these variables:
 
 - `KINO_DATA_DIR` — kino.db and thumbs instead of %APPDATA% (all builds), so tests never touch the real history
-- `KINO_TEST_OFFLINE` (debug builds only) — torrents without the network: no DHT, trackers, LSD or UPnP, listening on the
+- `KINO_TEST_OFFLINE` — torrents without the network: no DHT, trackers, LSD or UPnP, listening on the
   loopback only (no firewall prompt), the default downloads folder is `<data>\downloads`, not the Windows one. The tests
   make a .torrent of a file already in place, so it is checked and seeded
 - Playwright over CDP takes the browser's downloads for itself: `kino.ts` sends `Browser.setDownloadBehavior { behavior: 'default' }`
   so that the trackers browser's downloads reach Kino. The tracker scenarios run against `fixtures/trackerSite.ts`, never a real site
-- `KINO_TEST_VOLUME`, `KINO_TEST_MONITOR` (debug builds only) — start volume and the monitor (`1920x1080`) the window opens on, without focus.
-  The harness sets 1% and Full HD; override with `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`
+- `KINO_TEST_VOLUME`, `KINO_TEST_MONITOR` — start volume and the monitor (`1920x1080`) the window opens on, without focus
+  (a later start brings it forward without the focus too). The harness sets 1% and Full HD; override with
+  `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
+  prompt
+- No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys
 - Test media is generated, never the user's own files
 
 ## Out of Scope

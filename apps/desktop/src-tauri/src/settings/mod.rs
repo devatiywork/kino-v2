@@ -209,6 +209,9 @@ pub struct Settings {
     // System
     /// No sleep and no screen saver while a video plays
     pub keep_awake: bool,
+    /// «Медиаклавиши»: play / pause, next and previous keys of the keyboard and of Windows' media
+    /// overlay, also when Kino is not in front
+    pub media_keys: bool,
     // Downloads (torrents)
     /// «Папка по умолчанию»; empty — the system Downloads folder
     pub downloads_folder: String,
@@ -289,6 +292,7 @@ impl Default for Settings {
             watched_percent: 90,
             hotkeys: BTreeMap::new(),
             keep_awake: true,
+            media_keys: true,
             downloads_folder: String::new(),
             show_add_dialog: true,
             delete_torrent_file: false,

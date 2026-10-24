@@ -11,6 +11,8 @@ const { settingsStore } = await import('../../../entities/settings')
 const { libraryStore } = await import('../../../entities/library')
 const { DEFAULT_SETTINGS } = await import('../../../shared/ipc/settings')
 const mock = await tauri
+/** The changes sent to the core (the page also asks Windows about its default programs) */
+const updates = () => mock.calls().filter(([command]) => command === 'settings_update')
 
 function renderPage() {
   render(
@@ -52,7 +54,7 @@ describe('SettingsPage', () => {
     await user.click(screen.getByRole('radio', { name: '1.5×' }))
     await user.click(screen.getByRole('radio', { name: 'Бирюзовый' }))
     await user.click(screen.getByRole('radio', { name: '95%' }))
-    expect(mock.calls()).toEqual([
+    expect(updates()).toEqual([
       ['settings_update', { patch: { resume: false } }],
       ['settings_update', { patch: { theme: 'light' } }],
       ['settings_update', { patch: { defaultSpeed: 1.5 } }],
@@ -68,11 +70,23 @@ describe('SettingsPage', () => {
       expect(screen.getByRole('switch', { name })).toBeChecked()
       await user.click(screen.getByRole('switch', { name }))
     }
-    expect(mock.calls()).toEqual([
+    expect(updates()).toEqual([
       ['settings_update', { patch: { closeToTray: false } }],
       ['settings_update', { patch: { notifyFinished: false } }],
       ['settings_update', { patch: { keepAwakeDownloads: false } }],
     ])
+  })
+
+  it('система: медиаклавиши; «Открывать видео через Kino» показывает выбор Windows', async () => {
+    mock.respond('app_default_handlers', {
+      video: { name: 'Кино и ТВ', isKino: false },
+      torrent: { name: null, isKino: false },
+      magnet: { name: null, isKino: false },
+    })
+    const user = renderPage()
+    expect(await screen.findByText('Видео — Кино и ТВ')).toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: 'Медиаклавиши' }))
+    expect(updates()).toEqual([['settings_update', { patch: { mediaKeys: false } }]])
   })
 
   it('папки сериалов — те же, что на экране «Сериалы»', () => {
@@ -87,6 +101,6 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('button', { name: 'Вернуть стандартные' })).toBeDisabled()
     act(() => settingsStore.set({ hotkeys: { togglePause: 'KeyK' } }))
     await user.click(screen.getByRole('button', { name: 'Вернуть стандартные' }))
-    expect(mock.calls()).toEqual([['settings_update', { patch: { hotkeys: {} } }]])
+    expect(updates()).toEqual([['settings_update', { patch: { hotkeys: {} } }]])
   })
 })
