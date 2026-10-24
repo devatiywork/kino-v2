@@ -5,7 +5,8 @@
     "library": "Библиотека",
     "history": "История",
     "downloads": "Загрузки",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "downloadSpeed": "Качается со скоростью {{rate}} — открыть загрузки"
   },
   "open": {
     "button": "Открыть",

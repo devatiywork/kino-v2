@@ -5,7 +5,8 @@
     "library": "Library",
     "history": "History",
     "downloads": "Downloads",
-    "settings": "Settings"
+    "settings": "Settings",
+    "downloadSpeed": "Downloading at {{rate}} — open downloads"
   },
   "open": {
     "button": "Open",

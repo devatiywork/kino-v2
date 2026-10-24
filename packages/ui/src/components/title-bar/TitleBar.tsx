@@ -15,7 +15,8 @@ export interface TitleBarProps {
 
 /**
  * Свой заголовок окна вместо системного, тонкое стекло. Три колонки: средняя стоит ровно
- * посередине окна, пока крайним хватает места. Пустые места помечены data-tauri-drag-region:
+ * посередине окна, пока крайним хватает места; когда не хватает — сужается она, а не уезжают
+ * за край окна кнопки справа (содержимому середины — своя наименьшая ширина). Пустые места помечены data-tauri-drag-region:
  * за них окно перетаскивается, двойной клик разворачивает. Кнопки и поля внутри не тянут окно.
  */
 export function TitleBar({ children, center, end, controls, className }: TitleBarProps) {
@@ -23,14 +24,14 @@ export function TitleBar({ children, center, end, controls, className }: TitleBa
     <header
       data-tauri-drag-region
       className={cn(
-        'grid h-[52px] shrink-0 grid-cols-[minmax(max-content,1fr)_auto_minmax(max-content,1fr)] items-center gap-3.5 border-b border-line glass-titlebar',
+        'grid h-[52px] shrink-0 grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] items-center gap-3.5 border-b border-line glass-titlebar',
         className,
       )}
     >
       <div data-tauri-drag-region className="flex items-center gap-3.5 self-stretch pl-[18px]">
         {children}
       </div>
-      <div data-tauri-drag-region className="flex items-center self-stretch">
+      <div data-tauri-drag-region className="flex min-w-0 items-center self-stretch">
         {center}
       </div>
       <div data-tauri-drag-region className="flex items-center justify-end gap-3.5 self-stretch">

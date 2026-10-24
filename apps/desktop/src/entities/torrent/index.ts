@@ -8,6 +8,7 @@ export {
   useTorrents,
 } from './model/torrentsStore'
 export { downloadsView, matchesCategory, useDownloadsView, type CategoryFilter, type DownloadsTab } from './model/downloadsView'
+export { downloadingCount } from './lib/downloading'
 export { categoryName, hostOf, monthTitle, progressText, shortDate } from './lib/labels'
 export { matchesPeriod, periodOptions, type Period } from './lib/period'
 export { ArchiveRow } from './ui/ArchiveRow'

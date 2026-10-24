@@ -32,6 +32,9 @@ async function menu(page: Page, of: ReturnType<typeof row>, button: string, item
   await page.getByRole('menuitem', { name: item }).click()
 }
 
+/** «Загрузки» in the title bar, with the number of downloads after the name */
+const navDownloads = (page: Page) => page.getByRole('navigation', { name: 'Разделы', exact: true }).getByRole('button', { name: /^Загрузки/ })
+
 const tab = (kino: Kino, name: 'Загрузки' | 'Архив') => kino.page.getByRole('tab', { name: new RegExp(`^${name}`) }).click()
 
 test.describe('торренты', () => {
@@ -45,6 +48,8 @@ test.describe('торренты', () => {
     await expect(page.getByText('Добавлено в «Сериалы» и сохранено в архиве вместе со ссылкой на раздачу')).toBeVisible()
     // The file is already in place: checked, not downloaded — and seeded
     await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    // a seed is not a download
+    await expect(navDownloads(page)).toHaveText('Загрузки')
     const details = page.getByRole('region', { name: 'Подробности торрента' })
     await expect(details).toBeVisible()
     await details.getByRole('tab', { name: /Файлы/ }).click()
@@ -157,6 +162,8 @@ test.describe('торренты', () => {
     const preview = await kino.invoke<{ infoHash: string }>('torrent_preview', { source: { kind: 'file', path: torrents[1] } })
     await kino.invoke('torrent_add', { request: { infoHash: preview.infoHash, categoryId: null, saveDir: out, onlyFiles: null, sourceUrl: null, start: true } })
     await expect(row(page, 'Two.mkv').getByText('В очереди')).toBeVisible()
+    // Downloading and waiting in the queue: both on «Загрузки»
+    await expect(navDownloads(page)).toHaveText('Загрузки2')
 
     // Added — and selected: its details are open
     const details = page.getByRole('region', { name: 'Подробности торрента' })
@@ -183,6 +190,7 @@ test.describe('торренты', () => {
     await row(page, 'One.mkv').getByRole('button', { name: 'Пауза' }).click()
     await expect(row(page, 'Two.mkv').getByText('Загрузка')).toBeVisible()
     await expect(row(page, 'One.mkv').getByText('Пауза')).toBeVisible()
+    await expect(navDownloads(page)).toHaveText('Загрузки1')
   })
 
   test('категории: создать, переименовать, удалить — торренты не теряются', async ({ launch }) => {

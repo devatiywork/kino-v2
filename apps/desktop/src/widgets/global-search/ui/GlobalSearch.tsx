@@ -113,7 +113,8 @@ export function GlobalSearch() {
       emptyText={results && results.query === query.trim() ? t('search.empty', { query: results.query }) : undefined}
       clearLabel={t('search.clear')}
       inputRef={input}
-      className="w-[clamp(240px,28vw,380px)]"
+      // the title bar narrows it in a narrow window
+      className="w-[380px] min-w-40"
     />
   )
 }
