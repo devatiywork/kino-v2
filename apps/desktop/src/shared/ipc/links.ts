@@ -22,6 +22,8 @@ export interface SeasonSpace {
 }
 
 export const linksIpc = {
+  /** «Библиотека» besides video: finished torrents on disk whose files are not the library's videos */
+  libraryTorrents: () => invoke<ArchiveEntry[]>('app_library_torrents'),
   seriesSources: (key: string) => invoke<SeriesSource[]>('app_series_sources', { key }),
   /** `season` null — episodes without a season number */
   seasonSpace: (key: string, season: number | null) => invoke<SeasonSpace>('app_season_space', { key, season }),

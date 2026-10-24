@@ -68,8 +68,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
   src/                 — React renderer, Feature-Sliced Design:
     app/               — entry (main.tsx: settings loaded before the first render), App (screen switch, drop overlay),
                          startup sync and notices, appearance (theme, accent, language follow the settings), styles
-    pages/             — home (hero + history + unfinished + series; Welcome when empty), history, series (list + folders),
-                         show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
+    pages/             — home (hero + history + unfinished + series; Welcome when empty), history, library (chips «Все» /
+                         «Сериалы» / «Фильмы» / torrent categories on disk + folders), show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
                          settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
                          hotkeys, system; downloads/ — groups by qBittorrent's: SpeedRows, SeedingRows, ConnectionRows,
                          fields bound to one setting (SwitchRow, NumberField, TextSetting with a check, FolderField),
@@ -81,6 +81,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          torrent-details (General with the piece map / Files / Peers with speeds / Trackers with DHT, PeX,
                          LSD and re-announce / Speed chart 1-5-30 min / Options: seeding, check, move, save .torrent;
                          polled every second, resizable),
+                         library-shelf (shelves of «Библиотека»: buildShelves — series, films, then torrent categories, a
+                         category named like a video shelf joins it; useShelves; LibraryShelf, TorrentShelf),
                          archive-list (search, category, «Когда добавлен», sort, month groups, the backup menu), trackers-pane (bookmarks + browser bar + the place the
                          native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
@@ -96,8 +98,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
     entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
                          settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
                          rebind with swap, key labels, useHotkeyLabel),
-                         library (store: continue/history/series/folders, useSeriesDetail, labels, day grouping, Thumb,
-                         ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window,
+                         library (store: continue/history/series/films/folders, libraryView (the chosen shelf),
+                         useSeriesDetail, labels, day grouping, Thumb, ContinueCard, FilmCard, HistoryRow, SeriesCard,
+                         EpisodeRow, EpisodeDots), app-window,
                          torrent (store mirrored from the core: downloads every second, categories, archive; downloadsView;
                          labels, periods of the archive; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog;
                          categories and record helpers),
@@ -111,7 +114,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          window.__TAURI_INTERNALS__, so a module that got the real bridge still reaches the mock), track,
                          library and torrent fixtures
   e2e/                 — Playwright: kino.ts (launches kino-desktop.exe, connects over CDP, `launch` fixture), player/history/
-                         series/settings/torrents/series-torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
+                         series/library/settings/torrents/series-torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
                          page by address), global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
                          templates, torrent.ts — a .torrent of a file or folder and its magnet link, trackerSite.ts — a tiny
                          tracker on the loopback, media/ — tiny generated clips: a series of 2 seasons and a film)
@@ -122,6 +125,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          commands (get / update with a partial patch / reset → settings://changed; applied at once)
     src/library/       — Library (folders, positions, viewings, continue watching, history, clear history, series, key-value
                          storage, track memory; Policy from the settings: keep history, watched threshold),
+                         films (not episodes, from a library folder or a torrent, on disk, no samples),
                          episode (S02E05 / 2x05 / «Серия 5» → series key and folder), scan (video files, natural order),
                          series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title),
                          sources (files a source brought: linked, moved to their new place, season files, sidecar tracks),
@@ -161,6 +165,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          (BookmarkStore: bookmarks with positions), commands
     src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are
                          linked to the library (and all finished ones at start), series sources for «Скачать снова»,
+                         «Библиотека» besides video (finished torrents on disk whose files are not the library's),
                          «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»),
                          moving a torrent's files (the library's episodes move with them)
     src/instance.rs    — one Kino per data folder (SPEC 6 «Одно окно»): a named mutex; a later start hands its arguments
@@ -186,7 +191,7 @@ packages/ui/           — @kino/ui, our UI library
                          fields and rows inside a panel, never a solid background; utilities bg-wallpaper, glass,
                          glass-titlebar), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
-  src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
+  src/components/      — Button, IconButton, Pressable, FilterChip, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
                          PopoverButton, Kbd, KeyRecorder, Checkbox (indeterminate), TextField (description, error, addon,
                          multiline),
                          ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, SearchCombo (search with grouped

@@ -3,7 +3,7 @@
 //! bring its deleted episodes back, and «Освободить место» stops their seeding before the files
 //! go. Neither module knows the other; only this one knows both.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -16,7 +16,7 @@ use crate::library::sources::{sidecars, SourcedFile};
 use crate::library::Library;
 use crate::torrent::commands::CHANGED_EVENT as TORRENTS_CHANGED;
 use crate::torrent::store::Item;
-use crate::torrent::{ArchiveEntry, Finished, Torrents};
+use crate::torrent::{ArchiveEntry, ArchiveStatus, Finished, Torrents};
 
 fn emit(app: &AppHandle, event: &str) {
     if let Err(e) = app.emit(event, ()) {
@@ -51,6 +51,27 @@ pub fn link_all(library: &Library, torrents: &Torrents) -> anyhow::Result<usize>
         }
     }
     Ok(changed)
+}
+
+/// «Библиотека», the categories besides video (games, programs…): torrents finished and on disk
+/// whose files did not join the library. A torrent of videos is there as its series or films
+pub fn library_torrents(library: &Library, torrents: &Torrents) -> anyhow::Result<Vec<ArchiveEntry>> {
+    Ok(beside_video(torrents.archive("")?, &library.linked_sources()?))
+}
+
+/// Finished, on disk, not a source of the library's videos; the last finished first
+fn beside_video(entries: Vec<ArchiveEntry>, linked: &HashSet<String>) -> Vec<ArchiveEntry> {
+    let mut entries: Vec<ArchiveEntry> = entries
+        .into_iter()
+        .filter(|e| e.completed_at.is_some() && e.status != ArchiveStatus::FilesDeleted && !linked.contains(&e.info_hash))
+        .collect();
+    entries.sort_by_key(|e| std::cmp::Reverse(e.completed_at));
+    entries
+}
+
+#[tauri::command]
+pub fn app_library_torrents(library: State<'_, Arc<Library>>, torrents: State<'_, Arc<Torrents>>) -> AppResult<Vec<ArchiveEntry>> {
+    Ok(library_torrents(&library, &torrents)?)
 }
 
 /// A torrent some episodes of a series came from
@@ -190,6 +211,40 @@ pub async fn app_move_torrent(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn entry(id: i64, completed_at: Option<i64>, status: ArchiveStatus) -> ArchiveEntry {
+        ArchiveEntry {
+            id,
+            info_hash: format!("hash{id}"),
+            name: format!("Torrent {id}"),
+            total_size: 1,
+            file_count: 1,
+            category_id: None,
+            save_dir: String::new(),
+            content_path: String::new(),
+            source_url: None,
+            added_at: 0,
+            completed_at,
+            status,
+            uploaded: 0,
+        }
+    }
+
+    #[test]
+    fn the_library_shows_finished_torrents_on_disk_that_are_not_its_videos() {
+        use ArchiveStatus::*;
+        let entries = vec![
+            entry(1, Some(10), OnDisk),
+            entry(2, None, InDownloads),
+            entry(3, Some(30), InDownloads),
+            entry(4, Some(40), FilesDeleted),
+            entry(5, Some(50), OnDisk),
+        ];
+        let linked = HashSet::from(["hash5".to_string()]);
+        let ids: Vec<i64> = beside_video(entries, &linked).iter().map(|e| e.id).collect();
+        // 2 is downloading, 4 has no files, 5 is a film of the library; seeding still counts
+        assert_eq!(ids, [3, 1], "the last finished first");
+    }
 
     #[test]
     fn only_folders_without_files_are_removed() {

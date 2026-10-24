@@ -1,4 +1,4 @@
-import { cn, ConfirmDialog, ContextMenu, IconPlus, Pressable } from '@kino/ui'
+import { ConfirmDialog, ContextMenu, FilterChip, IconPlus, Pressable } from '@kino/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,22 +11,6 @@ import {
   type CategoryFilter,
 } from '../../../entities/torrent'
 import type { Category } from '../../../shared/ipc/torrents'
-
-function Chip({ label, count, selected, onPress }: { label: string; count: number; selected: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      aria-pressed={selected}
-      onPress={onPress}
-      className={cn(
-        'flex h-8 items-center gap-2 rounded-full border px-3.5 text-sm whitespace-nowrap transition-colors duration-(--duration-fast)',
-        selected ? 'border-accent bg-accent-soft text-fg' : 'border-line bg-panel text-fg-2 data-[hovered]:text-fg',
-      )}
-    >
-      {label}
-      <span className="font-mono text-2xs text-fg-3">{count}</span>
-    </Pressable>
-  )
-}
 
 /**
  * SPEC 4.2–4.3: the filter by category and the categories themselves — a right click edits or
@@ -52,7 +36,7 @@ export function CategoryBar({ items }: { items: readonly { categoryId: number | 
 
   return (
     <div role="group" aria-label={t('categories')} className="flex flex-wrap items-center gap-2">
-      <Chip label={t('allCategories')} count={items.length} selected={filter === 'all'} onPress={() => choose('all')} />
+      <FilterChip label={t('allCategories')} count={items.length} isSelected={filter === 'all'} onPress={() => choose('all')} />
       {categories.map((category) => (
         <ContextMenu
           key={category.id}
@@ -63,10 +47,12 @@ export function CategoryBar({ items }: { items: readonly { categoryId: number | 
           ]}
           onAction={(key) => (key === 'edit' ? setEditing(category) : setRemoving(category))}
         >
-          <Chip label={category.name} count={count(category.id)} selected={filter === category.id} onPress={() => choose(category.id)} />
+          <FilterChip label={category.name} count={count(category.id)} isSelected={filter === category.id} onPress={() => choose(category.id)} />
         </ContextMenu>
       ))}
-      {count('none') || filter === 'none' ? <Chip label={t('noCategory')} count={count('none')} selected={filter === 'none'} onPress={() => choose('none')} /> : null}
+      {count('none') || filter === 'none' ? (
+        <FilterChip label={t('noCategory')} count={count('none')} isSelected={filter === 'none'} onPress={() => choose('none')} />
+      ) : null}
       <Pressable
         aria-label={`${t('newCategory')}: ${t('category.createTitle')}`}
         onPress={() => setEditing(null)}

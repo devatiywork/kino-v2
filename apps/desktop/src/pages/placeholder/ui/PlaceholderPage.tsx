@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { navigate, type Screen } from '../../../shared/lib/router'
 
 /** A screen that comes in a later stage (none right now) */
-export function PlaceholderPage({ screen }: { screen: Exclude<Screen, 'home' | 'history' | 'series' | 'show' | 'settings' | 'player'> }) {
+export function PlaceholderPage({ screen }: { screen: Exclude<Screen, 'home' | 'history' | 'library' | 'show' | 'settings' | 'player'> }) {
   const { t } = useTranslation()
   return (
     <div className="grid h-full place-items-center">

@@ -13,10 +13,10 @@ export function ShowPage() {
   const detail = useSeriesDetail(key)
 
   return (
-    <ScrollArea className="h-full" aria-label={detail?.title ?? t('seriesScreen')}>
+    <ScrollArea className="h-full" aria-label={detail?.title ?? t('libraryScreen')}>
       <div className="mx-auto flex max-w-[1560px] flex-col gap-[30px] px-8 pt-[22px] pb-12">
-        <Button variant="ghost" size="sm" icon={<IconArrowLeft size={15} />} className="self-start" onPress={() => navigate('series')}>
-          {t('seriesScreen')}
+        <Button variant="ghost" size="sm" icon={<IconArrowLeft size={15} />} className="self-start" onPress={() => navigate('library')}>
+          {t('libraryScreen')}
         </Button>
         {detail === undefined ? null : detail === null ? (
           <p className="rounded-lg border border-dashed border-line-2 p-7 text-center text-base text-fg-3">{t('seriesMissing')}</p>

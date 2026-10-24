@@ -28,6 +28,12 @@ pub fn library_series(library: State<'_, Arc<Library>>) -> AppResult<Vec<SeriesS
     Ok(library.series_list()?)
 }
 
+/// «Библиотека» → «Фильмы»
+#[tauri::command]
+pub fn library_films(library: State<'_, Arc<Library>>) -> AppResult<Vec<LibraryFile>> {
+    Ok(library.films()?)
+}
+
 #[tauri::command]
 pub fn library_series_detail(library: State<'_, Arc<Library>>, key: String) -> AppResult<Option<SeriesDetail>> {
     Ok(library.series_detail(&key)?)
@@ -50,6 +56,8 @@ pub struct AddedFolder {
     pub folder: Folder,
     /// Series found in it
     pub series: Vec<String>,
+    /// And films
+    pub films: usize,
 }
 
 /// Adds a library folder and scans it (off the main thread: a big folder takes a while)
@@ -62,7 +70,8 @@ pub async fn library_add_folder(app: AppHandle, library: State<'_, Arc<Library>>
     let added = tauri::async_runtime::spawn_blocking(move || -> AppResult<AddedFolder> {
         let folder = library.add_folder(&path)?;
         let series = library.scan_dir(Path::new(&path), Some(folder.id))?;
-        Ok(AddedFolder { folder, series })
+        let films = library.films_in_folder(folder.id)?;
+        Ok(AddedFolder { folder, series, films })
     })
     .await
     .map_err(|e| AppError::Task(e.to_string()))??;

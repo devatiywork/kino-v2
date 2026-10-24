@@ -14,7 +14,7 @@ test.describe('сериалы', () => {
     const { page } = kino
     // The folder picker is a system dialog — the folder goes in through the same command
     await kino.invoke('library_add_folder', { path: media() })
-    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Сериалы' }).click()
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Библиотека' }).click()
 
     const cards = page.getByRole('button', { name: /^Kino Test, / })
     await expect(cards).toHaveCount(1, { timeout: 15_000 })

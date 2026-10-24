@@ -2,9 +2,9 @@ import { createStore, useStore } from './createStore'
 
 /**
  * Screens of the window. The player covers the whole window, the rest live under the title bar.
- * `show` is one series (its key in `seriesKey`), `series` — the list of series
+ * `show` is one series (its key in `seriesKey`), `library` — series, films and the rest by category
  */
-export type Screen = 'home' | 'series' | 'show' | 'history' | 'downloads' | 'settings' | 'player'
+export type Screen = 'home' | 'library' | 'show' | 'history' | 'downloads' | 'settings' | 'player'
 
 interface RouterState {
   screen: Screen

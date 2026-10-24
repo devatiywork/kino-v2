@@ -5,14 +5,17 @@ import { revealContent } from '../../../entities/torrent'
 import type { ArchiveEntry } from '../../../shared/ipc/torrents'
 import { useArchiveMenu } from '../model/useArchiveMenu'
 
-/** SPEC 4.4: the record's main action (by its status) and its menu */
-export function ArchiveActions({ entry }: { entry: ArchiveEntry }) {
+/**
+ * SPEC 4.4: the record's main action (by its status) and its menu. `folderFirst` — «Библиотека»:
+ * a game on disk opens its folder even while it seeds
+ */
+export function ArchiveActions({ entry, folderFirst = false }: { entry: ArchiveEntry; folderFirst?: boolean }) {
   const { t } = useTranslation('torrents')
   const { items, onAction, dialogs, run, again, toDownloads } = useArchiveMenu(entry)
 
   return (
     <>
-      {entry.status === 'inDownloads' ? (
+      {entry.status === 'inDownloads' && !folderFirst ? (
         <Button variant="ghost" size="sm" onPress={toDownloads}>
           {t('menu.goToDownloads')}
           <IconArrowRight size={14} />

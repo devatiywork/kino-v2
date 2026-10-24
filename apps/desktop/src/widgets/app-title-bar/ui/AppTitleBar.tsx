@@ -7,7 +7,7 @@ import { OpenFileButton } from '../../../features/open-video'
 import { windowIpc } from '../../../shared/ipc/window'
 import { navigate, useScreen, type Screen } from '../../../shared/lib/router'
 
-const SECTIONS = ['home', 'series', 'history', 'downloads'] as const satisfies readonly Screen[]
+const SECTIONS = ['home', 'library', 'history', 'downloads'] as const satisfies readonly Screen[]
 type Section = (typeof SECTIONS)[number]
 
 const isSection = (screen: Screen): screen is Section => (SECTIONS as readonly Screen[]).includes(screen)
@@ -49,8 +49,8 @@ export function AppTitleBar({ search }: { search?: ReactNode }) {
       <TitleBarNav
         label={t('nav.label')}
         items={items}
-        // a series page belongs to «Сериалы»
-        current={screen === 'show' ? 'series' : isSection(screen) ? screen : null}
+        // a series page belongs to «Библиотека»
+        current={screen === 'show' ? 'library' : isSection(screen) ? screen : null}
         onNavigate={navigate}
       />
     </TitleBar>

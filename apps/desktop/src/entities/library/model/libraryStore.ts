@@ -5,6 +5,7 @@ interface LibraryState {
   continueWatching: LibraryFile[]
   history: HistoryEntry[]
   series: SeriesSummary[]
+  films: LibraryFile[]
   folders: Folder[]
   /** The first answer from the core arrived — until then the home screen does not guess */
   loaded: boolean
@@ -16,6 +17,7 @@ export const libraryStore = createStore<LibraryState>({
   continueWatching: [],
   history: [],
   series: [],
+  films: [],
   folders: [],
   loaded: false,
   version: 0,
@@ -25,13 +27,14 @@ export const libraryStore = createStore<LibraryState>({
 const REFRESH_DEBOUNCE_MS = 400
 
 export async function refreshLibrary(): Promise<void> {
-  const [continueWatching, history, series, folders] = await Promise.all([
+  const [continueWatching, history, series, films, folders] = await Promise.all([
     libraryIpc.continueWatching(),
     libraryIpc.history(),
     libraryIpc.series(),
+    libraryIpc.films(),
     libraryIpc.folders(),
   ])
-  libraryStore.set((s) => ({ continueWatching, history, series, folders, loaded: true, version: s.version + 1 }))
+  libraryStore.set((s) => ({ continueWatching, history, series, films, folders, loaded: true, version: s.version + 1 }))
 }
 
 /** Fetch now and again whenever the core reports a change. Returns the unsubscribe */

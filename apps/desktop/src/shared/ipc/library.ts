@@ -82,6 +82,8 @@ export interface AddedFolder {
   folder: Folder
   /** Keys of the series found in it */
   series: string[]
+  /** And how many films */
+  films: number
 }
 
 export const libraryIpc = {
@@ -89,6 +91,8 @@ export const libraryIpc = {
   history: (limit = 300) => invoke<HistoryEntry[]>('library_history', { limit }),
   series: () => invoke<SeriesSummary[]>('library_series'),
   seriesDetail: (key: string) => invoke<SeriesDetail | null>('library_series_detail', { key }),
+  /** «Библиотека» → «Фильмы»: not episodes, from the library folders and the downloads, on disk */
+  films: () => invoke<LibraryFile[]>('library_films'),
   /** Every word must match, in any case */
   search: (query: string, limit = 6) => invoke<LibrarySearch>('library_search', { query, limit }),
   folders: () => invoke<Folder[]>('library_folders'),

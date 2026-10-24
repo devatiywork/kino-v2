@@ -23,7 +23,7 @@ const renderShow = () =>
 describe('ShowPage (integration)', () => {
   beforeEach(() => {
     mock.reset()
-    routerStore.set({ screen: 'show', previous: 'series', seriesKey: 'show:kino test' })
+    routerStore.set({ screen: 'show', previous: 'library', seriesKey: 'show:kino test' })
     mock.respond('app_series_sources', [])
   })
 

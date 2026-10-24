@@ -152,6 +152,12 @@ pub struct Library {
     policy: Mutex<Policy>,
 }
 
+/// «Sample», «sample-1080p», «x.SAMPLE.mkv»: a short cut of a release, not a film of its own
+pub fn is_sample(path: &str) -> bool {
+    let stem = Path::new(path).file_stem().map(|s| s.to_string_lossy().to_lowercase()).unwrap_or_default();
+    stem.split(|c: char| !c.is_alphanumeric()).any(|word| word == "sample")
+}
+
 const FILE_COLUMNS: &str =
     "f.id, f.path, f.title, f.series_title, f.season, f.episode, f.duration, f.position, f.watched, f.last_played_at, f.has_thumb";
 
@@ -263,8 +269,9 @@ impl Library {
         Ok(FileRef { id, series_key: series_key.map(str::to_owned) })
     }
 
-    /// Episodes found on disk: new ones are added, known ones keep their position and history.
-    /// Films (no episode mark) are not part of the series library. Returns the series keys seen
+    /// Videos found on disk: new ones are added, known ones keep their position and history.
+    /// Films (no episode mark) join only from a library folder — next to a file just opened
+    /// only its episodes matter. Returns the series keys seen
     pub fn add_scanned(&self, files: &[std::path::PathBuf], folder_id: Option<i64>) -> rusqlite::Result<Vec<String>> {
         let mut conn = self.conn();
         let tx = conn.transaction()?;
@@ -280,9 +287,13 @@ impl Library {
             )?;
             for path in files {
                 let info = describe(path);
-                let Some((key, title)) = &info.series else { continue };
+                let (key, title) = match &info.series {
+                    Some((key, title)) => (Some(key), Some(title)),
+                    None if folder_id.is_some() => (None, None),
+                    None => continue,
+                };
                 stmt.execute(params![path.to_string_lossy(), info.title, key, title, info.season, info.episode, info.series_dir, folder_id])?;
-                if !keys.contains(key) {
+                if let Some(key) = key.filter(|k| !keys.contains(k)) {
                     keys.push(key.clone());
                 }
             }
@@ -505,6 +516,34 @@ impl Library {
         Ok(items.into_iter().take(limit as usize).map(|(_, f)| f).collect())
     }
 
+    /// «Библиотека» → «Фильмы»: the videos of the library folders and the downloads that are not
+    /// episodes and are on disk, the last played first, then by title. A file only opened from
+    /// the Explorer is in the history, not here; a release's sample (sample.mkv) is not a film
+    pub fn films(&self) -> rusqlite::Result<Vec<LibraryFile>> {
+        self.films_of(None)
+    }
+
+    /// How many films a library folder has (adding it says so)
+    pub fn films_in_folder(&self, folder_id: i64) -> rusqlite::Result<usize> {
+        Ok(self.films_of(Some(folder_id))?.len())
+    }
+
+    fn films_of(&self, folder_id: Option<i64>) -> rusqlite::Result<Vec<LibraryFile>> {
+        let files: Vec<LibraryFile> = {
+            let conn = self.conn();
+            let sql = format!(
+                "SELECT {FILE_COLUMNS} FROM player_files f
+                 WHERE f.series_key IS NULL AND (f.folder_id IS NOT NULL OR f.source IS NOT NULL)
+                   AND (?1 IS NULL OR f.folder_id = ?1)
+                 ORDER BY f.last_played_at IS NULL, f.last_played_at DESC, f.title COLLATE NOCASE"
+            );
+            let mut stmt = conn.prepare(&sql)?;
+            let rows = stmt.query_map([folder_id], |r| self.file_from_row(r))?;
+            rows.collect::<rusqlite::Result<_>>()?
+        };
+        Ok(files.into_iter().filter(|f| f.exists && !is_sample(&f.path)).collect())
+    }
+
     /// SPEC 6 «Очистить историю»: viewings, positions, frames and the track memory are gone.
     /// Library folders and their episodes stay; files that were only played are forgotten
     pub fn clear_history(&self) -> rusqlite::Result<()> {
@@ -667,6 +706,41 @@ mod tests {
         assert_eq!(lib.neighbor(e2.id, 1, true).unwrap().and_then(|f| f.episode), Some(10));
         assert_eq!(lib.neighbor(file.id, -1, false).unwrap(), None);
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn films_are_the_folders_videos_on_disk_without_samples_and_episodes() {
+        let lib = Library::in_memory();
+        let (root, _) = season_on_disk("films");
+        std::fs::write(root.join("Heat.1995.mkv"), b"").unwrap();
+        std::fs::create_dir_all(root.join("Heat.1995")).unwrap();
+        std::fs::write(root.join("Heat.1995").join("heat-sample.mkv"), b"").unwrap();
+        std::fs::write(root.join("Gone.2001.mkv"), b"").unwrap();
+        let folder = lib.add_folder(&root.to_string_lossy()).unwrap();
+        lib.add_scanned(&scan::video_files(&root), Some(folder.id)).unwrap();
+        std::fs::remove_file(root.join("Gone.2001.mkv")).unwrap();
+        // Opened from the Explorer once: in the history, not in the library
+        open(&lib, r"D:\Downloads\clip.mp4", 60.0);
+        // The one played comes first
+        let heat = root.join("Heat.1995.mkv");
+        let file = lib.register(&heat.to_string_lossy(), &describe(&heat), Some(6000.0)).unwrap();
+        lib.save_progress(file.id, 600.0, Some(6000.0), &mut None, now_ms()).unwrap();
+
+        let films = lib.films().unwrap();
+        assert_eq!(films.iter().map(|f| f.title.as_str()).collect::<Vec<_>>(), ["Heat 1995", "Film 2014"]);
+        assert_eq!(films[0].position, 600.0);
+        assert_eq!(lib.films_in_folder(folder.id).unwrap(), 2);
+        assert_eq!(lib.films_in_folder(folder.id + 1).unwrap(), 0);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_sample_is_a_word_of_the_name_not_a_part_of_one() {
+        assert!(is_sample(r"D:\Heat\sample.mkv"));
+        assert!(is_sample(r"D:\Heat\Heat.1995.SAMPLE.mkv"));
+        assert!(is_sample(r"D:\Heat\heat-sample-1080p.mkv"));
+        assert!(!is_sample(r"D:\Films\Samples.of.Life.2010.mkv"));
+        assert!(!is_sample(r"D:\sample\Heat.1995.mkv"), "the folder's name does not count");
     }
 
     #[test]

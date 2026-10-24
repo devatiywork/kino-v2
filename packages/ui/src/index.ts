@@ -17,6 +17,7 @@ export { ScrollArea, type ScrollAreaProps } from './components/scroll-area/Scrol
 export { Popover, popoverStyles, type PopoverProps } from './components/popover/Popover'
 export { PopoverButton, type PopoverButtonProps } from './components/popover/PopoverButton'
 export { Pressable, type PressableProps } from './components/pressable/Pressable'
+export { FilterChip, type FilterChipProps } from './components/filter-chip/FilterChip'
 export { ListBox, ListBoxBase, type ListBoxProps } from './components/list-box/ListBox'
 export type { ListItem } from './components/list-box/listItem'
 export { Select, type SelectProps } from './components/select/Select'

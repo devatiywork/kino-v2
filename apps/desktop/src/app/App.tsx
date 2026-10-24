@@ -4,9 +4,9 @@ import { AddTorrentDialog, MagnetDialog } from '../features/add-torrent'
 import { DownloadsPage } from '../pages/downloads'
 import { HistoryPage } from '../pages/history'
 import { HomePage } from '../pages/home'
+import { LibraryPage } from '../pages/library'
 import { PlaceholderPage } from '../pages/placeholder'
 import { PlayerPage } from '../pages/player'
-import { SeriesPage } from '../pages/series'
 import { SettingsPage } from '../pages/settings'
 import { ShowPage } from '../pages/show'
 import { useScreen, type Screen } from '../shared/lib/router'
@@ -33,8 +33,8 @@ function Page({ screen }: { screen: Exclude<Screen, 'player'> }) {
       return <HomePage />
     case 'history':
       return <HistoryPage />
-    case 'series':
-      return <SeriesPage />
+    case 'library':
+      return <LibraryPage />
     case 'show':
       return <ShowPage />
     case 'settings':

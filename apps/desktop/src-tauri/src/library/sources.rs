@@ -122,6 +122,14 @@ impl Library {
         Ok(changed)
     }
 
+    /// Every source some file of the library came from (a torrent of videos)
+    pub fn linked_sources(&self) -> rusqlite::Result<std::collections::HashSet<String>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare("SELECT DISTINCT source FROM player_files WHERE source IS NOT NULL")?;
+        let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
+        rows.collect()
+    }
+
     /// The sources a series' episodes came from, with how many are gone from the disk
     pub fn series_sources(&self, key: &str) -> rusqlite::Result<Vec<SeriesSource>> {
         let conn = self.conn();
