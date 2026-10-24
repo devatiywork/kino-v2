@@ -56,6 +56,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino_<version>_x64-setup.exe`
   (per user, no admin; libmpv next to the exe, file associations, `magnet:`, Kino in Windows' «Приложения по умолчанию»)
 - `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
+- `bun scripts/make-icons.ts` — Kino's icon from `apps/desktop/src-tauri/icons/source/*.svg`: icon.ico (16–32 px from icon-small.svg, 48–256 px from icon.svg) and icon.png
 - `powershell -ExecutionPolicy Bypass -File scripts/fetch-libmpv.ps1` — download libmpv into `vendor/libmpv` and generate `mpv.lib` (needs 7-Zip and VS Build Tools)
 - `cargo run --manifest-path spikes/tauri-mpv/src-tauri/Cargo.toml -- <video>` — the libmpv + WebView2 spike
 
@@ -163,6 +164,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          media://key; off in the tests
     src/defaults.rs    — what Windows opens video, .torrent and magnet: with now (read only), its «Приложения по
                          умолчанию» page: a program may not choose itself
+    src/updates.rs     — «Проверять обновления» (off by default): GitHub Releases of devatiywork/kino-v2 at start
+                         and daily, a newer version told once (PendingUpdate, taken by the renderer); reqwest
     src/lib.rs         — single instance first, then setup (data dir, library, settings, torrents, trackers, tray, main
                          window from the config, media session, player), closing the window while torrents work hides it
                          in the tray, app_clear_history, app_open_url (http(s) only), app_reveal_path
@@ -249,6 +252,8 @@ Each launch gets its own temp folder; the core reads these variables:
   `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
   prompt
 - No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys
+- `KINO_UPDATES_URL` — where Kino asks for its latest release instead of GitHub (the tests' own server; the first check
+  then runs after a second). Under `KINO_TEST_OFFLINE` without it Kino never asks GitHub
 - Test media is generated, never the user's own files
 
 ## Out of Scope

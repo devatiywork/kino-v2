@@ -11,6 +11,7 @@ mod power;
 mod settings;
 mod torrent;
 mod trackers;
+mod updates;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -214,8 +215,15 @@ pub fn run() {
                     Err(e) => eprintln!("[media] session: {e}"),
                 }
             }
+            let settings_for_updates = settings.clone();
             let player = Player::new(app.handle(), library, settings, hwnd, size.width, size.height)?;
             app.manage(player);
+
+            // «Проверять обновления»; the tests never ask GitHub (only their own server)
+            app.manage(updates::PendingUpdate::default());
+            if !offline || std::env::var_os("KINO_UPDATES_URL").is_some() {
+                updates::spawn_checks(app.handle().clone(), settings_for_updates);
+            }
 
             // Later starts of Kino: the window comes forward, what they were given opens here
             let handle = app.handle().clone();
@@ -255,6 +263,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_launch_files,
             defaults::app_default_handlers,
+            updates::app_check_update,
+            updates::app_take_update,
             defaults::app_open_default_apps,
             app_clear_history,
             app_open_url,

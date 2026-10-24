@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -26,6 +26,8 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 # Torrent engine (SPEC 4): TLS for HTTP trackers through Windows' own schannel
 librqbit = { version = "9", default-features = false, features = ["default-tls"] }
 anyhow = "1"
+# «Проверять обновления»: GitHub Releases, over the same HTTP client and TLS the torrent engine uses
+reqwest = { version = "0.13", default-features = false, features = ["default-tls", "json"] }
 bytes = "1"
 # The archive's backup: each .torrent inside the JSON file (the version already in the tree)
 base64 = "0.23"

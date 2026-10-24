@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { onAutoplayed } from '../../entities/playback'
 import { showStatus } from '../../entities/tracker'
 import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
+import { appIpc } from '../../shared/ipc/app'
 import { playerIpc } from '../../shared/ipc/player'
 import { torrentsIpc } from '../../shared/ipc/torrents'
 import { trackersIpc } from '../../shared/ipc/trackers'
@@ -75,4 +76,23 @@ export function useCoreNotices(): void {
       unlisten.then((u) => u()).catch(report('autoplay'))
     }
   }, [])
+
+  // SPEC 6 «Обновления»: a newer Kino is out — its page opens in the browser. Taken when the
+  // page is up (the check may have finished before) and when the core says so
+  useEffect(() => {
+    const tell = async () => {
+      const release = await appIpc.takeUpdate()
+      if (!release) return
+      toast.show({
+        title: t('update.available', { ns: 'common', version: release.version }),
+        action: { label: t('update.open', { ns: 'common' }), onPress: () => void appIpc.openUrl(release.url).catch(report('release page')) },
+        duration: 0,
+      })
+    }
+    const unlisten = appIpc.onUpdate(() => void tell().catch(report('updates')))
+    void tell().catch(report('updates'))
+    return () => {
+      unlisten.then((u) => u()).catch(report('updates'))
+    }
+  }, [t, toast])
 }

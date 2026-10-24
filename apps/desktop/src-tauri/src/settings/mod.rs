@@ -212,6 +212,8 @@ pub struct Settings {
     /// «Медиаклавиши»: play / pause, next and previous keys of the keyboard and of Windows' media
     /// overlay, also when Kino is not in front
     pub media_keys: bool,
+    /// «Проверять обновления» (SPEC 4.7: Kino goes online for it only when it is on)
+    pub check_updates: bool,
     // Downloads (torrents)
     /// «Папка по умолчанию»; empty — the system Downloads folder
     pub downloads_folder: String,
@@ -293,6 +295,7 @@ impl Default for Settings {
             hotkeys: BTreeMap::new(),
             keep_awake: true,
             media_keys: true,
+            check_updates: false,
             downloads_folder: String::new(),
             show_add_dialog: true,
             delete_torrent_file: false,

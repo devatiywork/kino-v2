@@ -236,5 +236,15 @@
     "kino": "Kino",
     "none": "no program chosen",
     "choose": "Choose in Windows…"
+  },
+  "updates": {
+    "label": "Check for updates",
+    "hint": "At start and once a day Kino asks GitHub whether a new version is out. You download and install it yourself",
+    "checkNow": "Check now",
+    "checking": "Checking…",
+    "latest": "You have the latest version",
+    "available": "Kino {{version}} is out",
+    "open": "Open the release page",
+    "failed": "Could not check: {{message}}"
   }
 }

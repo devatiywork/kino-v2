@@ -40,6 +40,8 @@ export interface Settings {
   keepAwake: boolean
   /** «Медиаклавиши»: also when Kino is not in front */
   mediaKeys: boolean
+  /** «Проверять обновления»: GitHub Releases at start and once a day (SPEC 4.7: only when on) */
+  checkUpdates: boolean
   /** «Папка по умолчанию» of the downloads; empty — the system Downloads folder */
   downloadsFolder: string
   /** «Не начинать загрузку сразу» */
@@ -113,6 +115,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hotkeys: {},
   keepAwake: true,
   mediaKeys: true,
+  checkUpdates: false,
   downloadsFolder: '',
   startPaused: false,
   noSeeding: false,

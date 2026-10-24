@@ -54,5 +54,9 @@
     "archive": "Torrent archive",
     "seriesInfo": "{{watched}} of {{episodes}} watched",
     "fileGone": "file deleted"
+  },
+  "update": {
+    "available": "Kino {{version}} is out",
+    "open": "What’s new"
   }
 }

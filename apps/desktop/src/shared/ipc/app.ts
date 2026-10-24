@@ -12,6 +12,21 @@ export interface DefaultHandler {
   isKino: boolean
 }
 
+/** A release of Kino on GitHub (src-tauri/src/updates.rs) */
+export interface Release {
+  version: string
+  /** The release page: what is new and the installer */
+  url: string
+  notes: string
+}
+
+export interface UpdateCheck {
+  current: string
+  latest: Release
+  /** The latest is newer than this Kino */
+  available: boolean
+}
+
 export interface DefaultHandlers {
   video: DefaultHandler
   torrent: DefaultHandler
@@ -30,6 +45,15 @@ export const appIpc = {
 
   /** Windows' «Приложения по умолчанию»: only the user may choose the program there */
   openDefaultApps: () => invoke<void>('app_open_default_apps'),
+
+  /** «Проверить сейчас»: the latest release and whether it is newer */
+  checkUpdate: () => invoke<UpdateCheck>('app_check_update'),
+
+  /** The newer version the check at start or of the day found, once; null — nothing to tell */
+  takeUpdate: () => invoke<Release | null>('app_take_update'),
+
+  /** The check found a newer version: take it with takeUpdate */
+  onUpdate: (handler: () => void): Promise<UnlistenFn> => listen<null>('app://update', () => handler()),
 
   /** Files dragged onto the window (paths come from Tauri, HTML drag events are off) */
   onDragDrop: (handler: (phase: DropPhase, paths: string[]) => void): Promise<UnlistenFn> =>

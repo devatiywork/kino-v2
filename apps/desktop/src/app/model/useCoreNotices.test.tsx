@@ -1,5 +1,6 @@
 import { ToastProvider } from '@kino/ui'
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,6 +14,11 @@ const { preview } = await import('../../test/torrents')
 const mock = await tauri
 
 const wrapper = ({ children }: { children: ReactNode }) => <ToastProvider>{children}</ToastProvider>
+/** The hook inside the toasts' provider, so a toast is on the screen */
+function Notices() {
+  useCoreNotices()
+  return null
+}
 const magnet = 'magnet:?xt=urn:btih:2222222222222222222222222222222222222222&dn=Shogun'
 const topic = 'https://rutracker.org/forum/viewtopic.php?t=1'
 
@@ -23,6 +29,17 @@ describe('useCoreNotices: перехваты браузера трекеров',
       addTorrentStore.set({ preview: null, origin: 'file', sourceUrl: null, magnetOpen: false, magnetText: '', resolving: false, magnetError: null })
       trackersStore.set({ status: null })
     })
+  })
+
+  it('вышла новая Kino — уведомление до закрытия, «Что нового» открывает страницу версии', async () => {
+    const user = userEvent.setup()
+    render(<Notices />, { wrapper })
+    const url = 'https://github.com/devatiywork/kino-v2/releases/tag/v0.22.0'
+    mock.respond('app_take_update', { version: '0.22.0', url, notes: '' })
+    act(() => mock.fire('app://update', null))
+    expect(await screen.findByText('Вышла Kino 0.22.0')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Что нового' }))
+    expect(mock.calls().at(-1)).toEqual(['app_open_url', { url }])
   })
 
   it('.torrent с трекера — в окно добавления вместе со страницей раздачи', async () => {

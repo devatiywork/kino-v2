@@ -54,5 +54,9 @@
     "archive": "Архив торрентов",
     "seriesInfo": "Просмотрено {{watched}} из {{episodes}}",
     "fileGone": "файл удалён"
+  },
+  "update": {
+    "available": "Вышла Kino {{version}}",
+    "open": "Что нового"
   }
 }

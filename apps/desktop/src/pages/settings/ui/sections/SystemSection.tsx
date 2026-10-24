@@ -4,6 +4,7 @@ import { updateSettings, useSettings } from '../../../../entities/settings'
 import { ResetSettingsButton } from '../../../../features/reset-settings'
 import { DefaultAppsRow } from '../DefaultAppsRow'
 import { SettingRow, SettingsSection } from '../SettingsLayout'
+import { UpdatesRow } from '../UpdatesRow'
 
 /**
  * SPEC 6 «Система»; the reset of all settings closes the screen. «Одно окно» is not a choice: a
@@ -22,6 +23,7 @@ export function SystemSection() {
       <SettingRow label={t('system.keepAwake')} hint={t('system.keepAwakeHint')}>
         <Switch aria-label={t('system.keepAwake')} isSelected={keepAwake} onChange={(on) => void updateSettings({ keepAwake: on })} />
       </SettingRow>
+      <UpdatesRow />
       <SettingRow label={t('reset.button')} hint={t('reset.hint')}>
         <ResetSettingsButton />
       </SettingRow>

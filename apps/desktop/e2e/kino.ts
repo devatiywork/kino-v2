@@ -49,6 +49,8 @@ interface LaunchOptions {
   file?: string
   /** Reuse the data folder of an earlier launch */
   dataDir?: string
+  /** Where Kino asks for its latest release instead of GitHub: the test's own server */
+  updatesUrl?: string
 }
 
 let port = 9400 + Math.floor(Math.random() * 400)
@@ -82,6 +84,7 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
       KINO_TEST_MONITOR: process.env.KINO_E2E_MONITOR ?? '1920x1080',
       // Torrents without the network: no DHT, trackers or UPnP, loopback only — no firewall prompt
       KINO_TEST_OFFLINE: '1',
+      ...(options.updatesUrl ? { KINO_UPDATES_URL: options.updatesUrl } : {}),
       // Its own WebView2 browser: never joins another Kino, the CDP port is ours
       WEBVIEW2_USER_DATA_FOLDER: join(dataDir, 'webview2'),
       WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
