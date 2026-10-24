@@ -87,6 +87,34 @@ pub enum SubtitlePosition {
     High,
 }
 
+/// «Альтернативные лимиты» by the schedule: which days (SPEC 6)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ScheduleDays {
+    Everyday,
+    Weekdays,
+    Weekends,
+}
+
+/// What BitTorrent connects over (SPEC 6 «Соединение»)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Protocol {
+    TcpAndUtp,
+    Tcp,
+    Utp,
+}
+
+/// What happens to a torrent that has seeded enough by the settings' rules
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SeedLimitAction {
+    /// It stays in the downloads, on pause
+    Pause,
+    /// It leaves the downloads for the archive, the files stay
+    Archive,
+}
+
 impl SubtitlePosition {
     /// mpv sub-pos: 100 is the bottom edge of the video
     pub fn sub_pos(self) -> i64 {
@@ -106,6 +134,50 @@ pub const WATCHED_PERCENTS: [u8; 3] = [85, 90, 95];
 const HOTKEYS_MAX: usize = 32;
 /// 10 GB/s in KB/s: more is a typo
 const LIMIT_MAX: u32 = 10_000_000;
+const PEER_LIMIT_MAX: u32 = 2_000;
+const QUEUE_MAX: u32 = 100;
+
+/// «20:30» → minutes since midnight
+pub fn minutes_of(time: &str) -> Option<u32> {
+    let (hours, minutes) = time.trim().split_once(':')?;
+    let (hours, minutes): (u32, u32) = (hours.parse().ok()?, minutes.parse().ok()?);
+    (hours < 24 && minutes < 60).then_some(hours * 60 + minutes)
+}
+
+fn is_socks5(proxy: &str) -> bool {
+    proxy
+        .strip_prefix("socks5://")
+        .and_then(|rest| rest.rsplit_once(':'))
+        .is_some_and(|(host, port)| !host.is_empty() && port.parse::<u16>().is_ok_and(|p| p > 0))
+}
+
+impl Settings {
+    /// The trackers added to every new torrent: the lines that are web or UDP addresses
+    pub fn extra_tracker_list(&self) -> Vec<String> {
+        self.extra_trackers
+            .lines()
+            .map(str::trim)
+            .filter(|line| ["http://", "https://", "udp://"].iter().any(|scheme| line.starts_with(scheme)))
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// This local time is inside the schedule of the alternative limits; None — no schedule
+    /// (`weekday` 0 — Sunday, as Windows counts)
+    pub fn in_schedule(&self, weekday: u32, minute: u32) -> Option<bool> {
+        if !self.schedule_enabled {
+            return None;
+        }
+        let day = match self.schedule_days {
+            ScheduleDays::Everyday => true,
+            ScheduleDays::Weekdays => (1..=5).contains(&weekday),
+            ScheduleDays::Weekends => weekday == 0 || weekday == 6,
+        };
+        let (Some(from), Some(to)) = (minutes_of(&self.schedule_from), minutes_of(&self.schedule_to)) else { return Some(false) };
+        let within = if from <= to { minute >= from && minute < to } else { minute >= from || minute < to };
+        Some(day && within)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -140,6 +212,13 @@ pub struct Settings {
     // Downloads (torrents)
     /// «Папка по умолчанию»; empty — the system Downloads folder
     pub downloads_folder: String,
+    /// «Окно добавления»: off — a .torrent or a magnet goes straight to the downloads (the last
+    /// category, its folder); a torrent the archive knows still shows the window
+    pub show_add_dialog: bool,
+    /// «Удалять исходный .torrent после добавления» (the archive keeps its copy)
+    pub delete_torrent_file: bool,
+    /// «Отдельная папка для недокачанного»; empty — off. A finished torrent moves into its folder
+    pub incomplete_folder: String,
     /// «Не начинать загрузку сразу»
     pub start_paused: bool,
     /// «Не раздавать после загрузки — сразу в архив» (SPEC 4.3)
@@ -147,6 +226,36 @@ pub struct Settings {
     /// KB/s; 0 — no limit
     pub download_limit: u32,
     pub upload_limit: u32,
+    /// «Альтернативные лимиты» (KB/s, 0 — none): on by hand; the schedule turns them on and off
+    /// at its edges
+    pub alt_download_limit: u32,
+    pub alt_upload_limit: u32,
+    pub alt_limits_on: bool,
+    pub schedule_enabled: bool,
+    /// «HH:MM»; `to` before `from` — across midnight
+    pub schedule_from: String,
+    pub schedule_to: String,
+    pub schedule_days: ScheduleDays,
+    // Connection — read when the engine starts: they apply after a restart of Kino
+    /// 0 — a random port at every start
+    pub listen_port: u16,
+    pub upnp: bool,
+    pub protocol: Protocol,
+    /// Connections per torrent; 0 — the engine's own (128)
+    pub peer_limit: u32,
+    /// «socks5://[user:password@]host:port»; empty — none
+    pub proxy: String,
+    pub dht: bool,
+    pub lsd: bool,
+    // BitTorrent
+    /// Added to every new torrent, one per line
+    pub extra_trackers: String,
+    /// Seeding stops at this ratio (0 — no limit) or after these minutes of seeding (0 — none)
+    pub seed_ratio_limit: f64,
+    pub seed_time_limit: u32,
+    pub seed_limit_action: SeedLimitAction,
+    /// Downloading at once; the rest wait in the queue. 0 — no limit
+    pub max_active_downloads: u32,
     /// SPEC 4.6: closing the window while torrents download or seed hides Kino in the tray
     pub close_to_tray: bool,
     /// A Windows notification when a torrent finishes
@@ -175,10 +284,32 @@ impl Default for Settings {
             hotkeys: BTreeMap::new(),
             keep_awake: true,
             downloads_folder: String::new(),
+            show_add_dialog: true,
+            delete_torrent_file: false,
+            incomplete_folder: String::new(),
             start_paused: false,
             no_seeding: false,
             download_limit: 0,
             upload_limit: 0,
+            alt_download_limit: 1024,
+            alt_upload_limit: 256,
+            alt_limits_on: false,
+            schedule_enabled: false,
+            schedule_from: "08:00".into(),
+            schedule_to: "20:00".into(),
+            schedule_days: ScheduleDays::Everyday,
+            listen_port: 0,
+            upnp: true,
+            protocol: Protocol::TcpAndUtp,
+            peer_limit: 0,
+            proxy: String::new(),
+            dht: true,
+            lsd: true,
+            extra_trackers: String::new(),
+            seed_ratio_limit: 0.0,
+            seed_time_limit: 0,
+            seed_limit_action: SeedLimitAction::Pause,
+            max_active_downloads: 0,
             close_to_tray: true,
             notify_finished: true,
             keep_awake_downloads: true,
@@ -200,8 +331,27 @@ impl Settings {
             self.hotkeys.pop_last();
         }
         self.downloads_folder = self.downloads_folder.trim().to_string();
+        self.incomplete_folder = self.incomplete_folder.trim().to_string();
         self.download_limit = self.download_limit.min(LIMIT_MAX);
         self.upload_limit = self.upload_limit.min(LIMIT_MAX);
+        self.alt_download_limit = self.alt_download_limit.min(LIMIT_MAX);
+        self.alt_upload_limit = self.alt_upload_limit.min(LIMIT_MAX);
+        let defaults = Settings::default();
+        if minutes_of(&self.schedule_from).is_none() {
+            self.schedule_from = defaults.schedule_from.clone();
+        }
+        if minutes_of(&self.schedule_to).is_none() {
+            self.schedule_to = defaults.schedule_to;
+        }
+        self.peer_limit = self.peer_limit.min(PEER_LIMIT_MAX);
+        // A broken proxy would keep the engine from starting: only socks5://host:port gets through
+        self.proxy = self.proxy.trim().to_string();
+        if !self.proxy.is_empty() && !is_socks5(&self.proxy) {
+            self.proxy = String::new();
+        }
+        self.extra_trackers = self.extra_trackers.trim().to_string();
+        self.seed_ratio_limit = if self.seed_ratio_limit.is_finite() { self.seed_ratio_limit.clamp(0.0, 1000.0) } else { 0.0 };
+        self.max_active_downloads = self.max_active_downloads.min(QUEUE_MAX);
         self
     }
 
@@ -338,6 +488,31 @@ impl SettingsStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_schedule_of_the_alternative_limits() {
+        let mut s = Settings { schedule_enabled: true, schedule_from: "08:00".into(), schedule_to: "20:00".into(), ..Settings::default() };
+        assert_eq!(s.in_schedule(3, 8 * 60), Some(true));
+        assert_eq!(s.in_schedule(3, 20 * 60), Some(false), "until 20:00, not including");
+        s.schedule_days = ScheduleDays::Weekends;
+        assert_eq!(s.in_schedule(3, 12 * 60), Some(false), "Wednesday");
+        assert_eq!(s.in_schedule(0, 12 * 60), Some(true), "Sunday");
+        // Across midnight: 23:00 — 07:00
+        let night = Settings { schedule_enabled: true, schedule_from: "23:00".into(), schedule_to: "07:00".into(), ..Settings::default() };
+        assert_eq!((night.in_schedule(2, 23 * 60 + 30), night.in_schedule(2, 6 * 60)), (Some(true), Some(true)));
+        assert_eq!(night.in_schedule(2, 12 * 60), Some(false));
+        assert_eq!(Settings::default().in_schedule(2, 12 * 60), None, "no schedule");
+    }
+
+    #[test]
+    fn connection_values_that_could_break_the_engine_are_dropped() {
+        let stored = r#"{"proxy":"http://nope","scheduleFrom":"25:00","peerLimit":99999,"seedRatioLimit":-3}"#;
+        let s = from_stored(stored);
+        assert_eq!((s.proxy.as_str(), s.schedule_from.as_str(), s.peer_limit, s.seed_ratio_limit), ("", "08:00", 2_000, 0.0));
+        assert_eq!(from_stored(r#"{"proxy":"socks5://user:pw@10.0.0.1:1080"}"#).proxy, "socks5://user:pw@10.0.0.1:1080");
+        let trackers = Settings { extra_trackers: "udp://t.example:80/announce\n# заметка\nhttps://t2.example/announce".into(), ..Settings::default() };
+        assert_eq!(trackers.extra_tracker_list(), ["udp://t.example:80/announce", "https://t2.example/announce"]);
+    }
     use serde_json::json;
 
     fn patch(value: Value) -> Map<String, Value> {

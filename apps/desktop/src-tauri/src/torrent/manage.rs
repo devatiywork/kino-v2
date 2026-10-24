@@ -6,7 +6,7 @@ use std::path::Path;
 
 use anyhow::Context;
 
-use super::store::Seeding;
+use super::store::{Item, Seeding};
 use super::Torrents;
 
 /// A folder or a file to another place: a rename on the same disk, a copy and a delete across disks
@@ -106,6 +106,55 @@ impl Torrents {
         Ok(())
     }
 
+    /// «Отдельная папка для недокачанного» from the settings; None — off
+    pub(super) fn incomplete_folder(&self) -> Option<String> {
+        Some(self.settings.read(|s| s.incomplete_folder.clone())).filter(|dir| !dir.is_empty())
+    }
+
+    /// «Удалять исходный .torrent после добавления»: the file the add dialog came from (the
+    /// archive keeps its own copy)
+    pub(super) fn delete_source(&self, info_hash: &str) {
+        let Some(path) = super::lock(&self.sources).remove(info_hash) else { return };
+        let is_torrent = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("torrent"));
+        if is_torrent && self.settings.read(|s| s.delete_torrent_file) {
+            if let Err(e) = std::fs::remove_file(&path) {
+                eprintln!("[torrents] delete {}: {e}", path.display());
+            }
+        }
+    }
+
+    /// A torrent finished in the folder for unfinished torrents: it moves into its own and goes on
+    /// from there (its files are checked once more). Should the move fail, it stays where it is
+    pub(super) async fn move_into_place(&self, item: &Item) -> Item {
+        let mut placed = item.clone();
+        placed.incomplete_dir = None;
+        let (from, to) = (item.content_path(), placed.content_path());
+        let moved = async {
+            self.engine.remove(&item.info_hash, false).await?;
+            if from.exists() && from != to {
+                anyhow::ensure!(!to.exists(), "there is already {}", to.display());
+                if let Some(parent) = to.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                move_path(&from, &to)?;
+            }
+            self.store.set_incomplete(item.id, None)?;
+            self.start_item(&placed).await
+        };
+        match moved.await {
+            Ok(()) => placed,
+            Err(e) => {
+                eprintln!("[torrents] {} into its folder: {e:#}", item.name);
+                if self.engine.torrent(&item.info_hash).is_none() {
+                    if let Err(e) = self.start_item(item).await {
+                        eprintln!("[torrents] {} back: {e:#}", item.name);
+                    }
+                }
+                item.clone()
+            }
+        }
+    }
+
     pub fn speed_history(&self, id: i64) -> Vec<[u64; 2]> {
         super::lock(&self.speeds).of(id)
     }
@@ -189,6 +238,75 @@ mod tests {
             assert!(torrents.move_to(id, &root.join("nowhere").to_string_lossy()).await.is_err(), "not a folder");
             torrents.recheck(id).await.unwrap();
             assert!(torrents.engine.torrent(&entry.info_hash).is_some(), "checked again, still there");
+            torrents.shutdown().await;
+            let _ = std::fs::remove_dir_all(&root);
+        });
+    }
+
+    #[test]
+    fn a_torrent_downloads_into_the_unfinished_folder_and_moves_into_its_own() {
+        use std::sync::Arc;
+
+        use crate::library::Library;
+        use crate::settings::SettingsStore;
+        use crate::torrent::{AddRequest, ArchiveStatus, PreviewSource, TorrentsOptions};
+
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let root = std::env::temp_dir().join(format!("kino-unfinished-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&root);
+            let (unfinished, own) = (root.join("unfinished"), root.join("own"));
+            std::fs::create_dir_all(&unfinished).unwrap();
+            std::fs::create_dir_all(&own).unwrap();
+            // Already «downloaded» into the unfinished folder: the check finishes it at once
+            let film = unfinished.join("Film.2014.mkv");
+            std::fs::write(&film, (0..50_000).map(|i| (i % 251) as u8).collect::<Vec<_>>()).unwrap();
+            let spawner = librqbit::spawn_utils::BlockingSpawner::new(1);
+            let made = librqbit::create_torrent(&film, librqbit::CreateTorrentOptions { piece_length: Some(16_384), ..Default::default() }, &spawner)
+                .await
+                .unwrap();
+            let file = root.join("film.torrent");
+            std::fs::write(&file, made.as_bytes().unwrap()).unwrap();
+
+            let settings = Arc::new(SettingsStore::load(Arc::new(Library::in_memory())));
+            let patch = serde_json::json!({ "incompleteFolder": unfinished.to_string_lossy(), "deleteTorrentFile": true });
+            settings.update(patch.as_object().unwrap()).unwrap();
+            let torrents = Torrents::start(TorrentsOptions {
+                db_path: root.join("kino.db"),
+                dir: root.join("torrents"),
+                system_downloads: root.join("downloads"),
+                settings,
+                offline: true,
+            })
+            .await
+            .unwrap();
+            let preview = torrents.preview(PreviewSource::File { path: file.to_string_lossy().into_owned() }).await.unwrap();
+            torrents
+                .add(AddRequest {
+                    info_hash: preview.info_hash,
+                    category_id: None,
+                    save_dir: own.to_string_lossy().into_owned(),
+                    only_files: None,
+                    source_url: None,
+                    start: true,
+                })
+                .await
+                .unwrap();
+            assert!(!file.exists(), "«Удалять исходный .torrent» — the archive keeps its copy");
+
+            let mut finished = Vec::new();
+            for _ in 0..100 {
+                finished.extend(torrents.tick().await.unwrap().finished);
+                if !finished.is_empty() {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            assert_eq!(finished.len(), 1, "finished");
+            assert!(own.join("Film.2014.mkv").exists() && !film.exists(), "moved into its own folder");
+            assert_eq!(finished[0].item.output_folder(), own, "the library links the files where they are now");
+            let entry = torrents.archive("").unwrap().remove(0);
+            assert_eq!((entry.content_path, entry.status), (own.join("Film.2014.mkv").to_string_lossy().into_owned(), ArchiveStatus::InDownloads));
             torrents.shutdown().await;
             let _ = std::fs::remove_dir_all(&root);
         });

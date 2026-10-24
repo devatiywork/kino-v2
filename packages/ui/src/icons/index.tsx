@@ -196,6 +196,14 @@ export const IconExternal = createIcon(
     <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" />
   </>,
 )
+export const IconGauge = createIcon(
+  'Gauge',
+  <>
+    <path d="M4.6 17.5a8 8 0 1 1 14.8 0" />
+    <path d="M12 14.5l3.4-4" />
+    <path d="M8.5 19.5h7" />
+  </>,
+)
 export const IconLock = createIcon(
   'Lock',
   <>

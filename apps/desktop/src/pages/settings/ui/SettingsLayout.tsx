@@ -32,3 +32,13 @@ export function SettingRow({ label, hint, stacked, children }: { label: string; 
     </div>
   )
 }
+
+/** A group of rows inside one card: «Добавление и папки», «Скорость»… (SPEC 6); `hint` — for all its rows */
+export function SettingGroup({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="flex items-baseline gap-2 border-t border-line px-[18px] pt-4 pb-1 first:border-t-0">
+      <h3 className="text-2xs font-semibold tracking-caps text-fg-3 uppercase">{title}</h3>
+      {hint ? <span className="text-xs text-fg-3">· {hint}</span> : null}
+    </div>
+  )
+}

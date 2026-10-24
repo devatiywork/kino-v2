@@ -127,6 +127,53 @@ test.describe('торренты', () => {
     await expect(record(page, 'Film.2014.mkv').getByText('Файлы на диске')).toBeVisible()
   })
 
+  test('без окна добавления: сразу в загрузки, .torrent удалён; очередь, свои трекеры, альтернативные лимиты', async ({ launch, workdir }) => {
+    // Two files that are nowhere in the downloads: offline they wait for peers all the time
+    const src = join(workdir, 'src')
+    const out = join(workdir, 'out')
+    mkdirSync(src)
+    const torrents = ['One', 'Two'].map((name, n) => {
+      const file = join(src, `${name}.mkv`)
+      writeFileSync(file, Buffer.alloc(300_000, n + 1))
+      const torrent = join(workdir, `${name}.torrent`)
+      writeFileSync(torrent, makeTorrent(file))
+      return torrent
+    })
+    const tracker = 'udp://tracker.example:6969/announce'
+    const setup = await launch()
+    await setup.invoke('settings_update', {
+      patch: { showAddDialog: false, deleteTorrentFile: true, maxActiveDownloads: 1, downloadsFolder: out, extraTrackers: tracker },
+    })
+    await setup.close()
+
+    const kino = await launch({ file: torrents[0], dataDir: setup.dataDir })
+    const { page } = kino
+    await expect(page.getByText('Добавлено в «Сериалы» и сохранено в архиве')).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect.poll(() => existsSync(torrents[0] as string)).toBe(false)
+    await expect(row(page, 'One.mkv').getByText('Загрузка')).toBeVisible()
+
+    // The second one — as the add dialog would send it: it waits for the first
+    const preview = await kino.invoke<{ infoHash: string }>('torrent_preview', { source: { kind: 'file', path: torrents[1] } })
+    await kino.invoke('torrent_add', { request: { infoHash: preview.infoHash, categoryId: null, saveDir: out, onlyFiles: null, sourceUrl: null, start: true } })
+    await expect(row(page, 'Two.mkv').getByText('В очереди')).toBeVisible()
+
+    // Added — and selected: its details are open
+    const details = page.getByRole('region', { name: 'Подробности торрента' })
+    await expect(details.getByText('One.mkv').first()).toBeVisible()
+    await details.getByRole('tab', { name: /^Трекеры/ }).click()
+    await expect(details.getByText(tracker)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Альтернативные лимиты' }).click()
+    await expect(page.getByRole('button', { name: 'Альтернативные лимиты' })).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(async () => (await kino.settings()).altLimitsOn).toBe(true)
+
+    // The first one paused by hand: the queue lets the second one go
+    await row(page, 'One.mkv').getByRole('button', { name: 'Пауза' }).click()
+    await expect(row(page, 'Two.mkv').getByText('Загрузка')).toBeVisible()
+    await expect(row(page, 'One.mkv').getByText('Пауза')).toBeVisible()
+  })
+
   test('категории: создать, переименовать, удалить — торренты не теряются', async ({ launch }) => {
     const kino = await launch()
     const { page } = kino

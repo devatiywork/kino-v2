@@ -5,6 +5,7 @@ pub mod backup;
 pub mod commands;
 pub mod engine;
 pub mod manage;
+mod policy;
 mod speeds;
 pub mod store;
 
@@ -21,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use crate::db::now_ms;
 use crate::power::KeepAwake;
 use crate::settings::SettingsStore;
-use engine::{Engine, EngineOptions, Metainfo};
+use engine::{Engine, EngineOptions, Metainfo, Network};
 use store::{Category, FileEntry, Item, NewItem, Seeding, TorrentStore};
 
 /// A magnet's metadata comes from the peers: no answer in this time — say so
@@ -50,6 +51,8 @@ pub enum TorrentState {
     Downloading,
     Seeding,
     Paused,
+    /// «Очередь»: waits on pause for a free place (SPEC 6)
+    Queued,
     Error,
 }
 
@@ -123,6 +126,8 @@ pub struct Tick {
     pub finished: Vec<Finished>,
     /// Torrents that reached their ratio and went to the archive: name, ratio
     pub seeded: Vec<(String, f64)>,
+    /// The schedule turned the alternative limits on or off
+    pub settings_changed: bool,
 }
 
 /// A record of the archive (SPEC 4.4)
@@ -298,6 +303,14 @@ pub struct Torrents {
     offline: bool,
     speeds: Mutex<speeds::SpeedHistory>,
     peer_speeds: Mutex<speeds::PeerSpeeds>,
+    /// The .torrent files the add dialog came from: «Удалять исходный .torrent после добавления»
+    sources: Mutex<HashMap<String, PathBuf>>,
+    /// The limits given to the engine last: (download, upload) KB/s, and whether they are the alternative ones
+    applied_limits: Mutex<Option<(u32, u32)>>,
+    /// Inside the schedule of the alternative limits at the last tick; None — no schedule
+    schedule_was: Mutex<Option<bool>>,
+    /// Waiting in the queue: paused by Kino, not by the user
+    queued: Mutex<std::collections::HashSet<i64>>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -309,14 +322,32 @@ impl Torrents {
         let files_dir = options.dir.join("files");
         std::fs::create_dir_all(&files_dir)?;
         let (download_kbps, upload_kbps) = options.settings.read(|s| (s.download_limit, s.upload_limit));
-        let engine = Engine::start(EngineOptions {
+        let engine_options = |network: Network| EngineOptions {
             state_dir: options.dir.join("engine"),
             default_folder: options.system_downloads.clone(),
             offline: options.offline,
             download_kbps,
             upload_kbps,
-        })
-        .await?;
+            network,
+        };
+        let network = options.settings.read(|s| Network {
+            port: s.listen_port,
+            upnp: s.upnp,
+            protocol: s.protocol,
+            peer_limit: s.peer_limit,
+            proxy: s.proxy.clone(),
+            dht: s.dht,
+            lsd: s.lsd,
+        });
+        // A port taken by another program or a dead proxy must not keep Kino from starting
+        let engine = match Engine::start(engine_options(network.clone())).await {
+            Ok(engine) => engine,
+            Err(e) if network != Network::default() => {
+                eprintln!("[torrents] the engine with the connection settings: {e:#}; starting with the defaults");
+                Engine::start(engine_options(Network::default())).await?
+            }
+            Err(e) => return Err(e),
+        };
         let torrents = Arc::new(Self {
             store: TorrentStore::open(&options.db_path)?,
             engine,
@@ -329,6 +360,10 @@ impl Torrents {
             offline: options.offline,
             speeds: Mutex::default(),
             peer_speeds: Mutex::default(),
+            sources: Mutex::default(),
+            applied_limits: Mutex::default(),
+            schedule_was: Mutex::default(),
+            queued: Mutex::default(),
         });
         torrents.reconcile().await?;
         Ok(torrents)
@@ -362,7 +397,7 @@ impl Torrents {
 
     async fn start_item(&self, item: &Item) -> anyhow::Result<()> {
         let bytes = self.stored_bytes(&item.info_hash)?;
-        self.engine.add(bytes, &item.output_folder(), item.only_files.clone(), item.paused).await
+        self.engine.add(bytes, &item.output_folder(), item.only_files.clone(), item.paused, self.extra_trackers()).await
     }
 
     fn item(&self, id: i64) -> anyhow::Result<Item> {
@@ -407,7 +442,11 @@ impl Torrents {
     /// Reads a .torrent or resolves a magnet; the result waits for `add`
     pub async fn preview(&self, source: PreviewSource) -> anyhow::Result<Preview> {
         let meta = match source {
-            PreviewSource::File { path } => engine::read_torrent(Bytes::from(std::fs::read(&path).with_context(|| format!("cannot read {path}"))?))?,
+            PreviewSource::File { path } => {
+                let meta = engine::read_torrent(Bytes::from(std::fs::read(&path).with_context(|| format!("cannot read {path}"))?))?;
+                lock(&self.sources).insert(meta.info_hash.clone(), PathBuf::from(path));
+                meta
+            }
             PreviewSource::Magnet { uri } => {
                 let hash = engine::magnet_hash(&uri)?;
                 // The archive already has its .torrent: no need to ask the peers
@@ -438,8 +477,9 @@ impl Torrents {
         let meta = lock(&self.pending).remove(&hash).context("open the torrent again")?;
         let only_files = request.only_files.filter(|chosen| chosen.len() < meta.files.len());
         std::fs::write(self.torrent_file(&hash), &meta.torrent_bytes)?;
-        let output = output_folder(&request.save_dir, &meta.name, meta.files.len());
-        self.engine.add(meta.torrent_bytes.clone(), &output, only_files.clone(), !request.start).await?;
+        let incomplete = self.incomplete_folder();
+        let output = output_folder(incomplete.as_deref().unwrap_or(&request.save_dir), &meta.name, meta.files.len());
+        self.engine.add(meta.torrent_bytes.clone(), &output, only_files.clone(), !request.start, self.extra_trackers()).await?;
         let item = self.store.insert(&NewItem {
             info_hash: &hash,
             name: &meta.name,
@@ -449,9 +489,13 @@ impl Torrents {
             files: &meta.files,
             only_files: only_files.as_deref(),
             paused: !request.start,
+            incomplete_dir: incomplete.as_deref(),
         });
         match item {
-            Ok(item) => Ok(item.id),
+            Ok(item) => {
+                self.delete_source(&hash);
+                Ok(item.id)
+            }
             Err(e) => {
                 if let Err(remove) = self.engine.remove(&hash, false).await {
                     eprintln!("[torrents] undo add: {remove:#}");
@@ -486,6 +530,7 @@ impl Torrents {
                 TorrentStatsState::Live => (TorrentState::Downloading, None),
             },
         };
+        let state = self.queued_state(item.id, state);
         let size = stats.as_ref().map_or(item.total_size, |s| s.total_bytes);
         let done = stats.as_ref().map_or(0, |s| s.progress_bytes);
         let live = stats.as_ref().and_then(|s| s.live.as_ref());
@@ -543,13 +588,20 @@ impl Torrents {
     /// went to the archive) — exactly once each
     pub async fn tick(&self) -> anyhow::Result<Tick> {
         let mut tick = Tick::default();
-        for item in self.store.in_downloads()? {
+        let items = self.store.in_downloads()?;
+        self.apply_queue(&items).await?;
+        let mut seeders = Vec::new();
+        for item in items {
             let row = self.active_row(&item);
             if item.completed_at.is_some() {
-                // Seeding until its own ratio (SPEC 4.3 «Параметры торрента»)
-                if row.state == TorrentState::Seeding && Self::seeded_enough(item.seeding, row.ratio) {
-                    self.leave(&item, false).await?;
-                    tick.seeded.push((item.name.clone(), row.ratio));
+                // Seeding until its own ratio (SPEC 4.3 «Параметры торрента»), or by the settings' rules
+                if row.state == TorrentState::Seeding {
+                    if Self::seeded_enough(item.seeding, row.ratio) {
+                        self.leave(&item, false).await?;
+                        tick.seeded.push((item.name.clone(), row.ratio));
+                    } else {
+                        seeders.push((item, row));
+                    }
                 }
                 continue;
             }
@@ -557,12 +609,17 @@ impl Torrents {
                 continue;
             }
             self.store.set_completed(item.id, now_ms())?;
+            // Out of the folder for unfinished torrents into its own
+            let item = if item.incomplete_dir.is_some() { self.move_into_place(&item).await } else { item };
             let archived = !self.seeds_after_download(item.seeding);
             if archived {
                 self.leave(&item, false).await?;
             }
             tick.finished.push(Finished { item, archived });
         }
+        tick.seeded.extend(self.apply_seed_limits(&seeders).await?);
+        tick.settings_changed = self.follow_schedule()?;
+        self.refresh_limits();
         let update = self.snapshot()?;
         lock(&self.speeds).record(update.torrents.iter().map(|t| (t.id, t.download_speed, t.upload_speed)));
         let downloading = update.torrents.iter().any(|t| t.state == TorrentState::Downloading);
@@ -697,6 +754,20 @@ impl Torrents {
         let info = torrent.info.data.validate().context("broken .torrent in the archive")?;
         let lengths = info.lengths();
         let handle = self.engine.torrent(&item.info_hash);
+        // «Свои трекеры» the engine got on top of the torrent's own
+        if let Some(torrent) = &handle {
+            // The engine keeps them parsed: «http://T.example» comes back as «http://t.example/»
+            let same = |a: &str, b: &str| a.trim_end_matches('/').eq_ignore_ascii_case(b.trim_end_matches('/'));
+            let mut extra: Vec<String> = torrent
+                .shared()
+                .trackers
+                .iter()
+                .map(|url| url.to_string())
+                .filter(|url| !trackers.iter().any(|own| same(own, url)))
+                .collect();
+            extra.sort();
+            trackers.extend(extra);
+        }
         let progress = handle.as_ref().map(|t| t.stats().file_progress).unwrap_or_default();
         let selected = |index: usize| item.only_files.as_ref().is_none_or(|only| only.contains(&index));
         let files = self
@@ -771,6 +842,7 @@ impl Torrents {
         anyhow::ensure!(!item.in_downloads, "already in the downloads");
         let save_dir = save_dir.filter(|d| !d.trim().is_empty()).unwrap_or(item.save_dir.clone());
         self.store.return_to_downloads(id, &save_dir, item.only_files.as_deref(), !start, true)?;
+        self.store.set_incomplete(id, self.incomplete_folder().as_deref())?;
         let item = self.item(id)?;
         if let Err(e) = self.start_item(&item).await {
             self.store.leave_downloads(id, item.files_deleted, 0)?;
@@ -808,9 +880,6 @@ impl Torrents {
         engine::magnet_of(&self.stored_bytes(&item.info_hash)?)
     }
 
-    pub fn apply_limits(&self, download_kbps: u32, upload_kbps: u32) {
-        self.engine.set_limits(download_kbps, upload_kbps);
-    }
 
     /// The app is closing: this run's uploads into the ratio, the engine saves its state
     pub async fn shutdown(&self) {

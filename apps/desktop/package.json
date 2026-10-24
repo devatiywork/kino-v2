@@ -1,6 +1,6 @@
 {
   "name": "@kino/desktop",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "type": "module",
   "description": "Kino — приложение: Tauri + React, плеер на libmpv",

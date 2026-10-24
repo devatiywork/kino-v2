@@ -21,6 +21,17 @@ describe('TextField', () => {
     expect(screen.getByRole('button', { name: 'Обзор' })).toBeInTheDocument()
   })
 
+  it('многострочное поле: Enter — новая строка, не отправка', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<TextField label="Трекеры" multiline rows={3} onChange={onChange} />)
+    const area = screen.getByRole('textbox', { name: 'Трекеры' })
+    expect(area.tagName).toBe('TEXTAREA')
+    expect(area).toHaveAttribute('rows', '3')
+    await user.type(area, 'udp://a{Enter}udp://b')
+    expect(onChange).toHaveBeenLastCalledWith('udp://a\nudp://b')
+  })
+
   it('ошибка видна и озвучивается', () => {
     render(<TextField label="Magnet-ссылка" value="abc" onChange={() => undefined} isInvalid errorMessage="Это не magnet-ссылка" />)
     expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true')

@@ -148,6 +148,14 @@ const MIGRATIONS: &[&str] = &[
         CHECK (seed_mode IN ('default', 'ratio', 'never'));
     ALTER TABLE torrent_items ADD COLUMN seed_ratio REAL;
     "#,
+    // 8 — «Отдельная папка для недокачанного» (SPEC 6): where a torrent lies until it is finished
+    r#"
+    ALTER TABLE torrent_items ADD COLUMN incomplete_dir TEXT;
+    "#,
+    // 9 — since when a torrent seeds: «остановка раздачи по времени» (SPEC 6)
+    r#"
+    ALTER TABLE torrent_items ADD COLUMN seeding_since INTEGER;
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {

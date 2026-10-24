@@ -1,3 +1,4 @@
+import { refreshCategories, torrentsStore } from '../../../entities/torrent'
 import { findMagnet, torrentsIpc, type Preview } from '../../../shared/ipc/torrents'
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
@@ -35,8 +36,16 @@ export function useAddTorrent<R>(selector: (state: AddTorrentState) => R): R {
  * not a torrent. `sourceUrl` — the tracker page it was downloaded on
  */
 export async function openTorrentFile(path: string, sourceUrl: string | null = null): Promise<void> {
-  const preview = await torrentsIpc.preview({ kind: 'file', path })
+  const [preview] = await Promise.all([torrentsIpc.preview({ kind: 'file', path }), withCategories()])
   addTorrentStore.set({ preview, origin: sourceUrl ? 'tracker' : 'file', sourceUrl })
+}
+
+/**
+ * The categories and their folders before the torrent is shown: a .torrent Kino starts with
+ * (or the add without the dialog) must not land in a folder not loaded yet
+ */
+async function withCategories(): Promise<void> {
+  if (!torrentsStore.get().downloadsFolder) await refreshCategories()
 }
 
 /** `text` — the link it opens with; `sourceUrl` — the tracker page the link was clicked on */
@@ -59,7 +68,7 @@ export async function submitMagnet(text: string, invalid: string): Promise<void>
   const { sourceUrl } = addTorrentStore.get()
   addTorrentStore.set({ resolving: true, magnetError: null })
   try {
-    const preview = await torrentsIpc.preview({ kind: 'magnet', uri })
+    const [preview] = await Promise.all([torrentsIpc.preview({ kind: 'magnet', uri }), withCategories()])
     if (request !== magnetRequest) return
     addTorrentStore.set({ magnetOpen: false, resolving: false, preview, origin: sourceUrl ? 'tracker' : 'magnet', sourceUrl })
   } catch (e: unknown) {

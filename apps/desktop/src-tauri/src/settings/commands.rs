@@ -57,9 +57,8 @@ pub fn settings_reset(
 fn apply(app: &AppHandle, library: &Library, player: &Player, torrents: &Torrents, old: &Settings, new: &Settings) {
     library.set_policy(library_policy(new));
     player.apply_settings(old, new);
-    if (old.download_limit, old.upload_limit) != (new.download_limit, new.upload_limit) {
-        torrents.apply_limits(new.download_limit, new.upload_limit);
-    }
+    // The limits, the alternative ones, the schedule: the engine gets what holds now
+    torrents.refresh_limits();
     if let Err(e) = app.emit(CHANGED_EVENT, new) {
         eprintln!("[settings] emit: {e}");
     }

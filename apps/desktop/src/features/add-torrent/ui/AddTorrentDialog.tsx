@@ -1,13 +1,15 @@
 import { Button, Dialog, IconArchive, IconFileAdd, IconLink, IconMagnet, Modal, useToast } from '@kino/ui'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useOverlayTriggerState } from 'react-stately'
+import { useSettings } from '../../../entities/settings'
 import { categoryName, hostOf, shortDate, useTorrents } from '../../../entities/torrent'
-import type { ArchiveEntry } from '../../../shared/ipc/torrents'
+import type { AddRequest, ArchiveEntry, Preview } from '../../../shared/ipc/torrents'
 import { formatSize } from '../../../shared/lib/formatBytes'
 import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { closeAddDialog, useAddTorrent } from '../model/addTorrent'
 import { confirmAdd } from '../model/confirmAdd'
-import { useAddForm } from '../model/useAddForm'
+import { defaultRequest, useAddForm } from '../model/useAddForm'
 import { AddFormFields } from './AddFormFields'
 import { FileChecklist } from './FileChecklist'
 
@@ -20,16 +22,19 @@ export function AddTorrentDialog() {
   const origin = useAddTorrent((s) => s.origin)
   const trackerPage = useAddTorrent((s) => s.sourceUrl)
   const categories = useTorrents((s) => s.categories)
+  const showDialog = useSettings((s) => s.showAddDialog)
+  const startPaused = useSettings((s) => s.startPaused)
   const form = useAddForm(preview)
-  const state = useOverlayTriggerState({ isOpen: preview != null, onOpenChange: (open) => !open && closeAddDialog() })
-  useCoverNativeLayer(preview != null)
+  // «Окно добавления» off: a new torrent goes straight to the downloads; one the archive knows still asks
+  const quick = preview != null && !showDialog && !preview.duplicate
+  const state = useOverlayTriggerState({ isOpen: preview != null && !quick, onOpenChange: (open) => !open && closeAddDialog() })
+  useCoverNativeLayer(preview != null && !quick)
   const locale = i18n.language
   const known = preview?.duplicate ?? null
   const locked = known != null && known.status !== 'filesDeleted'
   const request = form.request()
 
-  const submit = async () => {
-    if (!preview || !request) return
+  const send = async (preview: Preview, request: AddRequest) => {
     try {
       const outcome = await confirmAdd(preview, request)
       const category = categoryName(request.categoryId, categories, t)
@@ -40,6 +45,12 @@ export function AddTorrentDialog() {
       toast.show({ title: String(e), tone: 'danger', duration: 6000 })
     }
   }
+  const submit = () => (preview && request ? send(preview, request) : Promise.resolve())
+
+  useEffect(() => {
+    if (quick && preview) void send(preview, defaultRequest(preview, trackerPage, startPaused))
+    // Once per torrent: `send` and the settings are read as they are at that moment
+  }, [quick, preview])
 
   const confirmLabel = !known
     ? t('add.confirm')

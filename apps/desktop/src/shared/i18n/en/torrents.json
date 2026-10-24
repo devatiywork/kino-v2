@@ -9,6 +9,9 @@
   "addMagnet": "Magnet link",
   "pauseAll": "Pause all downloads",
   "resumeAll": "Resume all downloads",
+  "altLimits": "Alternative limits",
+  "altLimitsOn": "Alternative limits on: ↓ {{down}} ↑ {{up}}. Press to turn off",
+  "altLimitsOff": "Turn on alternative limits: ↓ {{down}} ↑ {{up}}",
   "totalDown": "Download: {{rate}}",
   "totalUp": "Upload: {{rate}}",
   "categories": "Categories",
@@ -20,6 +23,7 @@
     "downloading": "Downloading",
     "seeding": "Seeding",
     "paused": "Paused",
+    "queued": "Queued",
     "error": "Error"
   },
   "archiveState": {

@@ -5,6 +5,15 @@ import type { AddRequest, Preview } from '../../../shared/ipc/torrents'
 import { useAddTorrent } from './addTorrent'
 
 /**
+ * «Окно добавления» off (SPEC 6): what the dialog would offer untouched — the last category, its
+ * folder, every file, the start as the settings say, the tracker's page
+ */
+export function defaultRequest(preview: Preview, sourceUrl: string | null, startPaused: boolean): AddRequest {
+  const categoryId = lastCategory()
+  return { infoHash: preview.infoHash, categoryId, saveDir: folderOf(categoryId), onlyFiles: null, sourceUrl, start: !startPaused }
+}
+
+/**
  * The add dialog's choices (SPEC 4.1): the category used last, its folder (until the folder
  * is edited by hand), every file, «Начать сразу» from the settings. A torrent the archive
  * knows starts from its record

@@ -67,8 +67,10 @@ apps/desktop/          — Tauri app (@kino/desktop)
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, series (list + folders),
                          show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
                          settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
-                         hotkeys, system), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds, category bar, details
-                         panel, Ctrl V with a magnet link), placeholder
+                         hotkeys, system; downloads/ — groups by qBittorrent's: SpeedRows, SeedingRows, ConnectionRows,
+                         fields bound to one setting (SwitchRow, NumberField, TextSetting with a check, FolderField),
+                         checks — time, proxy, tracker lines), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds,
+                         category bar, details panel, Ctrl V with a magnet link), placeholder
     widgets/           — app-title-bar (a `search` slot the app fills), global-search (Ctrl K: series, played files,
                          the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
@@ -80,7 +82,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
                          add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
-                         torrent-actions (pause, menu, delete with files; the menu also on a right click — useTorrentMenu),
+                         torrent-actions (pause, menu, delete with files; the menu also on a right click — useTorrentMenu;
+                         AltLimitsButton — the alternative limits on / off),
                          archive-actions (download / seed again, delete record; right click — useArchiveMenu), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
                          manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog),
                          free-season («Освободить место» of a watched season), download-series-again (episodes gone from
@@ -134,9 +137,13 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          .torrent / magnet reading), store (TorrentStore: own connection to the same db; categories, items,
                          files, case-insensitive search by every word), backup (the archive with its .torrent files in one
                          JSON file; a restore adds only what is missing), manage (a torrent's own seeding, full check,
-                         re-announce, moving the files, saving the .torrent), speeds (30 minutes of speeds per torrent,
-                         peer speeds), commands (torrents://update every second, torrents://changed,
-                         torrents://notice). Knows nothing about the player
+                         re-announce, moving the files, saving the .torrent, the folder for unfinished torrents, deleting
+                         the source .torrent), policy (the settings' rules the engine lacks, run by the update loop: the
+                         alternative limits' schedule by its edges, seeding limits by ratio and time, the queue — state
+                         `queued`), speeds (30 minutes of speeds per torrent, peer speeds), commands (torrents://update
+                         every second, torrents://changed, torrents://notice; settings://changed when the schedule switched
+                         the limits). Engine network options (port, UPnP, protocol, peers, SOCKS5, DHT, LSD) are read at
+                         start only. Knows nothing about the player
     src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
                          .torrent download → <data>\trackers\downloads + trackers://torrent; trackers://state with the
                          address and can-go-back / forward), history (WebView2 HistoryChanged, GoBack / GoForward), rules
@@ -158,7 +165,8 @@ packages/ui/           — @kino/ui, our UI library
                          with a shade per theme), base.css (no browser legacy), index.css
   src/icons/           — own SVG icon set, 24px grid, stroke 1.8
   src/components/      — Button, IconButton, Pressable, Switch, SegmentedControl, SwatchPicker, Slider, Select, ListBox, Popover,
-                         PopoverButton, Kbd, KeyRecorder, Checkbox (indeterminate), TextField (description, error, addon),
+                         PopoverButton, Kbd, KeyRecorder, Checkbox (indeterminate), TextField (description, error, addon,
+                         multiline),
                          ScrollArea, Logo, TitleBar, TitleBarNav, WindowControls, SearchField, SearchCombo (search with grouped
                          results, react-aria combobox), Tabs (toolbar, panelClassName),
                          Tooltip (useTooltipFor),
@@ -221,7 +229,8 @@ Each launch gets its own temp folder; the core reads these variables:
 
 - `KINO_DATA_DIR` — kino.db and thumbs instead of %APPDATA% (all builds), so tests never touch the real history
 - `KINO_TEST_OFFLINE` (debug builds only) — torrents without the network: no DHT, trackers, LSD or UPnP, listening on the
-  loopback only (no firewall prompt). The tests make a .torrent of a file already in place, so it is checked and seeded
+  loopback only (no firewall prompt), the default downloads folder is `<data>\downloads`, not the Windows one. The tests
+  make a .torrent of a file already in place, so it is checked and seeded
 - Playwright over CDP takes the browser's downloads for itself: `kino.ts` sends `Browser.setDownloadBehavior { behavior: 'default' }`
   so that the trackers browser's downloads reach Kino. The tracker scenarios run against `fixtures/trackerSite.ts`, never a real site
 - `KINO_TEST_VOLUME`, `KINO_TEST_MONITOR` (debug builds only) — start volume and the monitor (`1920x1080`) the window opens on, without focus.

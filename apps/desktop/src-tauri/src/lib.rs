@@ -102,7 +102,8 @@ pub fn run() {
             // Torrents (SPEC 4): their own connection to the same database, the engine on the
             // async runtime. KINO_TEST_OFFLINE (debug builds): no DHT, trackers or UPnP, loopback only
             let offline = cfg!(debug_assertions) && std::env::var_os("KINO_TEST_OFFLINE").is_some();
-            let system_downloads = app.path().download_dir().unwrap_or_else(|_| data.join("downloads"));
+            // The tests never download into the real «Загрузки» of Windows
+            let system_downloads = if offline { data.join("downloads") } else { app.path().download_dir().unwrap_or_else(|_| data.join("downloads")) };
             let torrents = tauri::async_runtime::block_on(Torrents::start(TorrentsOptions {
                 db_path: data.join("kino.db"),
                 dir: data.join("torrents"),

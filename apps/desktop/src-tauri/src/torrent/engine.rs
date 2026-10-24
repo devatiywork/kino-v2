@@ -19,6 +19,28 @@ use librqbit::{
 };
 
 use super::store::FileEntry;
+use crate::settings::Protocol;
+
+/// SPEC 6 «Соединение» and the peer sources: read when the engine starts
+#[derive(Debug, Clone, PartialEq)]
+pub struct Network {
+    /// 0 — a random port
+    pub port: u16,
+    pub upnp: bool,
+    pub protocol: Protocol,
+    /// Connections per torrent; 0 — the engine's own
+    pub peer_limit: u32,
+    /// socks5://…; empty — none
+    pub proxy: String,
+    pub dht: bool,
+    pub lsd: bool,
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self { port: 0, upnp: true, protocol: Protocol::TcpAndUtp, peer_limit: 0, proxy: String::new(), dht: true, lsd: true }
+    }
+}
 
 pub struct EngineOptions {
     /// Where the engine keeps its state: the session, the DHT table
@@ -29,6 +51,7 @@ pub struct EngineOptions {
     pub offline: bool,
     pub download_kbps: u32,
     pub upload_kbps: u32,
+    pub network: Network,
 }
 
 /// What the add dialog shows before anything starts
@@ -102,13 +125,15 @@ pub struct Engine {
 impl Engine {
     pub async fn start(options: EngineOptions) -> anyhow::Result<Self> {
         std::fs::create_dir_all(&options.state_dir)?;
-        let listen_addr = if options.offline { "127.0.0.1:0" } else { "[::]:0" };
+        let net = &options.network;
+        let host = if options.offline { "127.0.0.1" } else { "[::]" };
+        let listen_addr = format!("{host}:{}", if options.offline { 0 } else { net.port });
         let session = Session::new_with_opts(
             options.default_folder,
             SessionOptions {
                 fastresume: true,
                 persistence: Some(SessionPersistenceConfig::Json { folder: Some(options.state_dir.join("session")) }),
-                dht: (!options.offline).then(|| DhtSessionConfig {
+                dht: (!options.offline && net.dht).then(|| DhtSessionConfig {
                     persistence: Some(DhtPersistenceConfig {
                         config_filename: Some(options.state_dir.join("dht.json")),
                         ..Default::default()
@@ -116,13 +141,22 @@ impl Engine {
                     ..Default::default()
                 }),
                 disable_trackers: options.offline,
-                disable_local_service_discovery: options.offline,
+                disable_local_service_discovery: options.offline || !net.lsd,
                 listen: Some(ListenerOptions {
-                    mode: ListenerMode::TcpAndUtp,
+                    mode: match net.protocol {
+                        Protocol::TcpAndUtp => ListenerMode::TcpAndUtp,
+                        Protocol::Tcp => ListenerMode::TcpOnly,
+                        Protocol::Utp => ListenerMode::UtpOnly,
+                    },
                     listen_addr: listen_addr.parse()?,
-                    enable_upnp_port_forwarding: !options.offline,
+                    enable_upnp_port_forwarding: !options.offline && net.upnp,
                     ..Default::default()
                 }),
+                connect: (!net.proxy.is_empty()).then(|| librqbit::ConnectionOptions {
+                    proxy_url: Some(net.proxy.clone()),
+                    ..Default::default()
+                }),
+                peer_limit: (net.peer_limit > 0).then_some(net.peer_limit as usize),
                 ratelimits: LimitsConfig { download_bps: bps(options.download_kbps), upload_bps: bps(options.upload_kbps) },
                 client_name_and_version: Some(format!("Kino {}", env!("CARGO_PKG_VERSION"))),
                 ..Default::default()
@@ -170,12 +204,14 @@ impl Engine {
 
     /// Starts (or resumes) a torrent. `overwrite`: the files already on disk are checked and
     /// kept — this is what resumes a download and what seeds again
-    pub async fn add(&self, torrent_bytes: Bytes, output_folder: &Path, only_files: Option<Vec<usize>>, paused: bool) -> anyhow::Result<()> {
+    /// `trackers` — «свои трекеры к новым загрузкам» on top of the torrent's own
+    pub async fn add(&self, torrent_bytes: Bytes, output_folder: &Path, only_files: Option<Vec<usize>>, paused: bool, trackers: Vec<String>) -> anyhow::Result<()> {
         let options = AddTorrentOptions {
             paused,
             only_files,
             overwrite: true,
             output_folder: Some(output_folder.to_string_lossy().into_owned()),
+            trackers: (!trackers.is_empty()).then_some(trackers),
             ..Default::default()
         };
         self.session.add_torrent(AddTorrent::from_bytes(torrent_bytes), Some(options)).await?;
@@ -266,6 +302,7 @@ mod tests {
             offline: true,
             download_kbps: 0,
             upload_kbps: 0,
+            network: Network::default(),
         })
         .await
         .unwrap()
@@ -308,7 +345,7 @@ mod tests {
             let hash = read_torrent(bytes.clone()).unwrap().info_hash;
 
             let seeder = offline_engine(&dir.join("a")).await;
-            seeder.add(bytes.clone(), &dir.join("seed"), None, false).await.unwrap();
+            seeder.add(bytes.clone(), &dir.join("seed"), None, false, Vec::new()).await.unwrap();
             let seeding = seeder.torrent(&hash).unwrap();
             tokio::time::timeout(std::time::Duration::from_secs(30), seeding.wait_until_completed()).await.unwrap().unwrap();
             assert!(seeder.stats(&hash).unwrap().finished, "the files on disk are checked, not downloaded again");

@@ -10,6 +10,7 @@ const { AddTorrentDialog } = await import('./AddTorrentDialog')
 const { addTorrentStore, openTorrentFile } = await import('../model/addTorrent')
 const { downloadsView, torrentsStore } = await import('../../../entities/torrent')
 const { routerStore } = await import('../../../shared/lib/router')
+const { settingsStore } = await import('../../../entities/settings')
 const { archiveEntry, categories, preview } = await import('../../../test/torrents')
 const mock = await tauri
 
@@ -36,6 +37,7 @@ describe('AddTorrentDialog (integration)', () => {
       torrentsStore.set({ categories, downloadsFolder: 'D:\\Загрузки', active: [], archive: [] })
       downloadsView.set({ tab: 'archive', selected: null, category: 2 })
       routerStore.set({ screen: 'home' })
+      settingsStore.set({ showAddDialog: true, startPaused: false })
     })
     mock.respond('torrent_list', { torrents: [], downloadSpeed: 0, uploadSpeed: 0 })
     mock.respond('torrent_categories', categories)
@@ -134,5 +136,45 @@ describe('AddTorrentDialog (integration)', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть в загрузках' }))
     expect(mock.calls().filter(([command]) => command !== 'torrent_preview')).toEqual([])
     expect(downloadsView.get()).toMatchObject({ tab: 'downloads', selected: 11 })
+  })
+
+  it('окно добавления выключено — сразу в загрузки: последняя категория и её папка', async () => {
+    act(() => settingsStore.set({ showAddDialog: false }))
+    localStorage.setItem('kino.torrents.lastCategory', '2')
+    renderDialog()
+    mock.respond('torrent_add', 42)
+    await open()
+    await vi.waitFor(() =>
+      expect(mock.calls().find(([command]) => command === 'torrent_add')).toEqual([
+        'torrent_add',
+        { request: { infoHash: '2222222222222222222222222222222222222222', categoryId: 2, saveDir: 'E:\\Игры', onlyFiles: null, sourceUrl: null, start: true } },
+      ]),
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByText('Добавлено в «Игры» и сохранено в архиве')).toBeInTheDocument()
+  })
+
+  it('Kino запущен с .torrent, окно выключено: сначала категории и папки, потом добавление', async () => {
+    act(() => {
+      settingsStore.set({ showAddDialog: false })
+      torrentsStore.set({ categories: [], downloadsFolder: '' })
+    })
+    mock.respond('torrent_downloads_folder', 'D:\\Загрузки')
+    renderDialog()
+    mock.respond('torrent_add', 42)
+    await open()
+    await vi.waitFor(() =>
+      expect(mock.calls().find(([command]) => command === 'torrent_add')?.[1]).toMatchObject({
+        request: { categoryId: 1, saveDir: 'D:\\Загрузки\\Сериалы' },
+      }),
+    )
+  })
+
+  it('окно выключено, но торрент уже в архиве — спрашивает', async () => {
+    act(() => settingsStore.set({ showAddDialog: false }))
+    renderDialog()
+    await open({ duplicate: archiveEntry({ status: 'filesDeleted' }) })
+    expect(screen.getByRole('dialog', { name: 'Этот торрент уже в архиве' })).toBeInTheDocument()
+    expect(mock.calls().some(([command]) => command === 'torrent_add' || command === 'torrent_download_again')).toBe(false)
   })
 })

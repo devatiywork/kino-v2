@@ -6,6 +6,7 @@ const FILL: Record<TorrentState, string> = {
   seeding: 'bg-fg-2',
   paused: 'bg-fg-3',
   checking: 'bg-fg-3',
+  queued: 'bg-fg-3',
   error: 'bg-danger',
 }
 

@@ -48,6 +48,10 @@ pub struct Item {
     /// The first file: for a one-file torrent it is the whole content
     pub first_file: Option<String>,
     pub seeding: Seeding,
+    /// Downloading into «the folder for unfinished torrents»; None — it lies in `save_dir`
+    pub incomplete_dir: Option<String>,
+    /// Unix ms: seeding since then (the time limit of the settings counts from it)
+    pub seeding_since: Option<i64>,
 }
 
 /// SPEC 4.3: how long a torrent seeds after it is downloaded
@@ -81,9 +85,14 @@ impl Seeding {
 }
 
 impl Item {
+    /// The folder the content lies in now: the unfinished one while it downloads there
+    fn current_dir(&self) -> &str {
+        self.incomplete_dir.as_deref().unwrap_or(&self.save_dir)
+    }
+
     /// Where the content lies: a multi-file torrent has its own folder in `save_dir`
     pub fn content_path(&self) -> PathBuf {
-        let dir = Path::new(&self.save_dir);
+        let dir = Path::new(self.current_dir());
         match (&self.first_file, self.file_count) {
             (Some(file), 1) => dir.join(file),
             _ => dir.join(&self.name),
@@ -93,9 +102,9 @@ impl Item {
     /// What the engine writes into: the files' paths are relative to it
     pub fn output_folder(&self) -> PathBuf {
         if self.file_count > 1 {
-            Path::new(&self.save_dir).join(&self.name)
+            Path::new(self.current_dir()).join(&self.name)
         } else {
-            PathBuf::from(&self.save_dir)
+            PathBuf::from(self.current_dir())
         }
     }
 }
@@ -110,6 +119,8 @@ pub struct NewItem<'a> {
     pub files: &'a [FileEntry],
     pub only_files: Option<&'a [usize]>,
     pub paused: bool,
+    /// Downloading into the folder for unfinished torrents
+    pub incomplete_dir: Option<&'a str>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -129,7 +140,7 @@ pub type StoreResult<T> = Result<T, StoreError>;
 const ITEM_COLUMNS: &str = "i.id, i.info_hash, i.name, i.total_size, i.category_id, i.save_dir, i.source_url, i.added_at,
     i.completed_at, i.in_downloads, i.paused, i.files_deleted, i.only_files, i.uploaded,
     (SELECT count(*) FROM torrent_files f WHERE f.item_id = i.id),
-    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1), i.seed_mode, i.seed_ratio";
+    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1), i.seed_mode, i.seed_ratio, i.incomplete_dir, i.seeding_since";
 
 fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
     let only_files: Option<String> = row.get(12)?;
@@ -151,6 +162,8 @@ fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
         file_count: row.get::<_, i64>(14)? as usize,
         first_file: row.get(15)?,
         seeding: Seeding::from_columns(&row.get::<_, String>(16)?, row.get(17)?),
+        incomplete_dir: row.get(18)?,
+        seeding_since: row.get(19)?,
     })
 }
 
@@ -259,8 +272,8 @@ impl TorrentStore {
             let tx = conn.transaction()?;
             let id: i64 = tx.query_row(
                 "INSERT INTO torrent_items (info_hash, name, total_size, category_id, save_dir, source_url, added_at,
-                    paused, only_files, search_text)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) RETURNING id",
+                    paused, only_files, search_text, incomplete_dir)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) RETURNING id",
                 params![
                     new.info_hash.to_lowercase(),
                     new.name,
@@ -272,6 +285,7 @@ impl TorrentStore {
                     new.paused,
                     only_files_json(new.only_files),
                     search_text(new.name, new.files),
+                    new.incomplete_dir,
                 ],
                 |r| r.get(0),
             )?;
@@ -305,6 +319,17 @@ impl TorrentStore {
         Ok(())
     }
 
+    pub fn set_seeding_since(&self, id: i64, since: Option<i64>) -> StoreResult<()> {
+        self.conn().execute("UPDATE torrent_items SET seeding_since = ?2 WHERE id = ?1", params![id, since])?;
+        Ok(())
+    }
+
+    /// The torrent downloads into the folder for unfinished torrents (`Some`) or lies in its own
+    pub fn set_incomplete(&self, id: i64, dir: Option<&str>) -> StoreResult<()> {
+        self.conn().execute("UPDATE torrent_items SET incomplete_dir = ?2 WHERE id = ?1", params![id, dir])?;
+        Ok(())
+    }
+
     /// «Переместить файлы»: the content lies in another folder now
     pub fn set_save_dir(&self, id: i64, save_dir: &str) -> StoreResult<()> {
         self.conn().execute("UPDATE torrent_items SET save_dir = ?2 WHERE id = ?1", params![id, save_dir])?;
@@ -325,7 +350,8 @@ impl TorrentStore {
     /// «Убрать из загрузок» (`files_deleted` false) and «Удалить с файлами» (true); `uploaded` — of this run
     pub fn leave_downloads(&self, id: i64, files_deleted: bool, uploaded: u64) -> StoreResult<()> {
         self.conn().execute(
-            "UPDATE torrent_items SET in_downloads = 0, paused = 0, files_deleted = MAX(files_deleted, ?2), uploaded = uploaded + ?3
+            "UPDATE torrent_items SET in_downloads = 0, paused = 0, files_deleted = MAX(files_deleted, ?2), uploaded = uploaded + ?3,
+                seeding_since = NULL
              WHERE id = ?1",
             params![id, files_deleted, uploaded as i64],
         )?;
@@ -428,6 +454,7 @@ mod tests {
                 files: &files,
                 only_files: Some(&[0, 1]),
                 paused: false,
+                incomplete_dir: None,
             })
             .unwrap()
     }
@@ -473,6 +500,7 @@ mod tests {
                 files: &files,
                 only_files: None,
                 paused: true,
+                incomplete_dir: None,
             })
             .unwrap();
         assert_eq!(item.content_path(), PathBuf::from(r"D:\Загрузки\ubuntu-26.04-desktop-amd64.iso"));
@@ -523,6 +551,7 @@ mod tests {
                 files: &files,
                 only_files: None,
                 paused: false,
+                incomplete_dir: None,
             })
             .unwrap();
         assert_eq!(store.archive("МАРГАРИТА").unwrap().len(), 1, "Cyrillic ignores case too");

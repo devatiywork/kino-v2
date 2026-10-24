@@ -10,6 +10,7 @@ use super::backup::RestoreReport;
 use super::store::Seeding;
 use super::{AddRequest, ArchiveEntry, CategoryView, Finished, Preview, PreviewSource, Tick, TorrentDetails, Torrents, TorrentsUpdate};
 use crate::error::{AppError, AppResult};
+use crate::settings::commands::CHANGED_EVENT as SETTINGS_CHANGED;
 
 /// Every second: the downloads with their numbers
 pub const UPDATE_EVENT: &str = "torrents://update";
@@ -60,7 +61,12 @@ pub fn spawn_updates(
         loop {
             interval.tick().await;
             match torrents.tick().await {
-                Ok(Tick { update, finished, seeded }) => {
+                Ok(Tick { update, finished, seeded, settings_changed }) => {
+                    if settings_changed {
+                        if let Err(e) = app.emit(SETTINGS_CHANGED, torrents.settings()) {
+                            eprintln!("[torrents] emit: {e}");
+                        }
+                    }
                     on_update(&update);
                     if let Err(e) = app.emit(UPDATE_EVENT, update) {
                         eprintln!("[torrents] emit: {e}");

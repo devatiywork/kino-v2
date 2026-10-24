@@ -9,6 +9,9 @@
   "addMagnet": "Magnet-ссылка",
   "pauseAll": "Пауза всех загрузок",
   "resumeAll": "Продолжить все загрузки",
+  "altLimits": "Альтернативные лимиты",
+  "altLimitsOn": "Альтернативные лимиты включены: ↓ {{down}} ↑ {{up}}. Нажмите, чтобы выключить",
+  "altLimitsOff": "Включить альтернативные лимиты: ↓ {{down}} ↑ {{up}}",
   "totalDown": "Загрузка: {{rate}}",
   "totalUp": "Отдача: {{rate}}",
   "categories": "Категории",
@@ -20,6 +23,7 @@
     "downloading": "Загрузка",
     "seeding": "Раздача",
     "paused": "Пауза",
+    "queued": "В очереди",
     "error": "Ошибка"
   },
   "archiveState": {

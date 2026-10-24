@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef, type ReactNode, type TextareaHTMLAttributes } from 'react'
 import { useHover, useTextField, type AriaTextFieldProps } from 'react-aria'
 import { cn } from '../../lib/cn'
 
@@ -14,16 +14,27 @@ export interface TextFieldProps extends AriaTextFieldProps {
   mono?: boolean
   /** Кнопка справа внутри поля: «Обзор…» */
   addon?: ReactNode
+  /** Несколько строк: список трекеров, заметка */
+  multiline?: boolean
+  rows?: number
   className?: string
 }
 
 /** Текстовое поле: название, папка, magnet-ссылка. Системное меню правого клика работает только здесь */
-export function TextField({ label, showLabel = true, description, errorMessage, mono, addon, className, ...props }: TextFieldProps) {
-  const ref = useRef<HTMLInputElement>(null)
+export function TextField({ label, showLabel = true, description, errorMessage, mono, addon, multiline, rows = 4, className, ...props }: TextFieldProps) {
+  const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null)
   const { labelProps, inputProps, descriptionProps, errorMessageProps, isInvalid } = useTextField(
-    { ...props, label, description: typeof description === 'string' ? description : undefined, errorMessage },
+    {
+      ...props,
+      label,
+      description: typeof description === 'string' ? description : undefined,
+      errorMessage,
+      // react-aria types the props by the element; for a textarea it only leaves out `type`
+      inputElementType: (multiline ? 'textarea' : 'input') as 'input',
+    },
     ref,
   )
+  const text = cn('min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3', mono && 'font-mono text-sm')
   const { hoverProps, isHovered } = useHover({ isDisabled: props.isDisabled })
 
   return (
@@ -36,19 +47,17 @@ export function TextField({ label, showLabel = true, description, errorMessage, 
         data-hovered={isHovered || undefined}
         data-invalid={isInvalid || undefined}
         className={cn(
-          'flex h-[34px] min-w-0 items-center gap-1 rounded-md border border-line-2 bg-bg pr-1 pl-3',
+          'flex min-w-0 gap-1 rounded-md border border-line-2 bg-bg pr-1 pl-3',
+          multiline ? 'items-start py-2' : 'h-[34px] items-center',
           'transition-[border-color] duration-(--duration-fast) data-[hovered]:border-fg-3 focus-within:border-accent!',
           'data-[invalid]:border-danger',
         )}
       >
-        <input
-          {...inputProps}
-          ref={ref}
-          className={cn(
-            'h-full min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3',
-            mono && 'font-mono text-sm',
-          )}
-        />
+        {multiline ? (
+          <textarea {...(inputProps as TextareaHTMLAttributes<HTMLTextAreaElement>)} ref={ref} rows={rows} className={cn(text, 'resize-y leading-relaxed')} />
+        ) : (
+          <input {...inputProps} ref={ref} className={cn(text, 'h-full')} />
+        )}
         {addon}
       </div>
       {description ? (

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { downloadsView, useDownloadsView, useTorrents, type DownloadsTab } from '../../../entities/torrent'
 import { AddTorrentButtons } from '../../../features/add-torrent'
 import { CategoryBar } from '../../../features/manage-categories'
-import { PauseAllButton } from '../../../features/torrent-actions'
+import { AltLimitsButton, PauseAllButton } from '../../../features/torrent-actions'
 import { formatRate } from '../../../shared/lib/formatBytes'
 import { ArchiveList } from '../../../widgets/archive-list'
 import { DownloadsList } from '../../../widgets/downloads-list'
@@ -60,6 +60,7 @@ export function DownloadsPage() {
           <>
             <Speeds />
             <span className="flex-1" />
+            <AltLimitsButton />
             <PauseAllButton />
             <AddTorrentButtons />
           </>

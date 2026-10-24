@@ -120,7 +120,10 @@ test.describe('настройки', () => {
     await expect.poll(async () => (await section.boundingBox())?.y).toBeLessThan(100)
     for (const name of ['Не начинать загрузку сразу', 'Не раздавать после загрузки — сразу в архив']) {
       // A person's click on the switch: the focus goes to the hidden input inside it
-      const box = await page.locator('label', { has: page.getByRole('switch', { name }) }).boundingBox()
+      const label = page.locator('label', { has: page.getByRole('switch', { name }) })
+      // The section is long: the person scrolls to the switch first
+      await label.scrollIntoViewIfNeeded()
+      const box = await label.boundingBox()
       await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2)
       await expect(page.getByRole('switch', { name })).toBeChecked()
       await expect(section).toBeInViewport()

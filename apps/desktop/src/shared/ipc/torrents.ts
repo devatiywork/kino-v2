@@ -1,7 +1,8 @@
 import { invoke, listen, type UnlistenFn } from './bridge'
 
 /** Mirrors src-tauri/src/torrent/mod.rs */
-export type TorrentState = 'checking' | 'downloading' | 'seeding' | 'paused' | 'error'
+/** `queued` — waits on pause for its place in «Очередь» (the settings' limit of downloads at once) */
+export type TorrentState = 'checking' | 'downloading' | 'seeding' | 'paused' | 'queued' | 'error'
 
 export interface ActiveTorrent {
   id: number

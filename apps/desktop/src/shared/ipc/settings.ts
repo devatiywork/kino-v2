@@ -8,6 +8,11 @@ export type PreferredAudio = 'russian' | 'original'
 export type RussianAudioSubtitles = 'off' | 'forced' | 'full'
 export type SubtitleSize = 'small' | 'medium' | 'large'
 export type SubtitlePosition = 'bottom' | 'raised' | 'high'
+/** The days of the alternative limits' schedule */
+export type ScheduleDays = 'everyday' | 'weekdays' | 'weekends'
+export type TorrentProtocol = 'tcpAndUtp' | 'tcp' | 'utp'
+/** What a torrent that has seeded enough does: stays on pause or goes to the archive */
+export type SeedLimitAction = 'pause' | 'archive'
 
 /** Mirrors src-tauri/src/settings/mod.rs */
 export interface Settings {
@@ -42,6 +47,39 @@ export interface Settings {
   /** KB/s; 0 — no limit */
   downloadLimit: number
   uploadLimit: number
+  /** «Альтернативные лимиты», KB/s: on by hand; the schedule turns them on and off at its edges */
+  altDownloadLimit: number
+  altUploadLimit: number
+  altLimitsOn: boolean
+  scheduleEnabled: boolean
+  /** «HH:MM»; `to` before `from` — across midnight */
+  scheduleFrom: string
+  scheduleTo: string
+  scheduleDays: ScheduleDays
+  /** «Соединение»: read when the engine starts, so they apply after a restart. 0 — a random port */
+  listenPort: number
+  upnp: boolean
+  protocol: TorrentProtocol
+  /** Connections per torrent; 0 — the engine's own */
+  peerLimit: number
+  /** socks5://[user:password@]host:port; empty — none */
+  proxy: string
+  dht: boolean
+  lsd: boolean
+  /** Added to every new torrent, one per line */
+  extraTrackers: string
+  /** Seeding stops at this ratio (0 — no limit) or after these minutes (0 — none) */
+  seedRatioLimit: number
+  seedTimeLimit: number
+  seedLimitAction: SeedLimitAction
+  /** Downloading at once, the rest wait in the queue; 0 — no limit */
+  maxActiveDownloads: number
+  /** «Окно добавления»: off — straight to the downloads, unless the archive knows the torrent */
+  showAddDialog: boolean
+  /** «Удалять исходный .torrent после добавления» */
+  deleteTorrentFile: boolean
+  /** «Отдельная папка для недокачанного»; empty — off */
+  incompleteFolder: string
   /** SPEC 4.6: closing the window while torrents work hides Kino in the tray */
   closeToTray: boolean
   notifyFinished: boolean
@@ -71,6 +109,28 @@ export const DEFAULT_SETTINGS: Settings = {
   noSeeding: false,
   downloadLimit: 0,
   uploadLimit: 0,
+  altDownloadLimit: 1024,
+  altUploadLimit: 256,
+  altLimitsOn: false,
+  scheduleEnabled: false,
+  scheduleFrom: '08:00',
+  scheduleTo: '20:00',
+  scheduleDays: 'everyday',
+  listenPort: 0,
+  upnp: true,
+  protocol: 'tcpAndUtp',
+  peerLimit: 0,
+  proxy: '',
+  dht: true,
+  lsd: true,
+  extraTrackers: '',
+  seedRatioLimit: 0,
+  seedTimeLimit: 0,
+  seedLimitAction: 'pause',
+  maxActiveDownloads: 0,
+  showAddDialog: true,
+  deleteTorrentFile: false,
+  incompleteFolder: '',
   closeToTray: true,
   notifyFinished: true,
   keepAwakeDownloads: true,

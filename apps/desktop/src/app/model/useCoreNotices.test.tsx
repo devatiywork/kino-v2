@@ -31,7 +31,9 @@ describe('useCoreNotices: перехваты браузера трекеров',
     act(() => mock.fire('trackers://torrent', { target: 'C:\\Kino\\trackers\\downloads\\1-shogun.torrent', sourceUrl: topic }))
     expect(trackersStore.get().status).toEqual({ kind: 'torrent', text: 'Kino перехватил .torrent — в «Загрузки» Windows ничего не сохранено' })
     await vi.waitFor(() => expect(addTorrentStore.get()).toMatchObject({ origin: 'tracker', sourceUrl: topic, preview: { name: 'Shogun.S01.2160p' } }))
-    expect(mock.calls()).toEqual([['torrent_preview', { source: { kind: 'file', path: 'C:\\Kino\\trackers\\downloads\\1-shogun.torrent' } }]])
+    expect(mock.calls().filter(([command]) => command === 'torrent_preview')).toEqual([
+      ['torrent_preview', { source: { kind: 'file', path: 'C:\\Kino\\trackers\\downloads\\1-shogun.torrent' } }],
+    ])
   })
 
   it('magnet с трекера — сразу спрашивает пиров; повтор из окна не теряет страницу раздачи', async () => {

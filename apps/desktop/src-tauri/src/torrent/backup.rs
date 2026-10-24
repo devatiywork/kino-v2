@@ -156,6 +156,7 @@ impl Torrents {
                     files: &meta.files,
                     only_files: item.only_files.as_deref(),
                     paused: false,
+                    incomplete_dir: None,
                 },
                 item.added_at,
                 item.completed_at,
