@@ -1,6 +1,7 @@
 //! Torrents (SPEC 4): the engine, the archive and what the renderer sees of them. Knows nothing
 //! about the player: «Смотреть» only hands a file path to the renderer.
 
+pub mod backup;
 pub mod commands;
 pub mod engine;
 pub mod store;

@@ -206,6 +206,8 @@ pub fn run() {
             tc::torrent_delete_record,
             tc::torrent_magnet,
             tc::torrent_downloads_folder,
+            tc::torrent_export_archive,
+            tc::torrent_restore_archive,
             trc::tracker_bookmarks,
             trc::tracker_bookmark_create,
             trc::tracker_bookmark_update,

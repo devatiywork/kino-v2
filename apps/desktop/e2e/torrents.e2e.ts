@@ -151,4 +151,35 @@ test.describe('торренты', () => {
     await expect(bar.getByRole('button', { name: /^Кино/ })).toHaveCount(0)
     expect(await kino.invoke<{ name: string }[]>('torrent_categories')).toHaveLength(3)
   })
+
+  test('резервная копия переносит архив в чистый Kino; фильтр по датам', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const home = await launch({ file: torrent })
+    await addFromDialog(home.page, folder)
+    await expect(row(home.page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    // The system «Save as» dialog is not the page's: the menu's command goes in directly
+    const backup = join(workdir, 'kino-archive.json')
+    expect(await home.invoke('torrent_export_archive', { path: backup })).toBe(1)
+    await home.close()
+
+    // Another computer: an empty archive gets the record, its category and its release page
+    const laptop = await launch()
+    const { page } = laptop
+    await page.getByRole('navigation', { name: 'Разделы' }).getByRole('button', { name: 'Загрузки' }).click()
+    await tab(laptop, 'Архив')
+    await expect(page.getByText('Архив пока пуст', { exact: false })).toBeVisible()
+    expect(await laptop.invoke('torrent_restore_archive', { path: backup })).toEqual({ added: 1, skipped: 0, broken: 0 })
+    const restored = record(page, 'Film.2014.mkv')
+    await expect(restored).toBeVisible()
+    await expect(restored.getByRole('button', { name: /rutor\.info/ })).toBeVisible()
+    expect(await laptop.invoke('torrent_restore_archive', { path: backup })).toEqual({ added: 0, skipped: 1, broken: 0 })
+
+    // By date: the spans and the years the archive has
+    await page.getByRole('button', { name: /Когда добавлен/ }).click()
+    const year = String(new Date().getFullYear())
+    await expect(page.getByRole('option', { name: year })).toBeVisible()
+    await page.getByRole('option', { name: 'За неделю' }).click()
+    await expect(restored).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Резервная копия' })).toBeVisible()
+  })
 })

@@ -73,7 +73,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
                          torrent-details (General / Files / Peers / Trackers, polled every second, resizable),
-                         archive-list (search, sort, month groups), trackers-pane (bookmarks + browser bar + the place the
+                         archive-list (search, category, «Когда добавлен», sort, month groups, the backup menu), trackers-pane (bookmarks + browser bar + the place the
                          native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
@@ -82,14 +82,16 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          record), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
                          manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog),
                          free-season («Освободить место» of a watched season), download-series-again (episodes gone from
-                         the disk whose torrent is in the archive: «Скачать снова»)
+                         the disk whose torrent is in the archive: «Скачать снова»), archive-backup (save the archive to a
+                         file, restore from one)
     entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
                          settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
                          rebind with swap, key labels, useHotkeyLabel),
                          library (store: continue/history/series/folders, useSeriesDetail, labels, day grouping, Thumb,
                          ContinueCard, HistoryRow, SeriesCard, EpisodeRow, EpisodeDots), app-window,
                          torrent (store mirrored from the core: downloads every second, categories, archive; downloadsView;
-                         labels; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog; categories and record helpers),
+                         labels, periods of the archive; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog;
+                         categories and record helpers),
                          tracker (bookmarks, the page's address and history, the interception status line, a release page
                          waiting for the trackers tab, the bookmark of the open page's site, the last bookmark remembered)
     shared/            — ipc/ (bridge.ts — the only Tauri import for commands/events; typed wrappers: player, library,
@@ -125,7 +127,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          details; the update loop is the only place where torrents finish — «Не раздавать» archives there),
                          engine (librqbit session with fast resume, reconcile with the archive, offline mode for tests,
                          .torrent / magnet reading), store (TorrentStore: own connection to the same db; categories, items,
-                         files, case-insensitive search), commands (torrents://update every second, torrents://changed,
+                         files, case-insensitive search by every word), backup (the archive with its .torrent files in one
+                         JSON file; a restore adds only what is missing), commands (torrents://update every second, torrents://changed,
                          torrents://notice). Knows nothing about the player
     src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
                          .torrent download → <data>\trackers\downloads + trackers://torrent; trackers://state with the

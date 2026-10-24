@@ -6,6 +6,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
+use super::backup::RestoreReport;
 use super::{AddRequest, ArchiveEntry, CategoryView, Finished, Preview, PreviewSource, TorrentDetails, Torrents, TorrentsUpdate};
 use crate::error::{AppError, AppResult};
 
@@ -206,4 +207,18 @@ pub fn torrent_magnet(torrents: Service<'_>, id: i64) -> AppResult<String> {
 #[tauri::command]
 pub fn torrent_downloads_folder(torrents: Service<'_>) -> String {
     torrents.downloads_folder().to_string_lossy().into_owned()
+}
+
+/// SPEC 4.4 «Резервная копия»: the whole archive with its .torrent files into one file
+#[tauri::command]
+pub async fn torrent_export_archive(torrents: Service<'_>, path: String) -> AppResult<usize> {
+    Ok(torrents.export_archive(std::path::Path::new(&path))?)
+}
+
+/// What the archive lacks comes back from a backup; nothing it has changes
+#[tauri::command]
+pub async fn torrent_restore_archive(app: AppHandle, torrents: Service<'_>, path: String) -> AppResult<RestoreReport> {
+    let report = torrents.restore_archive(std::path::Path::new(&path))?;
+    changed(&app);
+    Ok(report)
 }

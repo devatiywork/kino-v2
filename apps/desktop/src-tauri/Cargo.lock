@@ -2275,9 +2275,10 @@ dependencies = [
 
 [[package]]
 name = "kino-desktop"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
+ "base64 0.23.1",
  "bytes",
  "libmpv2",
  "librqbit",

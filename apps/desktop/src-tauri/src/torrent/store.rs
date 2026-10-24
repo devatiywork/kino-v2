@@ -255,6 +255,18 @@ impl TorrentStore {
         Ok(self.item(id)?.expect("the inserted record"))
     }
 
+    /// A record from a backup (SPEC 4.4): straight into the archive, with its old dates, ratio
+    /// and «файлы удалены» — never into the downloads
+    pub fn insert_archived(&self, new: &NewItem, added_at: i64, completed_at: Option<i64>, files_deleted: bool, uploaded: u64) -> StoreResult<Item> {
+        let item = self.insert(new)?;
+        self.conn().execute(
+            "UPDATE torrent_items SET in_downloads = 0, paused = 0, added_at = ?2, completed_at = ?3, files_deleted = ?4, uploaded = ?5
+             WHERE id = ?1",
+            params![item.id, added_at, completed_at, files_deleted, uploaded as i64],
+        )?;
+        Ok(self.item(item.id)?.expect("the imported record"))
+    }
+
     /// «Скачать снова» / «Снова раздавать»: the same record goes back to the downloads
     pub fn return_to_downloads(&self, id: i64, save_dir: &str, only_files: Option<&[usize]>, paused: bool, reset_completion: bool) -> StoreResult<()> {
         self.conn().execute(

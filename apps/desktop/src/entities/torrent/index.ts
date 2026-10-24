@@ -9,6 +9,7 @@ export {
 } from './model/torrentsStore'
 export { downloadsView, matchesCategory, useDownloadsView, type CategoryFilter, type DownloadsTab } from './model/downloadsView'
 export { categoryName, hostOf, monthTitle, progressText, shortDate } from './lib/labels'
+export { matchesPeriod, periodOptions, type Period } from './lib/period'
 export { ArchiveRow } from './ui/ArchiveRow'
 export { StateBadge, TorrentBar } from './ui/TorrentBar'
 export { TorrentRow } from './ui/TorrentRow'

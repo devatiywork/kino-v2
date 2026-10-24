@@ -43,6 +43,15 @@ export interface TorrentsUpdate {
 
 export type ArchiveStatus = 'inDownloads' | 'onDisk' | 'filesDeleted'
 
+/** What restoring a backup did (src-tauri/src/torrent/backup.rs) */
+export interface RestoreReport {
+  added: number
+  /** Already in the archive */
+  skipped: number
+  /** Records without a readable .torrent */
+  broken: number
+}
+
 export interface ArchiveEntry {
   id: number
   infoHash: string
@@ -147,6 +156,10 @@ export const torrentsIpc = {
   details: (id: number) => invoke<TorrentDetails>('torrent_details', { id }),
   archive: (query = '') => invoke<ArchiveEntry[]>('torrent_archive', { query }),
   downloadAgain: (id: number, saveDir: string | null, start: boolean) => invoke<void>('torrent_download_again', { id, saveDir, start }),
+  /** SPEC 4.4 «Резервная копия»: the whole archive into a file; the number of records */
+  exportArchive: (path: string) => invoke<number>('torrent_export_archive', { path }),
+  /** What the archive lacks comes back from a backup */
+  restoreArchive: (path: string) => invoke<RestoreReport>('torrent_restore_archive', { path }),
   seedAgain: (id: number) => invoke<void>('torrent_seed_again', { id }),
   /** «Удалить из архива»: the record and its .torrent; files on disk stay */
   deleteRecord: (id: number) => invoke<void>('torrent_delete_record', { id }),

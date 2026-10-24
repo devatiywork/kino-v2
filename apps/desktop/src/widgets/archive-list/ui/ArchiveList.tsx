@@ -1,4 +1,4 @@
-import { IconArchive, IconSearch, SearchField, SegmentedControl } from '@kino/ui'
+import { IconArchive, IconSearch, SearchField, SegmentedControl, Select } from '@kino/ui'
 import { Fragment, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,17 +6,21 @@ import {
   categoryName,
   downloadsView,
   matchesCategory,
+  matchesPeriod,
   monthTitle,
+  periodOptions,
   searchArchive,
   useDownloadsView,
   useTorrents,
+  type Period,
 } from '../../../entities/torrent'
+import { ArchiveBackupMenu } from '../../../features/archive-backup'
 import { ArchiveActions, SourceLink } from '../../../features/archive-actions'
 import { formatSize } from '../../../shared/lib/formatBytes'
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
-/** SPEC 4.4: every torrent ever added — search by name and files, by month or by name */
+/** SPEC 4.4: every torrent ever added — search by name and files, by category and date, by month or by name; the backup */
 export function ArchiveList() {
   const { t, i18n } = useTranslation('torrents')
   const locale = i18n.language
@@ -27,13 +31,14 @@ export function ArchiveList() {
   const filter = useDownloadsView((s) => s.category)
   const sort = useDownloadsView((s) => s.sort)
   const highlight = useDownloadsView((s) => s.highlight)
+  const period = useDownloadsView((s) => s.period)
 
   useEffect(() => {
     if (highlight == null) return
     document.querySelector(`[data-record="${highlight}"]`)?.scrollIntoView({ block: 'center' })
   }, [highlight, archive])
 
-  const shown = archive.filter((e) => matchesCategory(filter, e.categoryId))
+  const shown = archive.filter((e) => matchesCategory(filter, e.categoryId) && matchesPeriod(period, e.addedAt))
   if (sort === 'name') shown.sort((a, b) => collator.compare(a.name, b.name))
   const size = archive.reduce((sum, e) => sum + e.totalSize, 0)
 
@@ -50,6 +55,15 @@ export function ArchiveList() {
           value={sort}
           onChange={(value) => downloadsView.set({ sort: value })}
         />
+        <Select
+          label={t('archive.period.label')}
+          items={periodOptions(archive.map((e) => e.addedAt), t)}
+          selectedKey={period}
+          onSelectionChange={(key) => downloadsView.set({ period: key as Period })}
+          className="w-44"
+        />
+        <span className="flex-1" />
+        <ArchiveBackupMenu />
       </div>
       {total ? (
         <p className="flex items-center gap-2 text-sm text-fg-3">
@@ -60,7 +74,7 @@ export function ArchiveList() {
       {!shown.length ? (
         <div className="flex flex-col items-center gap-2 py-14 text-center text-fg-2">
           <IconSearch size={26} className="text-fg-3" />
-          <span>{query.trim() ? t('archive.notFound', { query }) : t('archive.empty')}</span>
+          <span>{query.trim() ? t('archive.notFound', { query }) : period !== 'all' ? t('archive.nothingInPeriod') : t('archive.empty')}</span>
         </div>
       ) : (
         <ul aria-label={t('tabs.archive')} className="flex flex-col gap-2">

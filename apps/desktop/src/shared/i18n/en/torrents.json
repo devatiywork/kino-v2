@@ -149,7 +149,16 @@
     "empty": "The archive is empty. Every torrent you add stays here for good.",
     "notFound": "Nothing found in the archive for “{{query}}”",
     "added": "added {{date}}",
-    "noSource": "no release page"
+    "noSource": "no release page",
+    "period": {
+      "label": "Added",
+      "all": "Any time",
+      "week": "Past week",
+      "month": "Past month",
+      "quarter": "Past 3 months",
+      "year": "Past year"
+    },
+    "nothingInPeriod": "Nothing was added to the archive in that time"
   },
   "details": {
     "label": "Torrent details",
@@ -228,5 +237,17 @@
     "deleteTitle": "Delete “{{title}}”?",
     "deleteText": "The bookmark goes. The site sign-in and the torrent archive stay.",
     "deleteConfirm": "Delete bookmark"
+  },
+  "backup": {
+    "menu": "Backup",
+    "save": "Save a copy of the archive…",
+    "restore": "Restore from a copy…",
+    "saveTitle": "Save a copy of the archive",
+    "openTitle": "Restore the archive from a copy",
+    "filter": "Kino archive copy",
+    "saved": "Copy saved — torrents in it: {{count}}",
+    "restored": "Torrents added from the copy: {{count}}.",
+    "skipped": "Already in the archive: {{count}}.",
+    "broken": "Unreadable torrents: {{count}} — the copy has no .torrent for them"
   }
 }

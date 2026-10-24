@@ -1,5 +1,5 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open, save } from '@tauri-apps/plugin-dialog'
 import { VIDEO_EXTENSIONS } from '../lib/media'
 import { invoke, type UnlistenFn } from './bridge'
 
@@ -38,6 +38,16 @@ export const appIpc = {
 
   /** Text into the clipboard: a magnet link, a hash */
   copyText: (text: string) => navigator.clipboard.writeText(text),
+
+  /** A backup of the archive to restore; null if cancelled */
+  pickBackupFile: async (title: string, filterName: string): Promise<string | null> => {
+    const path = await open({ title, multiple: false, directory: false, filters: [{ name: filterName, extensions: ['json'] }] })
+    return typeof path === 'string' ? path : null
+  },
+
+  /** Where to save a backup («Сохранить как»); null if cancelled */
+  pickBackupTarget: async (title: string, defaultName: string, filterName: string): Promise<string | null> =>
+    save({ title, defaultPath: defaultName, filters: [{ name: filterName, extensions: ['json'] }] }),
 
   /** System file picker filtered to video; null if cancelled */
   pickVideoFile: async (title: string, filterName: string): Promise<string | null> => {
