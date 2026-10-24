@@ -260,6 +260,31 @@ test.describe('торренты', () => {
     await closed
   })
 
+  test('закрытие из полноэкранного плеера — в трей; повторный запуск возвращает окно с прежним экраном, а не пустой плеер', async ({ launch, workdir }) => {
+    const { torrent, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    await row(page, 'Film.2014.mkv').getByRole('button', { name: /Смотреть/ }).click()
+    await expect.poll(async () => (await kino.snapshot()).position).toBeGreaterThan(0.5)
+    const fullscreen = () => kino.invoke<boolean>('plugin:window|is_fullscreen', { label: 'main' })
+    await page.keyboard.press('f')
+    await expect.poll(fullscreen).toBe(true)
+
+    // Alt+F4 over the fullscreen video: the window goes to the tray, the video stops
+    await kino.invoke('plugin:window|close', { label: 'main' })
+    await expect.poll(() => kino.invoke<boolean>('plugin:window|is_visible', { label: 'main' })).toBe(false)
+    await expect.poll(async () => (await kino.snapshot()).idle).toBe(true)
+
+    // Started again (or «Открыть» of the tray): a window with the downloads, not a black player
+    expect(await kino.startAgain()).toBe(0)
+    await expect.poll(() => kino.invoke<boolean>('plugin:window|is_visible', { label: 'main' })).toBe(true)
+    expect(await fullscreen()).toBe(false)
+    await expect(page.locator('html[data-video]')).not.toBeAttached()
+    await expect(row(page, 'Film.2014.mkv')).toBeVisible()
+  })
+
   test('подробности: части, трекеры, скорость; параметры — до рейтинга, проверка, перенос; правый клик', async ({ launch, workdir }) => {
     const { torrent, film, folder } = filmTorrent(workdir)
     const kino = await launch({ file: torrent })

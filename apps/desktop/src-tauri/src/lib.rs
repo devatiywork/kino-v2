@@ -9,6 +9,7 @@ mod media_keys;
 mod player;
 mod power;
 mod settings;
+mod shell;
 mod torrent;
 mod trackers;
 mod updates;
@@ -27,6 +28,8 @@ use trackers::{commands as trc, Trackers};
 
 /// A later start of Kino handed over what it was started with (SPEC 6 «Одно окно»)
 pub const OPEN_EVENT: &str = "app://open";
+/// The window went to the tray and the video stopped: the renderer leaves the player
+pub const TO_TRAY_EVENT: &str = "app://to-tray";
 
 /// What Kino was started with: files (Explorer "Open with", file associations) and magnet links.
 /// A relative path is taken from the folder it was started in
@@ -91,8 +94,7 @@ fn app_reveal_path(path: String) -> AppResult<()> {
     if !target.exists() {
         return Err(error::AppError::NotAFolder(path));
     }
-    std::process::Command::new("explorer").arg(format!("/select,{}", target.display())).spawn()?;
-    Ok(())
+    Ok(shell::reveal(target)?)
 }
 
 /// SPEC 6 «Очистить историю» (the player and the library meet here)
@@ -273,6 +275,14 @@ pub fn run() {
                     if let Err(e) = player.stop() {
                         eprintln!("[window] stop the video: {e}");
                     }
+                }
+                // It comes back from the tray as a window with the screen before the player, not an
+                // empty player over the whole screen that looks like nothing came back
+                if let Err(e) = window.set_fullscreen(false) {
+                    eprintln!("[window] leave fullscreen: {e}");
+                }
+                if let Err(e) = window.app_handle().emit(TO_TRAY_EVENT, ()) {
+                    eprintln!("[window] emit: {e}");
                 }
                 if let Err(e) = window.hide() {
                     eprintln!("[window] hide: {e}");

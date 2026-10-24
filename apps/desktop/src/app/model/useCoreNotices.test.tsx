@@ -79,3 +79,20 @@ describe('useCoreNotices: перехваты браузера трекеров',
     expect(addTorrentStore.get()).toMatchObject({ magnetOpen: false, origin: 'tracker', sourceUrl: topic })
   })
 })
+
+describe('useCoreNotices: окно ушло в трей', () => {
+  it('видео остановлено: с экрана плеера — на прежний экран, из полноэкранного — в окно', async () => {
+    const { routerStore } = await import('../../shared/lib/router')
+    const { windowStore } = await import('../../entities/app-window')
+    mock.reset()
+    act(() => {
+      routerStore.set({ screen: 'player', previous: 'library', seriesKey: null })
+      windowStore.set({ maximized: false, fullscreen: true, mini: false })
+    })
+    renderHook(() => useCoreNotices(), { wrapper })
+    act(() => mock.fire('app://to-tray', null))
+    expect(routerStore.get().screen).toBe('library')
+    expect(windowStore.get().fullscreen).toBe(false)
+    expect(mock.calls().some(([command]) => command === 'plugin:window|set_fullscreen')).toBe(true)
+  })
+})

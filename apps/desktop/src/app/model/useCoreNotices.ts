@@ -1,6 +1,7 @@
 import { useToast } from '@kino/ui'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { leaveMini, setFullscreen, windowStore } from '../../entities/app-window'
 import { onAutoplayed } from '../../entities/playback'
 import { showStatus } from '../../entities/tracker'
 import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/add-torrent'
@@ -9,6 +10,7 @@ import { playerIpc } from '../../shared/ipc/player'
 import { torrentsIpc } from '../../shared/ipc/torrents'
 import { trackersIpc } from '../../shared/ipc/trackers'
 import { formatDecimal } from '../../shared/lib/formatBytes'
+import { goBack, routerStore } from '../../shared/lib/router'
 
 const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, e)
 
@@ -16,6 +18,19 @@ const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, 
 export function useCoreNotices(): void {
   const { t, i18n } = useTranslation('library')
   const toast = useToast()
+
+  // SPEC 4.6: the window went to the tray and the video stopped. It must come back as a window
+  // with the screen before the player — not an empty player, black over the whole screen
+  useEffect(() => {
+    const unlisten = appIpc.onToTray(() => {
+      if (windowStore.get().mini) leaveMini().catch(report('mini player'))
+      if (windowStore.get().fullscreen) setFullscreen(false)
+      if (routerStore.get().screen === 'player') goBack()
+    })
+    return () => {
+      unlisten.then((u) => u()).catch(report('to tray'))
+    }
+  }, [])
 
   // SPEC 3.3: «Дорожка "LostFilm" не найдена, выбрана: English»
   useEffect(() => {

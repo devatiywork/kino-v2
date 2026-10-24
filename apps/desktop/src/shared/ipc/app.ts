@@ -53,6 +53,9 @@ export const appIpc = {
   /** The newer version the check at start or of the day found, once; null — nothing to tell */
   takeUpdate: () => invoke<Release | null>('app_take_update'),
 
+  /** The window went to the tray (closed while torrents work): the video was stopped */
+  onToTray: (handler: () => void): Promise<UnlistenFn> => listen<null>('app://to-tray', () => handler()),
+
   /** The check found a newer version: take it with takeUpdate */
   onUpdate: (handler: () => void): Promise<UnlistenFn> => listen<null>('app://update', () => handler()),
 

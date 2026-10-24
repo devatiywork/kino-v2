@@ -26,6 +26,7 @@ export interface Snapshot {
   hasNext: boolean
   tracks: { id: number; kind: string; title: string | null; isExternal: boolean }[]
   videoHeight: number | null
+  idle: boolean
 }
 
 export interface Kino {

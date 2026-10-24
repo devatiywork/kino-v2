@@ -96,6 +96,5 @@ pub fn app_reveal_folder(path: String) -> AppResult<()> {
     if !Path::new(&path).is_dir() {
         return Err(AppError::NotAFolder(path));
     }
-    std::process::Command::new("explorer").arg(&path).spawn()?;
-    Ok(())
+    Ok(crate::shell::open_folder(Path::new(&path))?)
 }

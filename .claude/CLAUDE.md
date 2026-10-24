@@ -142,6 +142,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          next episode of the season), session (saves the position, takes frames), state (snapshot, pure +
                          tested), tracks (track-list parsing), track_defaults (preferred audio, subtitles with a Russian dub —
                          pure), commands
+    src/shell.rs       — Explorer through the shell itself (ShellExecuteW, SHOpenFolderAndSelectItems): a folder, a file
+                         selected — never explorer.exe's command line, whose parser loses quoted paths
     src/power.rs       — KeepAwake: a Windows power request — for a video (screen + system) or for downloads (system)
     src/background.rs  — SPEC 4.6: the tray (speeds in the tooltip, «Пауза всех», «Открыть», «Выйти»), «Скачан»
                          notifications; none in the E2E tests (a killed test leaves a dead tray icon)
