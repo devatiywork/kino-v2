@@ -8,7 +8,8 @@ encrypted handshake or the RC4 stream wrong is not connected at all.
     python libtorrent-peer.py leech <file.torrent> <folder> <port> <peer port>
 
 Prints a line of state a second. A leecher exits 0 once it has the whole torrent from
-encrypted peers only, 1 after 60 s; a seeder runs until it is killed.
+encrypted peers only, 1 after 60 s; a seeder runs until it is killed. LT_UPLOAD_LIMIT —
+bytes a second a seeder gives at most (the README's screenshots: a download that takes a while).
 """
 
 import json
@@ -34,6 +35,7 @@ def main() -> int:
         'allowed_enc_level': int(lt.enc_level.rc4),
         'prefer_rc4': True,
         'allow_multiple_connections_per_ip': True,
+        'upload_rate_limit': int(os.environ.get('LT_UPLOAD_LIMIT', '0')),
         # LT_TRANSPORT=tcp|utp — one of them only (the default: both, libtorrent tries uTP first)
         'enable_outgoing_utp': os.environ.get('LT_TRANSPORT', 'utp') == 'utp',
         'enable_outgoing_tcp': os.environ.get('LT_TRANSPORT', 'tcp') == 'tcp' or 'LT_TRANSPORT' not in os.environ,
@@ -63,7 +65,8 @@ def main() -> int:
             return 0
         if role == 'leech' and time.time() - started > 60:
             return 1
-        if role == 'leech' and peer and not peers:
+        # Until the other side is connected: a seeder's first try may come while it still checks its files
+        if peer and not peers:
             handle.connect_peer(('127.0.0.1', peer))
         time.sleep(1)
 

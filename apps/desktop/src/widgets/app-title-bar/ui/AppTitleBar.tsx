@@ -54,7 +54,9 @@ export function AppTitleBar({ search }: { search?: ReactNode }) {
       <Logo />
       {/* bun run dev: not to be taken for the installed Kino */}
       {import.meta.env.DEV ? (
-        <span className="-ml-1 rounded-sm border border-line-2 px-1 font-mono text-2xs text-fg-3 uppercase max-[1000px]:hidden">dev</span>
+        <span data-dev-badge className="-ml-1 rounded-sm border border-line-2 px-1 font-mono text-2xs text-fg-3 uppercase max-[1000px]:hidden">
+          dev
+        </span>
       ) : null}
       <TitleBarNav
         label={t('nav.label')}
