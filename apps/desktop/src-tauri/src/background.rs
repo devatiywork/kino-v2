@@ -13,6 +13,9 @@ use tauri_plugin_notification::NotificationExt;
 use crate::settings::{Language, SettingsStore};
 use crate::torrent::{Finished, TorrentState, Torrents, TorrentsUpdate};
 
+/// The tray's name, as in the Start menu (productName): Kino v1 next to it is «Kino»
+const APP_NAME: &str = "Kino v2";
+
 struct Labels {
     open: &'static str,
     pause_all: &'static str,
@@ -26,7 +29,7 @@ struct Labels {
 fn labels(language: Language) -> Labels {
     match language {
         Language::Ru => Labels {
-            open: "Открыть Kino",
+            open: "Открыть Kino v2",
             pause_all: "Пауза всех",
             resume_all: "Продолжить все",
             quit: "Выйти",
@@ -35,7 +38,7 @@ fn labels(language: Language) -> Labels {
             in_folder: "Файлы в папке",
         },
         Language::En => Labels {
-            open: "Open Kino",
+            open: "Open Kino v2",
             pause_all: "Pause all",
             resume_all: "Resume all",
             quit: "Quit",
@@ -91,7 +94,7 @@ impl Tray {
         let resume = Arc::new(Mutex::new(false));
         let wants_resume = resume.clone();
         let mut builder = TrayIconBuilder::with_id("kino")
-            .tooltip("Kino")
+            .tooltip(APP_NAME)
             .menu(&menu)
             .show_menu_on_left_click(false)
             .on_menu_event(move |app, event| match event.id().as_ref() {
@@ -124,9 +127,9 @@ impl Tray {
         let language = self.settings.read(|s| s.language);
         let text = labels(language);
         let tooltip = if update.torrents.is_empty() {
-            "Kino".to_string()
+            APP_NAME.to_string()
         } else {
-            format!("Kino\n↓ {} · ↑ {}", rate(update.download_speed, language), rate(update.upload_speed, language))
+            format!("{APP_NAME}\n↓ {} · ↑ {}", rate(update.download_speed, language), rate(update.upload_speed, language))
         };
         if let Err(e) = self.icon.set_tooltip(Some(tooltip)) {
             eprintln!("[tray] tooltip: {e}");

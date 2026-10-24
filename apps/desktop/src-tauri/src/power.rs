@@ -27,12 +27,12 @@ pub struct KeepAwake {
 impl KeepAwake {
     /// A video: the screen stays on
     pub fn for_video() -> Self {
-        Self::new("Kino: video is playing", SCREEN_AND_SYSTEM)
+        Self::new("Kino v2: video is playing", SCREEN_AND_SYSTEM)
     }
 
     /// Downloads: the computer stays on, the screen may go off
     pub fn for_downloads() -> Self {
-        Self::new("Kino: torrents are downloading", SYSTEM)
+        Self::new("Kino v2: torrents are downloading", SYSTEM)
     }
 
     fn new(reason: &str, kinds: &'static [POWER_REQUEST_TYPE]) -> Self {

@@ -65,9 +65,10 @@ pub fn app_default_handlers() -> DefaultHandlers {
 }
 
 /// «Приложения по умолчанию» of Windows, at Kino's own page when the installer registered it
+/// (as KinoV2 — windows/hooks.nsh)
 #[tauri::command]
 pub fn app_open_default_apps() -> AppResult<()> {
-    std::process::Command::new("explorer").arg("ms-settings:defaultapps?registeredAppUser=Kino").spawn()?;
+    std::process::Command::new("explorer").arg("ms-settings:defaultapps?registeredAppUser=KinoV2").spawn()?;
     Ok(())
 }
 

@@ -53,7 +53,7 @@ Themes: dark (default), light, system. The video area and controls over video ar
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
 - `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`)
-- `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino_<version>_x64-setup.exe`
+- `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino v2_<version>_x64-setup.exe`
   (per user, no admin; libmpv next to the exe, file associations, `magnet:`, Kino in Windows' «Приложения по умолчанию»)
 - `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
 - `bun scripts/fetch-filters.ts` — refresh the ad blocker's list (RU AdList + EasyList) in `apps/desktop/src-tauri/filters/` before a release

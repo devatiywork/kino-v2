@@ -2553,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "kino-desktop"
-version = "0.26.0"
+version = "0.26.1"
 dependencies = [
  "adblock",
  "anyhow",

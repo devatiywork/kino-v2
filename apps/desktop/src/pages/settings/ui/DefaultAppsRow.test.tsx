@@ -32,6 +32,6 @@ describe('DefaultAppsRow (ТЗ 6: Kino как обработчик)', () => {
     expect(await screen.findByText('.torrent — qBittorrent')).toBeInTheDocument()
     mock.respond('app_default_handlers', handlers('kino-desktop', true))
     act(() => window.dispatchEvent(new Event('focus')))
-    expect(await screen.findByText('.torrent — Kino')).toBeInTheDocument()
+    expect(await screen.findByText('.torrent — Kino v2')).toBeInTheDocument()
   })
 })
