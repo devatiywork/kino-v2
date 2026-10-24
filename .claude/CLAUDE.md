@@ -72,14 +72,16 @@ apps/desktop/          — Tauri app (@kino/desktop)
     widgets/           — app-title-bar (a `search` slot the app fills), global-search (Ctrl K: series, played files,
                          the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
-                         torrent-details (General / Files / Peers / Trackers, polled every second, resizable),
+                         torrent-details (General with the piece map / Files / Peers with speeds / Trackers with DHT, PeX,
+                         LSD and re-announce / Speed chart 1-5-30 min / Options: seeding, check, move, save .torrent;
+                         polled every second, resizable),
                          archive-list (search, category, «Когда добавлен», sort, month groups, the backup menu), trackers-pane (bookmarks + browser bar + the place the
                          native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
                          add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
-                         torrent-actions (pause, menu, delete with files), archive-actions (download / seed again, delete
-                         record), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
+                         torrent-actions (pause, menu, delete with files; the menu also on a right click — useTorrentMenu),
+                         archive-actions (download / seed again, delete record; right click — useArchiveMenu), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
                          manage-bookmarks (BookmarkList with the «…» menu: edit, move, delete; BookmarkDialog),
                          free-season («Освободить место» of a watched season), download-series-again (episodes gone from
                          the disk whose torrent is in the archive: «Скачать снова»), archive-backup (save the archive to a
@@ -131,7 +133,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          engine (librqbit session with fast resume, reconcile with the archive, offline mode for tests,
                          .torrent / magnet reading), store (TorrentStore: own connection to the same db; categories, items,
                          files, case-insensitive search by every word), backup (the archive with its .torrent files in one
-                         JSON file; a restore adds only what is missing), commands (torrents://update every second, torrents://changed,
+                         JSON file; a restore adds only what is missing), manage (a torrent's own seeding, full check,
+                         re-announce, moving the files, saving the .torrent), speeds (30 minutes of speeds per torrent,
+                         peer speeds), commands (torrents://update every second, torrents://changed,
                          torrents://notice). Knows nothing about the player
     src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
                          .torrent download → <data>\trackers\downloads + trackers://torrent; trackers://state with the
@@ -140,7 +144,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          (BookmarkStore: bookmarks with positions), commands
     src/links.rs       — the one place where the library and the torrents meet (SPEC 5): a finished torrent's files are
                          linked to the library (and all finished ones at start), series sources for «Скачать снова»,
-                         «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»)
+                         «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»),
+                         moving a torrent's files (the library's episodes move with them)
     src/lib.rs         — setup (data dir, library, settings, torrents, trackers, tray, main window from the config, player),
                          closing the window while torrents work hides it in the tray, app_clear_history,
                          app_open_url (http(s) only), app_reveal_path

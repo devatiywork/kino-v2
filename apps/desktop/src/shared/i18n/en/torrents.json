@@ -70,7 +70,8 @@
     "finishedArchived": "“{{name}}” downloaded and moved to the archive — files stay",
     "archivedSeeding_one": "{{count}} seeding torrent moved to the archive",
     "archivedSeeding_other": "{{count}} seeding torrents moved to the archive",
-    "notTorrent": "Cannot open the torrent: {{message}}"
+    "notTorrent": "Cannot open the torrent: {{message}}",
+    "seeded": "“{{name}}” reached ratio {{ratio}} and went to the archive — the files stay"
   },
   "confirmDelete": {
     "title": "Delete the files?",
@@ -205,7 +206,22 @@
     "noPeers": "No connections now",
     "privateTrackers": "Private torrent: peers come from the tracker only, no DHT or PeX",
     "noTrackers": "The torrent has no trackers — peers come from DHT",
-    "tracker": "Tracker address"
+    "tracker": "Tracker address",
+    "copyAddress": "Copy address",
+    "lost": "Wasted",
+    "on": "working",
+    "off": "off",
+    "offPrivate": "off — private torrent",
+    "dht": "DHT",
+    "pex": "PeX (peer exchange)",
+    "lsd": "LSD (local network)",
+    "speed": "Speed",
+    "params": "Options",
+    "speedSpan": "Chart period",
+    "minutes": "{{count}} min",
+    "peak": "peak {{rate}}",
+    "speedSoon": "The chart appears in a couple of seconds",
+    "speedChart": "Download and upload speed chart"
   },
   "trackers": {
     "tab": "Trackers",
@@ -249,5 +265,30 @@
     "restored": "Torrents added from the copy: {{count}}.",
     "skipped": "Already in the archive: {{count}}.",
     "broken": "Unreadable torrents: {{count}} — the copy has no .torrent for them"
+  },
+  "params": {
+    "seeding": "Seeding",
+    "seedDefault": "As in the settings",
+    "seedRatio": "Until a ratio",
+    "seedNever": "Do not seed",
+    "ratio": "Ratio",
+    "seedHint": {
+      "default": "As the settings decide: “Do not seed after download” and the seeding rules",
+      "ratio": "Seeds until the uploaded amount reaches the ratio, then goes to the archive — the files stay",
+      "never": "To the archive as soon as it is downloaded, the files stay"
+    },
+    "actions": "Actions",
+    "recheck": "Check the files",
+    "rechecking": "The files are being checked again",
+    "reannounce": "Re-announce",
+    "reannounced": "Trackers, DHT and LSD are asked again",
+    "move": "Move the files…",
+    "moveTitle": "Where to move the files",
+    "moved": "The files moved: {{folder}}",
+    "saveTorrent": "Save the .torrent…",
+    "saveTitle": "Save the .torrent",
+    "torrentFilter": "Torrent file",
+    "saved": ".torrent saved",
+    "engineNote": "Own speed and connection limits, file priorities, super-seeding and web seeds are not supported by Kino’s engine (librqbit)"
   }
 }

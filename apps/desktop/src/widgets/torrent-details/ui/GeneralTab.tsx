@@ -3,6 +3,7 @@ import { categoryName, shortDate, TorrentBar, useTorrents } from '../../../entit
 import type { ActiveTorrent, TorrentDetails } from '../../../shared/ipc/torrents'
 import { formatDecimal, formatRate, formatSize } from '../../../shared/lib/formatBytes'
 import { formatDuration } from '../../../shared/lib/formatDuration'
+import { PieceMap } from './PieceMap'
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -25,7 +26,14 @@ export function GeneralTab({ torrent, details }: { torrent: ActiveTorrent; detai
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
         <span className="w-20 text-sm text-fg-3">{t('details.downloaded')}</span>
-        <TorrentBar progress={torrent.progress} state={torrent.state} label={t('details.downloaded')} className="flex-1" />
+        {/* The pieces on disk once the engine has checked them; until then — the overall progress */}
+        {details?.pieceMap.length ? (
+          <div className="flex-1">
+            <PieceMap parts={details.pieceMap} label={t('details.downloaded')} />
+          </div>
+        ) : (
+          <TorrentBar progress={torrent.progress} state={torrent.state} label={t('details.downloaded')} className="flex-1" />
+        )}
         <b className="w-14 text-right font-mono text-sm text-fg">{(Math.floor(torrent.progress * 1000) / 10).toLocaleString(locale)}%</b>
       </div>
       <section className="flex flex-col gap-2.5">
@@ -39,6 +47,7 @@ export function GeneralTab({ torrent, details }: { torrent: ActiveTorrent; detai
           <Stat label={t('details.category')} value={categoryName(torrent.categoryId, categories, t)} />
           <Stat label={t('details.downSpeed')} value={formatRate(torrent.downloadSpeed, locale)} />
           <Stat label={t('details.upSpeed')} value={formatRate(torrent.uploadSpeed, locale)} />
+          <Stat label={t('details.lost')} value={details ? size(details.lost) : '…'} />
         </dl>
       </section>
       <section className="flex flex-col gap-2.5">

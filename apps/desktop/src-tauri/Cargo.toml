@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"

@@ -5,7 +5,9 @@ import type { ActiveTorrent } from '../../../shared/ipc/torrents'
 import { useTorrentDetails } from '../model/useTorrentDetails'
 import { FilesTab } from './FilesTab'
 import { GeneralTab } from './GeneralTab'
+import { ParamsTab } from './ParamsTab'
 import { PeersTab, TrackersTab } from './PeersTrackersTabs'
+import { SpeedTab } from './SpeedTab'
 
 const MIN_HEIGHT = 180
 const MAX_HEIGHT = 640
@@ -61,6 +63,8 @@ export function TorrentDetailsPanel({ torrent, onClose }: { torrent: ActiveTorre
     { id: 'files', label: t('details.files'), count: details?.files.length },
     { id: 'peers', label: t('details.peers'), count: details?.peers.length },
     { id: 'trackers', label: t('details.trackers'), count: details?.trackers.length },
+    { id: 'speed', label: t('details.speed') },
+    { id: 'params', label: t('details.params') },
   ]
 
   return (
@@ -85,7 +89,9 @@ export function TorrentDetailsPanel({ torrent, onClose }: { torrent: ActiveTorre
             {tab.id === 'general' ? <GeneralTab torrent={torrent} details={details} /> : null}
             {tab.id === 'files' && details ? <FilesTab id={torrent.id} files={details.files} onChanged={reload} /> : null}
             {tab.id === 'peers' && details ? <PeersTab peers={details.peers} /> : null}
-            {tab.id === 'trackers' && details ? <TrackersTab details={details} /> : null}
+            {tab.id === 'trackers' && details ? <TrackersTab id={torrent.id} details={details} /> : null}
+            {tab.id === 'speed' ? <SpeedTab id={torrent.id} /> : null}
+            {tab.id === 'params' && details ? <ParamsTab torrent={torrent} seeding={details.seeding} onChanged={reload} /> : null}
           </ScrollArea>
         )}
       </Tabs>

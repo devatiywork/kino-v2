@@ -141,6 +141,13 @@ const MIGRATIONS: &[&str] = &[
     ALTER TABLE player_files ADD COLUMN source_path TEXT;
     CREATE INDEX player_files_source ON player_files (source, source_path);
     "#,
+    // 7 — a torrent's own seeding (SPEC 4.3 «Параметры торрента»): as in the settings, until a
+    // ratio, or not at all
+    r#"
+    ALTER TABLE torrent_items ADD COLUMN seed_mode TEXT NOT NULL DEFAULT 'default'
+        CHECK (seed_mode IN ('default', 'ratio', 'never'));
+    ALTER TABLE torrent_items ADD COLUMN seed_ratio REAL;
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {

@@ -15,7 +15,7 @@ import {
   type Period,
 } from '../../../entities/torrent'
 import { ArchiveBackupMenu } from '../../../features/archive-backup'
-import { ArchiveActions, SourceLink } from '../../../features/archive-actions'
+import { ArchiveActions, ArchiveContextMenu, SourceLink } from '../../../features/archive-actions'
 import { formatSize } from '../../../shared/lib/formatBytes'
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
@@ -86,13 +86,15 @@ export function ArchiveList() {
               <Fragment key={entry.id}>
                 {newGroup ? <li className="pt-2 text-2xs font-semibold tracking-caps text-fg-3 uppercase">{group}</li> : null}
                 <li>
-                  <ArchiveRow
-                    entry={entry}
-                    category={categoryName(entry.categoryId, categories, t)}
-                    highlighted={highlight === entry.id}
-                    source={<SourceLink url={entry.sourceUrl} />}
-                    actions={<ArchiveActions entry={entry} />}
-                  />
+                  <ArchiveContextMenu entry={entry}>
+                    <ArchiveRow
+                      entry={entry}
+                      category={categoryName(entry.categoryId, categories, t)}
+                      highlighted={highlight === entry.id}
+                      source={<SourceLink url={entry.sourceUrl} />}
+                      actions={<ArchiveActions entry={entry} />}
+                    />
+                  </ArchiveContextMenu>
                 </li>
               </Fragment>
             )

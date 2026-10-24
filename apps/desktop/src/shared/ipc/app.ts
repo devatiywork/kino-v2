@@ -45,6 +45,10 @@ export const appIpc = {
     return typeof path === 'string' ? path : null
   },
 
+  /** Where to save a .torrent («Сохранить как»); null if cancelled */
+  pickTorrentTarget: async (title: string, defaultName: string, filterName: string): Promise<string | null> =>
+    save({ title, defaultPath: defaultName, filters: [{ name: filterName, extensions: ['torrent'] }] }),
+
   /** Where to save a backup («Сохранить как»); null if cancelled */
   pickBackupTarget: async (title: string, defaultName: string, filterName: string): Promise<string | null> =>
     save({ title, defaultPath: defaultName, filters: [{ name: filterName, extensions: ['json'] }] }),

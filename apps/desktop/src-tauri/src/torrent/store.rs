@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{params, Connection, OptionalExtension, Row};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::db;
 
@@ -28,7 +28,7 @@ pub struct FileEntry {
 }
 
 /// A record of the archive as the engine and the commands need it
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Item {
     pub id: i64,
     pub info_hash: String,
@@ -47,6 +47,37 @@ pub struct Item {
     pub file_count: usize,
     /// The first file: for a one-file torrent it is the whole content
     pub first_file: Option<String>,
+    pub seeding: Seeding,
+}
+
+/// SPEC 4.3: how long a torrent seeds after it is downloaded
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "mode")]
+pub enum Seeding {
+    /// As the settings say («Не раздавать после загрузки», the ratio rules)
+    Default,
+    /// Until uploaded / size reaches the ratio, then to the archive
+    Ratio { ratio: f64 },
+    /// To the archive as soon as it is downloaded
+    Never,
+}
+
+impl Seeding {
+    fn from_columns(mode: &str, ratio: Option<f64>) -> Self {
+        match (mode, ratio) {
+            ("ratio", Some(ratio)) if ratio > 0.0 => Seeding::Ratio { ratio },
+            ("never", _) => Seeding::Never,
+            _ => Seeding::Default,
+        }
+    }
+
+    fn columns(self) -> (&'static str, Option<f64>) {
+        match self {
+            Seeding::Default => ("default", None),
+            Seeding::Ratio { ratio } => ("ratio", Some(ratio)),
+            Seeding::Never => ("never", None),
+        }
+    }
 }
 
 impl Item {
@@ -98,7 +129,7 @@ pub type StoreResult<T> = Result<T, StoreError>;
 const ITEM_COLUMNS: &str = "i.id, i.info_hash, i.name, i.total_size, i.category_id, i.save_dir, i.source_url, i.added_at,
     i.completed_at, i.in_downloads, i.paused, i.files_deleted, i.only_files, i.uploaded,
     (SELECT count(*) FROM torrent_files f WHERE f.item_id = i.id),
-    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1)";
+    (SELECT f.path FROM torrent_files f WHERE f.item_id = i.id ORDER BY f.idx LIMIT 1), i.seed_mode, i.seed_ratio";
 
 fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
     let only_files: Option<String> = row.get(12)?;
@@ -119,6 +150,7 @@ fn item_from_row(row: &Row) -> rusqlite::Result<Item> {
         uploaded: row.get::<_, i64>(13)? as u64,
         file_count: row.get::<_, i64>(14)? as usize,
         first_file: row.get(15)?,
+        seeding: Seeding::from_columns(&row.get::<_, String>(16)?, row.get(17)?),
     })
 }
 
@@ -265,6 +297,18 @@ impl TorrentStore {
             params![item.id, added_at, completed_at, files_deleted, uploaded as i64],
         )?;
         Ok(self.item(item.id)?.expect("the imported record"))
+    }
+
+    pub fn set_seeding(&self, id: i64, seeding: Seeding) -> StoreResult<()> {
+        let (mode, ratio) = seeding.columns();
+        self.conn().execute("UPDATE torrent_items SET seed_mode = ?2, seed_ratio = ?3 WHERE id = ?1", params![id, mode, ratio])?;
+        Ok(())
+    }
+
+    /// «Переместить файлы»: the content lies in another folder now
+    pub fn set_save_dir(&self, id: i64, save_dir: &str) -> StoreResult<()> {
+        self.conn().execute("UPDATE torrent_items SET save_dir = ?2 WHERE id = ?1", params![id, save_dir])?;
+        Ok(())
     }
 
     /// «Скачать снова» / «Снова раздавать»: the same record goes back to the downloads

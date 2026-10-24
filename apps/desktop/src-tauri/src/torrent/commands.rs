@@ -7,7 +7,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
 use super::backup::RestoreReport;
-use super::{AddRequest, ArchiveEntry, CategoryView, Finished, Preview, PreviewSource, TorrentDetails, Torrents, TorrentsUpdate};
+use super::store::Seeding;
+use super::{AddRequest, ArchiveEntry, CategoryView, Finished, Preview, PreviewSource, Tick, TorrentDetails, Torrents, TorrentsUpdate};
 use crate::error::{AppError, AppResult};
 
 /// Every second: the downloads with their numbers
@@ -21,6 +22,8 @@ pub const NOTICE_EVENT: &str = "torrents://notice";
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum TorrentNotice {
     Finished { name: String, archived: bool },
+    /// Its own ratio is reached: to the archive
+    Seeded { name: String, ratio: f64 },
 }
 
 impl From<anyhow::Error> for AppError {
@@ -57,10 +60,16 @@ pub fn spawn_updates(
         loop {
             interval.tick().await;
             match torrents.tick().await {
-                Ok((update, finished)) => {
+                Ok(Tick { update, finished, seeded }) => {
                     on_update(&update);
                     if let Err(e) = app.emit(UPDATE_EVENT, update) {
                         eprintln!("[torrents] emit: {e}");
+                    }
+                    for (name, ratio) in seeded {
+                        if let Err(e) = app.emit(NOTICE_EVENT, TorrentNotice::Seeded { name, ratio }) {
+                            eprintln!("[torrents] emit: {e}");
+                        }
+                        changed(&app);
                     }
                     for done in finished {
                         on_finished(&done);
@@ -228,4 +237,36 @@ pub async fn torrent_restore_archive(app: AppHandle, torrents: Service<'_>, path
     let report = torrents.restore_archive(std::path::Path::new(&path))?;
     changed(&app);
     Ok(report)
+}
+
+/// SPEC 4.3 «Параметры торрента»: «Раздача: как в настройках / до рейтинга / не раздавать»
+#[tauri::command]
+pub fn torrent_set_seeding(torrents: Service<'_>, id: i64, seeding: Seeding) -> AppResult<()> {
+    Ok(torrents.set_seeding(id, seeding)?)
+}
+
+/// «Проверить файлы»: every piece on disk is checked again
+#[tauri::command]
+pub async fn torrent_recheck(app: AppHandle, torrents: Service<'_>, id: i64) -> AppResult<()> {
+    torrents.recheck(id).await?;
+    changed(&app);
+    Ok(())
+}
+
+/// «Переобъявить»: trackers, DHT and LSD are asked for peers now
+#[tauri::command]
+pub async fn torrent_reannounce(torrents: Service<'_>, id: i64) -> AppResult<()> {
+    Ok(torrents.reannounce(id).await?)
+}
+
+/// «Сохранить .torrent»: the archive's copy into a chosen file
+#[tauri::command]
+pub fn torrent_save_file(torrents: Service<'_>, id: i64, path: String) -> AppResult<()> {
+    Ok(torrents.save_torrent_file(id, std::path::Path::new(&path))?)
+}
+
+/// The «Скорость» tab: a sample a second for the last 30 minutes, [download, upload]
+#[tauri::command]
+pub fn torrent_speed_history(torrents: Service<'_>, id: i64) -> Vec<[u64; 2]> {
+    torrents.speed_history(id)
 }

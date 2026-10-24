@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const tauri = vi.hoisted(async () => (await import('../../../test/tauriMock')).createTauriMock())
 vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
-const { ArchiveActions } = await import('./ArchiveActions')
+const { ArchiveActions, ArchiveContextMenu } = await import('./ArchiveActions')
 const { downloadsView, torrentsStore } = await import('../../../entities/torrent')
 const { trackersStore } = await import('../../../entities/tracker')
 const { archiveEntry, categories } = await import('../../../test/torrents')
@@ -78,5 +78,19 @@ describe('ArchiveActions (integration)', () => {
     expect(mock.calls()).toEqual([])
     expect(downloadsView.get().tab).toBe('trackers')
     expect(trackersStore.get().pending).toBe('https://kinozal.tv/details.php?id=1')
+  })
+
+  it('правый клик по записи — то же меню', async () => {
+    render(
+      <ToastProvider>
+        <ArchiveContextMenu entry={archiveEntry({ status: 'onDisk' })}>
+          <div>Severance.S02.1080p</div>
+        </ArchiveContextMenu>
+      </ToastProvider>,
+    )
+    const user = userEvent.setup()
+    await user.pointer({ keys: '[MouseRight]', target: screen.getByText('Severance.S02.1080p') })
+    await user.click(await screen.findByRole('menuitem', { name: 'Снова раздавать' }))
+    expect(mock.calls()[0]).toEqual(['torrent_seed_again', { id: 11 }])
   })
 })

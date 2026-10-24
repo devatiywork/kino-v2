@@ -201,4 +201,40 @@ test.describe('торренты', () => {
     await kino.invoke('plugin:window|close', { label: 'main' }).catch(() => undefined)
     await closed
   })
+
+  test('подробности: части, трекеры, скорость; параметры — до рейтинга, проверка, перенос; правый клик', async ({ launch, workdir }) => {
+    const { torrent, film, folder } = filmTorrent(workdir)
+    const kino = await launch({ file: torrent })
+    const { page } = kino
+    await addFromDialog(page, folder)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible()
+    const details = page.getByRole('region', { name: 'Подробности торрента' })
+    await expect(details.getByRole('img', { name: 'Скачано: 100%' })).toBeVisible()
+
+    await details.getByRole('tab', { name: /^Трекеры/ }).click()
+    // Offline tests: no DHT, PeX or LSD
+    await expect(details.getByRole('row', { name: /DHT/ })).toContainText('выключено')
+    await details.getByRole('tab', { name: 'Скорость' }).click()
+    await expect(details.getByRole('img', { name: 'График скорости загрузки и отдачи' })).toBeVisible()
+
+    await details.getByRole('tab', { name: 'Параметры' }).click()
+    await details.getByRole('radio', { name: 'До рейтинга' }).click({ force: true })
+    const [entry] = await kino.invoke<{ id: number }[]>('torrent_archive', { query: '' })
+    await expect.poll(async () => (await kino.invoke<{ seeding: unknown }>('torrent_details', { id: entry?.id })).seeding).toEqual({ mode: 'ratio', ratio: 2 })
+    await details.getByRole('button', { name: 'Проверить файлы' }).click()
+    await expect(page.getByText('Файлы проверяются заново')).toBeVisible()
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible({ timeout: 30_000 })
+
+    // «Переместить файлы…» picks the folder in a system dialog: its command goes in directly
+    const moved = join(workdir, 'moved')
+    mkdirSync(moved)
+    await kino.invoke('app_move_torrent', { id: entry?.id, folder: moved })
+    await expect.poll(() => existsSync(join(moved, 'Film.2014.mkv'))).toBe(true)
+    expect(existsSync(film)).toBe(false)
+    await expect(row(page, 'Film.2014.mkv').getByText('Раздача')).toBeVisible({ timeout: 30_000 })
+
+    await row(page, 'Film.2014.mkv').click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Убрать из загрузок' }).click()
+    await expect(page.getByText('Убрано из загрузок. Файлы на месте, запись осталась в архиве')).toBeVisible()
+  })
 })

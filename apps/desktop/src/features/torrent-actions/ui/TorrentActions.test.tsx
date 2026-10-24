@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const tauri = vi.hoisted(async () => (await import('../../../test/tauriMock')).createTauriMock())
 vi.mock('../../../shared/ipc/bridge', async () => (await tauri).bridge)
 
-const { TorrentActions } = await import('./TorrentActions')
+const { TorrentActions, TorrentContextMenu } = await import('./TorrentActions')
 const { downloadsView, torrentsStore } = await import('../../../entities/torrent')
 const { activeTorrent, categories } = await import('../../../test/torrents')
 const mock = await tauri
@@ -64,5 +64,19 @@ describe('TorrentActions (integration)', () => {
     expect(screen.getByRole('menuitem', { name: 'Категория: Сериалы' })).toHaveAttribute('aria-disabled', 'true')
     await user.click(screen.getByRole('menuitem', { name: 'Категория: Игры' }))
     expect(mock.calls()).toEqual([['torrent_set_category', { id: 7, categoryId: 2 }]])
+  })
+
+  it('правый клик по строке — то же меню', async () => {
+    render(
+      <ToastProvider>
+        <TorrentContextMenu torrent={activeTorrent()}>
+          <div>Peacemaker.S02.2160p</div>
+        </TorrentContextMenu>
+      </ToastProvider>,
+    )
+    const user = userEvent.setup()
+    await user.pointer({ keys: '[MouseRight]', target: screen.getByText('Peacemaker.S02.2160p') })
+    await user.click(await screen.findByRole('menuitem', { name: 'Убрать из загрузок' }))
+    expect(mock.calls()).toEqual([['torrent_remove', { id: 7, deleteFiles: false }]])
   })
 })

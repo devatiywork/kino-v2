@@ -1,2 +1,2 @@
 export { PauseAllButton } from './ui/PauseAllButton'
-export { TorrentActions } from './ui/TorrentActions'
+export { TorrentActions, TorrentContextMenu } from './ui/TorrentActions'

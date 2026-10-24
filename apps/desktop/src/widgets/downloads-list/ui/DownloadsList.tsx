@@ -2,7 +2,7 @@ import { Button, IconDownload, IconPlay } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { categoryName, downloadsView, matchesCategory, TorrentRow, useDownloadsView, useTorrents } from '../../../entities/torrent'
 import { useOpenVideo } from '../../../features/open-video'
-import { TorrentActions } from '../../../features/torrent-actions'
+import { TorrentActions, TorrentContextMenu } from '../../../features/torrent-actions'
 
 /** SPEC 4.3: the torrents in the downloads, filtered by category; «Смотреть» opens a ready video */
 export function DownloadsList() {
@@ -30,22 +30,24 @@ export function DownloadsList() {
     <ul aria-label={t('tabs.downloads')} className="flex flex-col gap-2">
       {shown.map((torrent) => (
         <li key={torrent.id}>
-          <TorrentRow
-            torrent={torrent}
-            category={categoryName(torrent.categoryId, categories, t)}
-            selected={selected === torrent.id}
-            onSelect={() => downloadsView.set({ selected: selected === torrent.id ? null : torrent.id })}
-            actions={
-              <>
-                {torrent.video ? (
-                  <Button variant="ghost" size="sm" icon={<IconPlay size={14} />} onPress={() => void openPath(torrent.video ?? '')}>
-                    {t('watch')}
-                  </Button>
-                ) : null}
-                <TorrentActions torrent={torrent} />
-              </>
-            }
-          />
+          <TorrentContextMenu torrent={torrent}>
+            <TorrentRow
+              torrent={torrent}
+              category={categoryName(torrent.categoryId, categories, t)}
+              selected={selected === torrent.id}
+              onSelect={() => downloadsView.set({ selected: selected === torrent.id ? null : torrent.id })}
+              actions={
+                <>
+                  {torrent.video ? (
+                    <Button variant="ghost" size="sm" icon={<IconPlay size={14} />} onPress={() => void openPath(torrent.video ?? '')}>
+                      {t('watch')}
+                    </Button>
+                  ) : null}
+                  <TorrentActions torrent={torrent} />
+                </>
+              }
+            />
+          </TorrentContextMenu>
         </li>
       ))}
     </ul>

@@ -7,12 +7,13 @@ import { openMagnetDialog, openTorrentFile, submitMagnet } from '../../features/
 import { playerIpc } from '../../shared/ipc/player'
 import { torrentsIpc } from '../../shared/ipc/torrents'
 import { trackersIpc } from '../../shared/ipc/trackers'
+import { formatDecimal } from '../../shared/lib/formatBytes'
 
 const report = (what: string) => (e: unknown) => console.error(`[app] ${what}`, e)
 
 /** What the core tells on its own: a remembered track is missing, the next episode started */
 export function useCoreNotices(): void {
-  const { t } = useTranslation('library')
+  const { t, i18n } = useTranslation('library')
   const toast = useToast()
 
   // SPEC 3.3: «Дорожка "LostFilm" не найдена, выбрана: English»
@@ -36,8 +37,11 @@ export function useCoreNotices(): void {
   // SPEC 4.6: a torrent finished (and with «Не раздавать после загрузки» went to the archive)
   useEffect(() => {
     const unlisten = torrentsIpc.onNotice((notice) => {
-      const key = notice.archived ? 'toast.finishedArchived' : 'toast.finished'
-      toast.show({ title: t(key, { ns: 'torrents', name: notice.name }), tone: 'success', duration: 6000 })
+      const title =
+        notice.type === 'seeded'
+          ? t('toast.seeded', { ns: 'torrents', name: notice.name, ratio: formatDecimal(notice.ratio, i18n.language) })
+          : t(notice.archived ? 'toast.finishedArchived' : 'toast.finished', { ns: 'torrents', name: notice.name })
+      toast.show({ title, tone: 'success', duration: 6000 })
     })
     return () => {
       unlisten.then((u) => u()).catch(report('torrent notices'))

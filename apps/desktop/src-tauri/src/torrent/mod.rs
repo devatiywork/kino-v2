@@ -4,6 +4,8 @@
 pub mod backup;
 pub mod commands;
 pub mod engine;
+pub mod manage;
+mod speeds;
 pub mod store;
 
 use std::collections::HashMap;
@@ -20,7 +22,7 @@ use crate::db::now_ms;
 use crate::power::KeepAwake;
 use crate::settings::SettingsStore;
 use engine::{Engine, EngineOptions, Metainfo};
-use store::{Category, FileEntry, Item, NewItem, TorrentStore};
+use store::{Category, FileEntry, Item, NewItem, Seeding, TorrentStore};
 
 /// A magnet's metadata comes from the peers: no answer in this time — say so
 const MAGNET_TIMEOUT: Duration = Duration::from_secs(90);
@@ -88,7 +90,7 @@ pub struct ActiveTorrent {
     pub video: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TorrentsUpdate {
     pub torrents: Vec<ActiveTorrent>,
@@ -112,6 +114,15 @@ pub enum ArchiveStatus {
 pub struct Finished {
     pub item: Item,
     pub archived: bool,
+}
+
+/// What a second of the update loop brought
+#[derive(Debug, Default)]
+pub struct Tick {
+    pub update: TorrentsUpdate,
+    pub finished: Vec<Finished>,
+    /// Torrents that reached their ratio and went to the archive: name, ratio
+    pub seeded: Vec<(String, f64)>,
 }
 
 /// A record of the archive (SPEC 4.4)
@@ -221,6 +232,18 @@ pub struct PeerView {
     pub client: Option<String>,
     pub downloaded: u64,
     pub uploaded: u64,
+    /// Bytes per second, from the counters a second ago
+    pub download_speed: u64,
+    pub upload_speed: u64,
+}
+
+/// Where else peers come from; a private torrent asks its trackers only
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Discovery {
+    pub dht: bool,
+    pub pex: bool,
+    pub lsd: bool,
 }
 
 /// The details panel (SPEC 4.3): what changes is read again every second
@@ -238,6 +261,15 @@ pub struct TorrentDetails {
     pub piece_size: u64,
     pub pieces: u64,
     pub magnet: String,
+    /// «Скачано»: the pieces on disk in up to 300 parts, 0…255 each; empty — not checked yet
+    pub piece_map: Vec<u8>,
+    /// Connected peers and all the peers known
+    pub peers_live: u32,
+    pub peers_seen: u32,
+    /// Fetched but thrown away (failed checks, duplicates)
+    pub lost: u64,
+    pub discovery: Discovery,
+    pub seeding: Seeding,
 }
 
 pub struct TorrentsOptions {
@@ -262,6 +294,10 @@ pub struct Torrents {
     files: Mutex<HashMap<i64, Vec<FileEntry>>>,
     /// «Не засыпать во время загрузок»
     awake: KeepAwake,
+    /// Tests: no DHT, LSD or trackers
+    offline: bool,
+    speeds: Mutex<speeds::SpeedHistory>,
+    peer_speeds: Mutex<speeds::PeerSpeeds>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -290,6 +326,9 @@ impl Torrents {
             pending: Mutex::default(),
             files: Mutex::default(),
             awake: KeepAwake::for_downloads(),
+            offline: options.offline,
+            speeds: Mutex::default(),
+            peer_speeds: Mutex::default(),
         });
         torrents.reconcile().await?;
         Ok(torrents)
@@ -502,23 +541,34 @@ impl Torrents {
     /// its completion date; with «Не раздавать после загрузки» it goes to the archive at once
     /// (SPEC 4.3). Returns the list and the names that finished just now (and whether they
     /// went to the archive) — exactly once each
-    pub async fn tick(&self) -> anyhow::Result<(TorrentsUpdate, Vec<Finished>)> {
-        let mut finished = Vec::new();
-        let no_seeding = self.settings.read(|s| s.no_seeding);
+    pub async fn tick(&self) -> anyhow::Result<Tick> {
+        let mut tick = Tick::default();
         for item in self.store.in_downloads()? {
-            if item.completed_at.is_some() || self.active_row(&item).state != TorrentState::Seeding {
+            let row = self.active_row(&item);
+            if item.completed_at.is_some() {
+                // Seeding until its own ratio (SPEC 4.3 «Параметры торрента»)
+                if row.state == TorrentState::Seeding && Self::seeded_enough(item.seeding, row.ratio) {
+                    self.leave(&item, false).await?;
+                    tick.seeded.push((item.name.clone(), row.ratio));
+                }
+                continue;
+            }
+            if row.state != TorrentState::Seeding {
                 continue;
             }
             self.store.set_completed(item.id, now_ms())?;
-            if no_seeding {
+            let archived = !self.seeds_after_download(item.seeding);
+            if archived {
                 self.leave(&item, false).await?;
             }
-            finished.push(Finished { item, archived: no_seeding });
+            tick.finished.push(Finished { item, archived });
         }
         let update = self.snapshot()?;
+        lock(&self.speeds).record(update.torrents.iter().map(|t| (t.id, t.download_speed, t.upload_speed)));
         let downloading = update.torrents.iter().any(|t| t.state == TorrentState::Downloading);
         self.awake.set(downloading && self.settings.read(|s| s.keep_awake_downloads));
-        Ok((update, finished))
+        tick.update = update;
+        Ok(tick)
     }
 
     /// Something downloads or seeds: closing the window hides Kino in the tray (SPEC 4.6)
@@ -654,29 +704,40 @@ impl Torrents {
             .into_iter()
             .map(|f| FileProgress { done: progress.get(f.index).copied().unwrap_or(0), selected: selected(f.index), index: f.index, path: f.path, size: f.size })
             .collect();
+        let live_stats = handle.as_ref().and_then(|t| t.stats().live);
+        let now = std::time::Instant::now();
         let peers = handle
             .and_then(|t| t.live())
             .map(|live| {
+                let mut speeds = lock(&self.peer_speeds);
                 let mut peers: Vec<PeerView> = live
                     .per_peer_stats_snapshot(Default::default())
                     .peers
                     .into_iter()
-                    .map(|(address, stats)| PeerView {
-                        address,
-                        connection: stats
-                            .conn_kind
-                            .and_then(|kind| serde_json::to_value(kind).ok())
-                            .and_then(|v| v.as_str().map(str::to_uppercase))
-                            .unwrap_or_default(),
-                        client: stats.client_name,
-                        downloaded: stats.counters.fetched_bytes,
-                        uploaded: stats.counters.uploaded_bytes,
+                    .map(|(address, stats)| {
+                        let (downloaded, uploaded) = (stats.counters.fetched_bytes, stats.counters.uploaded_bytes);
+                        let (download_speed, upload_speed) = speeds.update(id, &address, downloaded, uploaded, now);
+                        PeerView {
+                            connection: stats
+                                .conn_kind
+                                .and_then(|kind| serde_json::to_value(kind).ok())
+                                .and_then(|v| v.as_str().map(str::to_uppercase))
+                                .unwrap_or_default(),
+                            client: stats.client_name,
+                            address,
+                            downloaded,
+                            uploaded,
+                            download_speed,
+                            upload_speed,
+                        }
                     })
                     .collect();
+                speeds.keep_only(id, &peers.iter().map(|p| p.address.clone()).collect::<Vec<_>>());
                 peers.sort_by(|a, b| b.downloaded.cmp(&a.downloaded).then(b.uploaded.cmp(&a.uploaded)));
                 peers
             })
             .unwrap_or_default();
+        let discovering = !private && !self.offline;
         Ok(TorrentDetails {
             files,
             peers,
@@ -688,6 +749,13 @@ impl Torrents {
             piece_size: u64::from(lengths.default_piece_length()),
             pieces: u64::from(lengths.total_pieces()),
             magnet: engine::magnet_of(&bytes)?,
+            piece_map: self.engine.piece_map(&item.info_hash, 300).unwrap_or_default(),
+            peers_live: live_stats.as_ref().map_or(0, |s| s.snapshot.peer_stats.live),
+            peers_seen: live_stats.as_ref().map_or(0, |s| s.snapshot.peer_stats.seen),
+            lost: live_stats.as_ref().map_or(0, |s| s.snapshot.fetched_bytes.saturating_sub(s.snapshot.downloaded_and_checked_bytes)),
+            // PeX has no switch in the engine: on whenever the torrent is not private
+            discovery: Discovery { dht: discovering, pex: discovering, lsd: discovering },
+            seeding: item.seeding,
         })
     }
 

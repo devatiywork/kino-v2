@@ -115,7 +115,13 @@ export interface PeerView {
   client: string | null
   downloaded: number
   uploaded: number
+  /** Bytes per second */
+  downloadSpeed: number
+  uploadSpeed: number
 }
+
+/** SPEC 4.3: how long a torrent seeds after it is downloaded */
+export type Seeding = { mode: 'default' } | { mode: 'ratio'; ratio: number } | { mode: 'never' }
 
 export interface TorrentDetails {
   files: FileProgress[]
@@ -128,9 +134,21 @@ export interface TorrentDetails {
   pieceSize: number
   pieces: number
   magnet: string
+  /** «Скачано»: up to 300 parts, 0…255 each; empty — not checked yet */
+  pieceMap: number[]
+  peersLive: number
+  peersSeen: number
+  /** Fetched and thrown away */
+  lost: number
+  /** Where else peers come from; a private torrent asks its trackers only */
+  discovery: { dht: boolean; pex: boolean; lsd: boolean }
+  seeding: Seeding
 }
 
-export type TorrentNotice = { type: 'finished'; name: string; archived: boolean }
+export type TorrentNotice =
+  | { type: 'finished'; name: string; archived: boolean }
+  /** Its own ratio is reached: to the archive */
+  | { type: 'seeded'; name: string; ratio: number }
 
 /** Typed wrappers over the torrent commands (src-tauri/src/torrent/commands.rs) */
 export const torrentsIpc = {
@@ -160,6 +178,16 @@ export const torrentsIpc = {
   exportArchive: (path: string) => invoke<number>('torrent_export_archive', { path }),
   /** What the archive lacks comes back from a backup */
   restoreArchive: (path: string) => invoke<RestoreReport>('torrent_restore_archive', { path }),
+  /** SPEC 4.3 «Параметры торрента» */
+  setSeeding: (id: number, seeding: Seeding) => invoke<void>('torrent_set_seeding', { id, seeding }),
+  /** Every piece on disk is checked again */
+  recheck: (id: number) => invoke<void>('torrent_recheck', { id }),
+  /** Trackers, DHT and LSD are asked for peers now */
+  reannounce: (id: number) => invoke<void>('torrent_reannounce', { id }),
+  /** The archive's .torrent into a chosen file */
+  saveFile: (id: number, path: string) => invoke<void>('torrent_save_file', { id, path }),
+  /** A sample a second for the last 30 minutes: [download, upload] */
+  speedHistory: (id: number) => invoke<[number, number][]>('torrent_speed_history', { id }),
   seedAgain: (id: number) => invoke<void>('torrent_seed_again', { id }),
   /** «Удалить из архива»: the record and its .torrent; files on disk stay */
   deleteRecord: (id: number) => invoke<void>('torrent_delete_record', { id }),

@@ -165,6 +165,28 @@ pub async fn app_free_season(
     Ok(space)
 }
 
+/// SPEC 4.3 «Переместить файлы»: the torrent's content goes to another folder, the library's
+/// rows of its episodes move with it (their progress stays)
+#[tauri::command]
+pub async fn app_move_torrent(
+    app: AppHandle,
+    library: State<'_, Arc<Library>>,
+    torrents: State<'_, Arc<Torrents>>,
+    id: i64,
+    folder: String,
+) -> AppResult<()> {
+    torrents.move_to(id, &folder).await?;
+    if let Some(item) = torrents.store().item(id)? {
+        match link(&library, &torrents, &item) {
+            Ok(0) => {}
+            Ok(_) => emit(&app, LIBRARY_CHANGED),
+            Err(e) => eprintln!("[links] relink {}: {e:#}", item.name),
+        }
+    }
+    emit(&app, TORRENTS_CHANGED);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

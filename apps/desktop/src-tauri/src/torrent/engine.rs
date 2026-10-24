@@ -55,6 +55,18 @@ fn files_of<B: AsRef<[u8]>>(info: &librqbit::ValidatedTorrentMetaV1Info<B>) -> V
         .collect()
 }
 
+/// `count` pieces (the bitfield may be longer) into at most `parts` parts, each 0…255
+pub fn squeeze(haves: &[bool], count: usize, parts: usize) -> Vec<u8> {
+    let parts = parts.min(count);
+    (0..parts)
+        .map(|part| {
+            let (from, to) = (part * count / parts, ((part + 1) * count / parts).max(part * count / parts + 1));
+            let have = haves.get(from..to.min(haves.len())).map_or(0, |pieces| pieces.iter().filter(|&&have| have).count());
+            (have * 255 / (to - from)) as u8
+        })
+        .collect()
+}
+
 /// Reads a .torrent file: name, files, hash — without the engine
 pub fn read_torrent(bytes: Bytes) -> anyhow::Result<Metainfo> {
     let torrent = librqbit::torrent_from_bytes(&bytes).context("not a .torrent file")?;
@@ -186,6 +198,25 @@ impl Engine {
         Ok(())
     }
 
+    /// The pieces on disk squeezed into at most `parts` parts: 0…255 — how much of each part is
+    /// there (SPEC 4.3 «Скачано»). None — the torrent is not in the engine or not checked yet
+    pub fn piece_map(&self, info_hash: &str, parts: usize) -> Option<Vec<u8>> {
+        let api = librqbit::api::Api::new(self.session.clone(), None);
+        let (haves, count) = api.api_dump_haves(id_of(info_hash).ok()?).ok()?;
+        Some(squeeze(&haves.iter().by_vals().collect::<Vec<bool>>(), count as usize, parts))
+    }
+
+    /// «Переобъявить»: a pause and a start again rebuild the requests to the trackers, DHT and LSD
+    pub async fn reannounce(&self, info_hash: &str) -> anyhow::Result<()> {
+        let torrent = self.torrent(info_hash).context("the torrent is not in the engine")?;
+        if torrent.is_paused() {
+            return Ok(());
+        }
+        self.session.pause(&torrent).await?;
+        self.session.unpause(&torrent).await?;
+        Ok(())
+    }
+
     pub async fn set_only_files(&self, info_hash: &str, files: &[usize]) -> anyhow::Result<()> {
         let torrent = self.torrent(info_hash).context("not in the engine")?;
         self.session.update_only_files(&torrent, &files.iter().copied().collect::<HashSet<usize>>()).await?;
@@ -238,6 +269,15 @@ mod tests {
         })
         .await
         .unwrap()
+    }
+
+    #[test]
+    fn the_piece_map_is_squeezed_into_parts() {
+        let haves = [true, true, false, false, true, false];
+        assert_eq!(squeeze(&haves, 6, 3), [255, 0, 127]);
+        assert_eq!(squeeze(&haves, 6, 100), [255, 255, 0, 0, 255, 0], "never more parts than pieces");
+        assert_eq!(squeeze(&[true; 8], 5, 5), [255; 5], "the bitfield is padded to bytes");
+        assert!(squeeze(&[], 0, 10).is_empty());
     }
 
     #[test]
