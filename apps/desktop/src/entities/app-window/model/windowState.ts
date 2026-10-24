@@ -4,9 +4,11 @@ import { createStore, useStore } from '../../../shared/lib/createStore'
 interface WindowState {
   maximized: boolean
   fullscreen: boolean
+  /** «Мини-плеер»: the window is the picture alone, small and above the rest */
+  mini: boolean
 }
 
-export const windowStore = createStore<WindowState>({ maximized: false, fullscreen: false })
+export const windowStore = createStore<WindowState>({ maximized: false, fullscreen: false, mini: false })
 
 async function refresh(): Promise<void> {
   const [maximized, fullscreen] = await Promise.all([windowIpc.isMaximized(), windowIpc.isFullscreen()])

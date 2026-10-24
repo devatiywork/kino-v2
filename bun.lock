@@ -7,7 +7,7 @@
     },
     "apps/desktop": {
       "name": "@kino/desktop",
-      "version": "0.9.1",
+      "version": "0.26.2",
       "dependencies": {
         "@kino/ui": "workspace:*",
         "@tauri-apps/api": "^2.12.4",
@@ -39,7 +39,7 @@
     },
     "packages/ui": {
       "name": "@kino/ui",
-      "version": "0.5.0",
+      "version": "0.13.0",
       "dependencies": {
         "@fontsource-variable/golos-text": "^5.3.0",
         "@fontsource-variable/jetbrains-mono": "^5.3.0",

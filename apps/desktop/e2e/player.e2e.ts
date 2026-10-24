@@ -31,6 +31,48 @@ test.describe('плеер', () => {
     await expect.poll(fullscreen).toBe(false)
   })
 
+  test('качество, вес и битрейт файла; клик по видео — пауза; мини-плеер поверх окон и обратно', async ({ launch }) => {
+    const kino = await launch({ file: FILM })
+    const { page } = kino
+    await expect.poll(async () => (await kino.snapshot()).videoHeight).toBe(180)
+    await wakeControls(page)
+    // The test film: 320×180 H.264
+    await expect(page.getByTitle('Качество, размер и средний битрейт файла')).toHaveText(/^180p · H\.264 · \d+ (кБ|МБ) · \d+ кбит\/с$/)
+
+    const center = async () => {
+      const size = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }))
+      return { x: Math.round(size.w / 2), y: Math.round(size.h / 2) }
+    }
+    let at = await center()
+    await page.mouse.click(at.x, at.y)
+    await expect.poll(async () => (await kino.snapshot()).paused).toBe(true)
+    await page.mouse.click(at.x, at.y)
+    await expect.poll(async () => (await kino.snapshot()).paused).toBe(false)
+
+    const onTop = () => kino.invoke<boolean>('plugin:window|is_always_on_top', { label: 'main' })
+    const width = () => page.evaluate(() => window.innerWidth)
+    await wakeControls(page)
+    await page.getByRole('button', { name: 'Мини-плеер' }).click()
+    await expect.poll(width).toBe(480)
+    await expect.poll(onTop).toBe(true)
+    const mini = page.getByRole('region', { name: 'Мини-плеер' })
+    await expect(mini).toBeVisible()
+    // 320×180 is 16:9: 270, give or take a pixel of a scaled screen
+    expect(Math.abs((await page.evaluate(() => window.innerHeight)) - 270)).toBeLessThanOrEqual(1)
+
+    // Off the centre's play button: the picture itself
+    at = await center()
+    await page.mouse.click(at.x + 60, at.y + 40)
+    await expect.poll(async () => (await kino.snapshot()).paused).toBe(true)
+    // The window heard of the pause too, as it would have by a person's second click
+    await expect(mini.getByRole('button', { name: 'Воспроизвести' })).toBeVisible()
+    await page.mouse.dblclick(at.x + 60, at.y + 40)
+    await expect.poll(width).toBeGreaterThan(900)
+    await expect.poll(onTop).toBe(false)
+    await expect(mini).toBeHidden()
+    expect((await kino.snapshot()).paused, 'a double click is two clicks: back as it was').toBe(true)
+  })
+
   test('клик по полосе перематывает к этому месту', async ({ launch }) => {
     const kino = await launch({ file: FILM })
     const { page } = kino

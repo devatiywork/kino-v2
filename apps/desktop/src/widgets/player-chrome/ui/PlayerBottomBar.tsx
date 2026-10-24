@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { openNeighborEpisode, SEEK_STEP, seekBy, togglePause, usePlayback } from '../../../entities/playback'
 import { useHotkeyLabel } from '../../../entities/settings'
 import { FullscreenButton } from '../../../features/fullscreen'
+import { MiniPlayerButton } from '../../../features/mini-player'
 import { SpeedButton } from '../../../features/playback-speed'
 import { SeekBar } from '../../../features/seek'
 import { TracksButton } from '../../../features/switch-tracks'
@@ -109,6 +110,7 @@ export function PlayerBottomBar({ hidden, onMenuOpenChange, episodesOpen, onTogg
               {t('episodes')}
             </Button>
           ) : null}
+          <MiniPlayerButton />
           <FullscreenButton />
         </div>
       </div>

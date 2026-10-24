@@ -17,5 +17,8 @@ function checkSubtitles(): void {
 export default function globalSetup(): void {
   checkSubtitles()
   const manifest = fileURLToPath(new URL('../src-tauri/Cargo.toml', import.meta.url))
-  execFileSync('cargo', ['build', '--manifest-path', manifest], { stdio: 'inherit' })
+  // KINO_DEV_PORT: the core loads the renderer from that port (merged into tauri.conf.json)
+  const port = process.env.KINO_DEV_PORT
+  const env = port ? { ...process.env, TAURI_CONFIG: JSON.stringify({ build: { devUrl: `http://127.0.0.1:${port}` } }) } : process.env
+  execFileSync('cargo', ['build', '--manifest-path', manifest], { stdio: 'inherit', env })
 }

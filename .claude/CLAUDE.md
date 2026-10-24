@@ -48,13 +48,18 @@ Themes: dark (default), light, system. The video area and controls over video ar
 ## Commands
 
 - `bun install` — install dependencies
-- `bun run dev` — the app in dev mode (Vite on http://127.0.0.1:5181 + Tauri/Rust core)
+- `bun run dev` — the app in dev mode (Vite on http://127.0.0.1:5181 + Tauri/Rust core). The debug build keeps its own
+  data in `%APPDATA%\local.kino.app.dev` (its WebView2 profile too), says «dev» in the title bar, the taskbar and the
+  tray: it never shares the history, the torrents or the one window with the installed Kino
 - `bun run ui` — UI library showcase on http://127.0.0.1:5180
 - `bun run test` — tests in all packages
 - `bun run typecheck` — TypeScript in all packages
-- `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`)
+- `bun run e2e` — E2E tests: builds the debug core, starts Vite, drives the real app through Playwright (needs `vendor/libmpv`).
+  `KINO_DEV_PORT=5191` — next to a running `bun run dev` of another checkout (a git worktree): its own Vite, and the core is
+  built for that port (TAURI_CONFIG merges `build.devUrl`)
 - `bun run --filter @kino/desktop build` — release build and the installer: `apps/desktop/src-tauri/target/release/bundle/nsis/Kino v2_<version>_x64-setup.exe`
-  (per user, no admin; libmpv next to the exe, file associations, `magnet:`, Kino in Windows' «Приложения по умолчанию»)
+  (for all users, in Program Files, asks for admin rights; libmpv next to the exe, file associations, `magnet:`, «Kino v2»
+  in Windows' «Приложения по умолчанию»)
 - `powershell -ExecutionPolicy Bypass -File apps/desktop/e2e/fixtures/make-media.ps1 -Mpv <mpv.exe>` — regenerate the test clips (committed; rerun only to change them)
 - `bun scripts/fetch-filters.ts` — refresh the ad blocker's list (RU AdList + EasyList) in `apps/desktop/src-tauri/filters/` before a release
 - `bun scripts/make-icons.ts` — Kino's icon from `apps/desktop/src-tauri/icons/source/*.svg`: icon.ico (16–32 px from icon-small.svg, 48–256 px from icon.svg) and icon.png
@@ -85,7 +90,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          category named like a video shelf joins it; useShelves; LibraryShelf, TorrentShelf),
                          archive-list (search, category, «Когда добавлен», sort, month groups, the backup menu), trackers-pane (bookmarks + browser bar + the place the
                          native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
-    features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, player-hotkeys,
+    features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, mini-player, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
                          add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
                          torrent-actions (pause, menu, delete with files; the menu also on a right click — useTorrentMenu;
@@ -100,7 +105,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          rebind with swap, key labels, useHotkeyLabel),
                          library (store: continue/history/series/films/folders, libraryView (the chosen shelf),
                          useSeriesDetail, labels, day grouping, Thumb, ContinueCard, FilmCard, HistoryRow, SeriesCard,
-                         EpisodeRow, EpisodeDots), app-window,
+                         EpisodeRow, EpisodeDots), app-window (maximized, fullscreen, the mini player: the window
+                         shrinks to the picture in the corner, above the rest, and comes back as it was),
                          torrent (store mirrored from the core: downloads every second, categories, archive; downloadsView;
                          labels, periods of the archive; TorrentRow, ArchiveRow, TorrentBar, CategoryDialog, SourceDialog;
                          categories and record helpers),
@@ -153,7 +159,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          every second, torrents://changed, torrents://notice; settings://changed when the schedule switched
                          the limits). Engine network options (port, UPnP, protocol, peers, SOCKS5, DHT, LSD) are read at
                          start only. Knows nothing about the player
-    src/trackers/      — Trackers (the browser webview: open, layout, reload; interception: magnet → trackers://magnet,
+    src/trackers/      — Trackers (the browser: a webview per site — a tab, kept alive, at most 6, the one used longest ago
+                         closes; the shown one is laid over the tab, the rest hidden; open, layout, reload; interception:
+                         magnet → trackers://magnet,
                          a download named .torrent or unknown (dl.php) → <data>\trackers\downloads, kept and sent as
                          trackers://torrent only if it is a .torrent inside, anything else not downloaded or deleted →
                          trackers://refused; trackers://state with the address, can-go-back / forward and the ads
@@ -183,7 +191,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
     windows/hooks.nsh  — the installer's own steps: Kino's capabilities for «Приложения по умолчанию»
                          (bundle settings, file associations and the `magnet:` scheme are in tauri.conf.json; the
                          installer is per machine: C:\Program Files\Kino v2, asks for admin rights, the registry under HKLM)
-  data                 — %APPDATA%\local.kino.app: kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
+  data                 — %APPDATA%\local.kino.app (a debug build: local.kino.app.dev): kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
                          trackers\downloads (.torrent files the trackers browser caught, cleared at start)
 packages/ui/           — @kino/ui, our UI library

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { setFullscreen, toggleFullscreen, windowStore } from '../../../entities/app-window'
+import { leaveMini, setFullscreen, toggleFullscreen, windowStore } from '../../../entities/app-window'
 import {
   changeVolume,
   openNeighborEpisode,
@@ -13,14 +13,17 @@ import {
 import { keymapOf, resolveHotkeys, settingsStore, type PlayerAction } from '../../../entities/settings'
 import { resolvePlayerKey } from './playerKeymap'
 
+const expand = () => void leaveMini().catch((e: unknown) => console.error('[window] mini player', e))
+
 const RUN: Record<PlayerAction, () => void> = {
   togglePause,
   seekBack: () => seekBy(-SEEK_STEP),
   seekForward: () => seekBy(SEEK_STEP),
   volumeUp: () => changeVolume(VOLUME_STEP),
   volumeDown: () => changeVolume(-VOLUME_STEP),
-  toggleFullscreen,
-  exitFullscreen: () => setFullscreen(false),
+  // In the mini player both bring the full window back
+  toggleFullscreen: () => (windowStore.get().mini ? expand() : toggleFullscreen()),
+  exitFullscreen: () => (windowStore.get().mini ? expand() : setFullscreen(false)),
   toggleMute,
   toggleSubtitles,
   nextEpisode: () => void openNeighborEpisode(1),
@@ -41,8 +44,8 @@ export function usePlayerHotkeys(enabled = true): void {
       // The keys of the settings at the moment of the press: a remap works at once
       const action = resolvePlayerKey(e, keymapOf(resolveHotkeys(settingsStore.get().hotkeys)))
       if (!action) return
-      // Escape outside fullscreen is not ours
-      if (action === 'exitFullscreen' && !windowStore.get().fullscreen) return
+      // Escape outside fullscreen and the mini player is not ours
+      if (action === 'exitFullscreen' && !windowStore.get().fullscreen && !windowStore.get().mini) return
       e.preventDefault()
       e.stopPropagation()
       if (e.repeat && !REPEATABLE.has(action)) return

@@ -22,6 +22,24 @@ export function togglePause(): void {
   run(playerIpc.setPaused(!paused), 'pause')
 }
 
+/** What the first click of a possible double click found: the second one puts it back */
+let pausedBeforeClick: boolean | null = null
+
+/**
+ * A click on the picture pauses or plays. The second click of a double click (fullscreen, the
+ * full window) puts back what the first one changed — from what it found, not from the state,
+ * which the core may not have reported yet
+ */
+export function clickVideo(detail: number): void {
+  if (detail === 1) {
+    pausedBeforeClick = playbackStore.get().paused
+    togglePause()
+  } else if (detail === 2 && pausedBeforeClick != null) {
+    run(playerIpc.setPaused(pausedBeforeClick), 'pause')
+    pausedBeforeClick = null
+  }
+}
+
 export function seekBy(seconds: number): void {
   run(playerIpc.seek(seconds, 'relative'), 'seek')
 }

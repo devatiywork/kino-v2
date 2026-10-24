@@ -1,5 +1,6 @@
-//! The trackers browser (SPEC 4.5): web pages inside Kino, in a webview of its own laid over the
-//! «Трекеры» tab. The page is remote: Tauri gives a remote origin no command unless a capability
+//! The trackers browser (SPEC 4.5): web pages inside Kino, in webviews of their own laid over the
+//! «Трекеры» tab — a tab per site, kept alive, so switching bookmarks shows a page and does not
+//! load it again. The page is remote: Tauri gives a remote origin no command unless a capability
 //! names its URL, and none does. What the page tries to do is decided here: downloads of .torrent
 //! files and magnet links become the add dialog, any other page — of whatever site — stays
 //! inside (nothing goes to the default browser by itself), Kino's own pages are out of reach
@@ -28,7 +29,7 @@ use adblock::AdBlocker;
 use rules::Navigation;
 use store::BookmarkStore;
 
-/// The webview's label: no capability lists it, and its pages are remote anyway
+/// The tab webviews' labels start so: no capability lists them, and their pages are remote anyway
 pub const LABEL: &str = "trackers";
 /// Address and loading of the page — for the toolbar
 pub const STATE_EVENT: &str = "trackers://state";
@@ -77,12 +78,21 @@ pub struct Bounds {
     pub height: f64,
 }
 
-/// What the webview's handlers share with the commands
+/// What every tab's handlers share with the commands
 struct Shared {
     app: AppHandle,
-    page: Mutex<PageState>,
     downloads_dir: PathBuf,
     app_origins: Vec<Url>,
+    /// The tab over the «Трекеры» tab: only its state goes to the toolbar
+    active: Mutex<Option<String>>,
+}
+
+/// One site's page, kept alive while another one is shown: switching back is instant and the
+/// page is where it was left
+struct Tab {
+    key: String,
+    shared: Arc<Shared>,
+    page: Mutex<PageState>,
     /// The last address the page went to: its own navigation is never blocked
     navigating: Mutex<Option<String>>,
     blocked_ads: AtomicU32,
@@ -98,31 +108,40 @@ impl Shared {
             eprintln!("[trackers] emit {event}: {e}");
         }
     }
+}
+
+impl Tab {
+    fn is_active(&self) -> bool {
+        lock(&self.shared.active).as_deref() == Some(self.key.as_str())
+    }
 
     fn source(&self) -> Option<String> {
         lock(&self.page).url.clone()
     }
 
-    /// Changes the page's state and tells the toolbar
+    fn state(&self) -> PageState {
+        let mut page = lock(&self.page).clone();
+        page.blocked_ads = self.blocked_ads.load(Ordering::Relaxed);
+        page
+    }
+
+    /// Changes the page's state; the toolbar hears of it while this tab is shown
     fn update_page(&self, change: impl FnOnce(&mut PageState)) {
-        let state = {
-            let mut page = lock(&self.page);
-            change(&mut page);
-            page.blocked_ads = self.blocked_ads.load(Ordering::Relaxed);
-            page.clone()
-        };
-        self.emit(STATE_EVENT, state);
+        change(&mut lock(&self.page));
+        if self.is_active() {
+            self.shared.emit(STATE_EVENT, self.state());
+        }
     }
 
     /// A navigation or a new window: true — it opens in the trackers browser
     fn decide(&self, url: &Url) -> bool {
-        match rules::classify(url, &self.app_origins) {
+        match rules::classify(url, &self.shared.app_origins) {
             Navigation::Allow => {
                 *lock(&self.navigating) = Some(url.to_string());
                 true
             }
             Navigation::Magnet => {
-                self.emit(MAGNET_EVENT, Intercepted { target: url.to_string(), source_url: self.source() });
+                self.shared.emit(MAGNET_EVENT, Intercepted { target: url.to_string(), source_url: self.source() });
                 false
             }
             Navigation::Block => false,
@@ -133,21 +152,22 @@ impl Shared {
     /// other file (setup.exe from an ad) does not download at all; one the name tells nothing of
     /// (dl.php) downloads there and is kept only if it is a .torrent inside
     fn download(&self, event: DownloadEvent<'_>) -> bool {
+        let downloads_dir = &self.shared.downloads_dir;
         match event {
             DownloadEvent::Requested { url, destination } => match rules::download_kind(&url, destination) {
                 rules::DownloadKind::Torrent | rules::DownloadKind::Unknown => {
                     let name = destination.file_name().and_then(|n| n.to_str()).unwrap_or("download");
                     let name: String = name.chars().map(|ch| if ch.is_alphanumeric() || ".-_[]".contains(ch) { ch } else { '_' }).collect();
-                    *destination = self.downloads_dir.join(format!("{}-{name}", now_ms()));
+                    *destination = downloads_dir.join(format!("{}-{name}", now_ms()));
                     true
                 }
                 rules::DownloadKind::Other(name) => {
-                    self.emit(REFUSED_EVENT, Refused { name });
+                    self.shared.emit(REFUSED_EVENT, Refused { name });
                     false
                 }
             },
             DownloadEvent::Finished { path, success, .. } => {
-                if let Some(path) = path.filter(|p| success && p.starts_with(&self.downloads_dir)) {
+                if let Some(path) = path.filter(|p| success && p.starts_with(downloads_dir)) {
                     self.finished(&path);
                 }
                 true
@@ -165,7 +185,7 @@ impl Shared {
             if let Err(e) = std::fs::remove_file(path) {
                 eprintln!("[trackers] remove {}: {e}", path.display());
             }
-            return self.emit(REFUSED_EVENT, Refused { name });
+            return self.shared.emit(REFUSED_EVENT, Refused { name });
         }
         // dl.php that was a .torrent: the add dialog and the archive see a .torrent
         let target = if name.to_lowercase().ends_with(".torrent") {
@@ -180,14 +200,26 @@ impl Shared {
                 }
             }
         };
-        self.emit(TORRENT_EVENT, Intercepted { target: target.to_string_lossy().into_owned(), source_url: self.source() });
+        self.shared.emit(TORRENT_EVENT, Intercepted { target: target.to_string_lossy().into_owned(), source_url: self.source() });
     }
+}
+
+/// Sites kept alive at once; past that the one used longest ago closes (its login stays)
+const MAX_TABS: usize = 6;
+
+fn place(webview: &Webview, b: Bounds) -> tauri::Result<()> {
+    webview.set_position(LogicalPosition::new(b.x, b.y))?;
+    webview.set_size(LogicalSize::new(b.width.max(1.0), b.height.max(1.0)))?;
+    webview.show()
 }
 
 pub struct Trackers {
     store: BookmarkStore,
     shared: Arc<Shared>,
-    webview: Mutex<Option<Webview>>,
+    /// The tabs, the one used last at the end
+    tabs: Mutex<Vec<(Arc<Tab>, Webview)>>,
+    /// Labels of the tab webviews: trackers-1, trackers-2…
+    next_label: AtomicU32,
     /// Parsed once, off the main thread, from Kino's start
     blocker: Arc<AdBlocker>,
 }
@@ -205,15 +237,9 @@ impl Trackers {
         app_origins.extend(app.config().build.dev_url.clone());
         Ok(Self {
             store: BookmarkStore::open(db_path)?,
-            shared: Arc::new(Shared {
-                app: app.clone(),
-                page: Mutex::default(),
-                downloads_dir,
-                app_origins,
-                navigating: Mutex::default(),
-                blocked_ads: AtomicU32::new(0),
-            }),
-            webview: Mutex::default(),
+            shared: Arc::new(Shared { app: app.clone(), downloads_dir, app_origins, active: Mutex::default() }),
+            tabs: Mutex::default(),
+            next_label: AtomicU32::new(1),
             // Parsed in the background from the start: the first page of the tab is already clean
             blocker: AdBlocker::start(),
         })
@@ -223,27 +249,84 @@ impl Trackers {
         &self.store
     }
 
+    /// The shown tab's page
     pub fn page(&self) -> PageState {
-        lock(&self.shared.page).clone()
+        self.active().map(|(tab, _)| tab.state()).unwrap_or_default()
     }
 
-    /// A bookmark or a typed address; the first time the webview is made
-    pub fn open(&self, url: Url, bounds: Bounds) -> AppResult<()> {
-        let mut webview = lock(&self.webview);
-        if let Some(existing) = webview.as_ref() {
-            existing.navigate(url)?;
-            drop(webview);
-            return self.layout(Some(bounds));
+    fn active(&self) -> Option<(Arc<Tab>, Webview)> {
+        let key = lock(&self.shared.active).clone()?;
+        lock(&self.tabs).iter().find(|(tab, _)| tab.key == key).cloned()
+    }
+
+    /// A site in the tab `key` (a bookmark's, or of the address typed): an open tab only shows
+    /// unless `navigate`; a new one is made with the page. The rest hide
+    pub fn open(&self, url: Url, bounds: Bounds, key: &str, navigate: bool) -> AppResult<()> {
+        let mut tabs = lock(&self.tabs);
+        match tabs.iter().position(|(tab, _)| tab.key == key) {
+            Some(i) => {
+                let entry = tabs.remove(i);
+                if navigate {
+                    entry.1.navigate(url)?;
+                }
+                tabs.push(entry);
+            }
+            None => {
+                let made = self.make(url, key, bounds)?;
+                tabs.push(made);
+                while tabs.len() > MAX_TABS {
+                    let (old, webview) = tabs.remove(0);
+                    if let Err(e) = webview.close() {
+                        eprintln!("[trackers] close {}: {e}", old.key);
+                    }
+                }
+            }
         }
+        *lock(&self.shared.active) = Some(key.to_string());
+        for (tab, webview) in tabs.iter() {
+            if tab.key == key {
+                place(webview, bounds)?;
+                self.shared.emit(STATE_EVENT, tab.state());
+            } else {
+                webview.hide()?;
+            }
+        }
+        Ok(())
+    }
+
+    /// A deleted bookmark's tab goes; when it was shown, nothing is
+    pub fn close(&self, key: &str) -> AppResult<()> {
+        let mut tabs = lock(&self.tabs);
+        if let Some(i) = tabs.iter().position(|(tab, _)| tab.key == key) {
+            let (_, webview) = tabs.remove(i);
+            webview.close()?;
+            let mut active = lock(&self.shared.active);
+            if active.as_deref() == Some(key) {
+                *active = None;
+                self.shared.emit(STATE_EVENT, PageState::default());
+            }
+        }
+        Ok(())
+    }
+
+    fn make(&self, url: Url, key: &str, bounds: Bounds) -> AppResult<(Arc<Tab>, Webview)> {
         let window = self.shared.app.get_window("main").ok_or(tauri::Error::WindowNotFound)?;
-        let (on_nav, on_new, on_download, on_load, on_history) =
-            (self.shared.clone(), self.shared.clone(), self.shared.clone(), self.shared.clone(), self.shared.clone());
-        let builder = WebviewBuilder::new(LABEL, WebviewUrl::External(url))
+        let tab = Arc::new(Tab {
+            key: key.to_string(),
+            shared: self.shared.clone(),
+            page: Mutex::default(),
+            navigating: Mutex::default(),
+            blocked_ads: AtomicU32::new(0),
+        });
+        let label = format!("{LABEL}-{}", self.next_label.fetch_add(1, Ordering::Relaxed));
+        let (on_nav, on_new, on_download, on_load, on_history) = (tab.clone(), tab.clone(), tab.clone(), tab.clone(), tab.clone());
+        let own_label = label.clone();
+        let builder = WebviewBuilder::new(&label, WebviewUrl::External(url))
             .on_navigation(move |url| on_nav.decide(url))
             .on_new_window(move |url, _features| {
-                // target=_blank and window.open: in place, there is one page
+                // target=_blank and window.open: in place, a site has one page
                 if on_new.decide(&url) {
-                    if let Some(webview) = on_new.app.get_webview(LABEL) {
+                    if let Some(webview) = on_new.shared.app.get_webview(&own_label) {
                         tauri::async_runtime::spawn(async move {
                             if let Err(e) = webview.navigate(url) {
                                 eprintln!("[trackers] open in place: {e}");
@@ -265,7 +348,7 @@ impl Trackers {
                 });
             });
         let created = window.add_child(builder, LogicalPosition::new(bounds.x, bounds.y), LogicalSize::new(bounds.width, bounds.height))?;
-        let (for_page, for_count, settings) = (self.shared.clone(), self.shared.clone(), self.shared.app.state::<Arc<SettingsStore>>().inner().clone());
+        let (for_page, for_count, settings) = (tab.clone(), tab.clone(), self.shared.app.state::<Arc<SettingsStore>>().inner().clone());
         blocking::attach(
             &created,
             blocking::Context {
@@ -285,22 +368,21 @@ impl Trackers {
                 page.can_go_forward = forward;
             });
         })?;
-        *webview = Some(created);
-        Ok(())
+        Ok((tab, created))
     }
 
-    /// «Сохранять пароли сайтов» switched in the settings
+    /// «Сохранять пароли сайтов» switched in the settings: every open site
     pub fn set_password_saving(&self, on: bool) {
-        if let Some(webview) = lock(&self.webview).as_ref() {
+        for (_, webview) in lock(&self.tabs).iter() {
             if let Err(e) = autofill::set_saving(webview, on) {
                 eprintln!("[trackers] password saving: {e}");
             }
         }
     }
 
-    /// Whether the trackers browser offers to save passwords now; None — it is not open yet
+    /// Whether the trackers browser offers to save passwords now; None — no site is open yet
     pub async fn password_saving(&self) -> AppResult<Option<bool>> {
-        let webview = lock(&self.webview).clone();
+        let webview = lock(&self.tabs).first().map(|(_, webview)| webview.clone());
         Ok(match webview {
             Some(webview) => Some(autofill::is_saving(&webview).await?),
             None => None,
@@ -314,28 +396,22 @@ impl Trackers {
         Ok(autofill::clear(&main).await?)
     }
 
-    /// Over the tab (`Some`) or hidden: another screen, a dialog over it
+    /// The shown tab over the «Трекеры» tab (`Some`) or hidden: another screen, a dialog over it
     pub fn layout(&self, bounds: Option<Bounds>) -> AppResult<()> {
-        let webview = lock(&self.webview);
-        let Some(webview) = webview.as_ref() else { return Ok(()) };
+        let Some((_, webview)) = self.active() else { return Ok(()) };
         match bounds {
-            Some(b) => {
-                webview.set_position(LogicalPosition::new(b.x, b.y))?;
-                webview.set_size(LogicalSize::new(b.width.max(1.0), b.height.max(1.0)))?;
-                webview.show()?;
-            }
+            Some(b) => place(&webview, b)?,
             None => webview.hide()?,
         }
         Ok(())
     }
 
-    /// The toolbar: back, forward, reload
+    /// The toolbar: back, forward, reload — of the shown tab
     pub fn go(&self, action: &str) -> AppResult<()> {
-        let webview = lock(&self.webview);
-        let Some(webview) = webview.as_ref() else { return Ok(()) };
+        let Some((_, webview)) = self.active() else { return Ok(()) };
         match action {
-            "back" => history::step(webview, true)?,
-            "forward" => history::step(webview, false)?,
+            "back" => history::step(&webview, true)?,
+            "forward" => history::step(&webview, false)?,
             _ => webview.reload()?,
         }
         Ok(())

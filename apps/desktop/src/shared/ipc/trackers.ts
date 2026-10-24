@@ -46,8 +46,13 @@ export const trackersIpc = {
   updateBookmark: (id: number, title: string, url: string) => invoke<void>('tracker_bookmark_update', { id, title, url }),
   deleteBookmark: (id: number) => invoke<void>('tracker_bookmark_delete', { id }),
   moveBookmark: (id: number, step: -1 | 1) => invoke<void>('tracker_bookmark_move', { id, step }),
-  /** Opens a site over the given place of the window (the first time the webview is made) */
-  open: (url: string, bounds: Bounds) => invoke<void>('tracker_open', { url, bounds }),
+  /**
+   * Shows the site's tab over the given place of the window, made with `url` the first time;
+   * `navigate` — an open tab goes to `url` as well. Each tab keeps its page alive
+   */
+  open: (url: string, bounds: Bounds, tab: string, navigate: boolean) => invoke<void>('tracker_open', { url, bounds, tab, navigate }),
+  /** A deleted bookmark's tab */
+  close: (tab: string) => invoke<void>('tracker_close', { tab }),
   /** The page over this place, or null — hidden */
   layout: (bounds: Bounds | null) => invoke<void>('tracker_layout', { bounds }),
   go: (action: BrowserAction) => invoke<void>('tracker_go', { action }),

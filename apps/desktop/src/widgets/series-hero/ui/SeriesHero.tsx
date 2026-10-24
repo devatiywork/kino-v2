@@ -17,7 +17,6 @@ function Remembered({ detail }: { detail: SeriesDetail }) {
         <dt className="text-fg-3">{t('rememberedSubs')}</dt>
         <dd className="truncate text-fg">{label(detail.subtitles, t('turnedOff'))}</dd>
       </dl>
-      <p className="text-xs text-fg-3">{t('rememberedNote')}</p>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 {
   "back": "Back",
+  "quality": "Quality, size and average bitrate of the file",
   "play": "Play",
   "pause": "Pause",
   "back10": "Back 10 seconds",
@@ -41,5 +42,8 @@
     "autoplayOn": "Autoplay on",
     "autoplayOff": "Autoplay off"
   },
-  "loading": "Loading…"
+  "loading": "Loading…",
+  "miniPlayer": "Mini player",
+  "expandPlayer": "Expand the player",
+  "closePlayer": "Close the player"
 }

@@ -42,12 +42,27 @@ fn absolute(arg: String, cwd: Option<&Path>) -> String {
     }
 }
 
-/// %APPDATA%\<identifier>: kino.db and thumbs\ (SPEC 7). KINO_DATA_DIR — a separate folder, so
-/// the E2E tests never touch the real history
+/// %APPDATA%\<identifier>: kino.db and thumbs\ (SPEC 7). A debug build (bun run dev) has its own
+/// %APPDATA%\<identifier>.dev: it never shares the history, the torrents or the one window with
+/// the installed Kino. KINO_DATA_DIR — a separate folder, so the E2E tests never touch either
 fn data_dir(identifier: &str) -> PathBuf {
-    match std::env::var_os("KINO_DATA_DIR") {
-        Some(dir) => PathBuf::from(dir),
-        None => std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_default().join(identifier),
+    if let Some(dir) = std::env::var_os("KINO_DATA_DIR") {
+        return PathBuf::from(dir);
+    }
+    let appdata = std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_default();
+    if cfg!(debug_assertions) {
+        appdata.join(format!("{identifier}.dev"))
+    } else {
+        appdata.join(identifier)
+    }
+}
+
+/// The debug build's WebView2 profile (the trackers' logins and passwords) is in its data folder
+/// too: two WebView2 apps on one profile fail, and the installed Kino keeps its own. Set before
+/// any thread or webview exists
+fn separate_webview_profile(data: &Path) {
+    if cfg!(debug_assertions) && std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").is_none() {
+        std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", data.join("webview2"));
     }
 }
 
@@ -126,6 +141,7 @@ fn place_for_tests(app: &tauri::AppHandle, config: &mut tauri::utils::config::Wi
 pub fn run() {
     let context = tauri::generate_context!();
     let data = data_dir(&context.config().identifier);
+    separate_webview_profile(&data);
     // SPEC 6 «Одно окно»: a second start hands its files to the running Kino and quits
     let listener = match instance::claim(&data, &launch_args()) {
         instance::Instance::First(listener) => listener,
@@ -201,6 +217,10 @@ pub fn run() {
             // The main window is made here and not by Tauri itself, so the E2E tests can place it
             let mut config = app.config().app.windows.first().cloned().expect("main window config");
             place_for_tests(app.handle(), &mut config)?;
+            // A debug build says so in the taskbar and Alt+Tab: it is not the installed Kino
+            if cfg!(debug_assertions) {
+                config.title = format!("{} · dev", config.title);
+            }
             let window = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?.build()?;
             let size = window.inner_size()?;
             let hwnd = window.hwnd()?.0 as isize;
@@ -339,6 +359,7 @@ pub fn run() {
             trc::tracker_bookmark_delete,
             trc::tracker_bookmark_move,
             trc::tracker_open,
+            trc::tracker_close,
             trc::tracker_layout,
             trc::tracker_go,
             trc::tracker_page,

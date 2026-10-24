@@ -1,7 +1,7 @@
 import { cn, ConfirmDialog, IconMore, IconPlus, MenuButton, Pressable } from '@kino/ui'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { bookmarkOf, refreshBookmarks, useTrackers } from '../../../entities/tracker'
+import { bookmarkOf, closeBookmarkTab, refreshBookmarks, useTrackers } from '../../../entities/tracker'
 import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { trackersIpc, type Bookmark } from '../../../shared/ipc/trackers'
 import { BookmarkDialog } from './BookmarkDialog'
@@ -95,7 +95,13 @@ export function BookmarkList({ onOpen }: { onOpen: (bookmark: Bookmark) => void 
         confirmLabel={t('trackers.deleteConfirm')}
         cancelLabel={i18n.t('actions.cancel', { ns: 'common' })}
         tone="danger"
-        onConfirm={() => removing && void run(() => trackersIpc.deleteBookmark(removing.id))}
+        onConfirm={() =>
+          removing &&
+          void run(async () => {
+            await trackersIpc.deleteBookmark(removing.id)
+            await closeBookmarkTab(removing.id)
+          })
+        }
       />
     </nav>
   )

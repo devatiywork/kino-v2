@@ -44,6 +44,15 @@ export interface PlayerSnapshot {
   subtitlesVisible: boolean
   tracks: Track[]
   hwdec: string | null
+  /** The picture as decoded: 1920×1080 */
+  videoWidth: number | null
+  videoHeight: number | null
+  /** mpv's codec name: «h264», «hevc», «av1» */
+  videoCodec: string | null
+  /** PQ or HLG: HDR10, Dolby Vision, HLG */
+  hdr: boolean
+  /** Bytes; with the duration — the average bitrate */
+  fileSize: number | null
 }
 
 export type SeekMode = 'absolute' | 'relative'

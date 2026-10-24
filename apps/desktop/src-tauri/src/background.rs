@@ -13,8 +13,9 @@ use tauri_plugin_notification::NotificationExt;
 use crate::settings::{Language, SettingsStore};
 use crate::torrent::{Finished, TorrentState, Torrents, TorrentsUpdate};
 
-/// The tray's name, as in the Start menu (productName): Kino v1 next to it is «Kino»
-const APP_NAME: &str = "Kino v2";
+/// The tray's name, as in the Start menu (productName): Kino v1 next to it is «Kino». A debug
+/// build's icon says it is not the installed one
+const APP_NAME: &str = if cfg!(debug_assertions) { "Kino v2 · dev" } else { "Kino v2" };
 
 struct Labels {
     open: &'static str,

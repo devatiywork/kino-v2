@@ -116,6 +116,9 @@ describe('BookmarkList (integration)', () => {
     expect(screen.getByRole('status', { name: 'native', hidden: true })).toHaveTextContent('hidden')
     expect(mock.calls()).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Удалить закладку' }))
-    await vi.waitFor(() => expect(mock.calls()).toEqual([['tracker_bookmark_delete', { id: 2 }], ['tracker_bookmarks', undefined]]))
+    // its tab goes with it
+    await vi.waitFor(() =>
+      expect(mock.calls()).toEqual([['tracker_bookmark_delete', { id: 2 }], ['tracker_close', { tab: 'bookmark:2' }], ['tracker_bookmarks', undefined]]),
+    )
   })
 })

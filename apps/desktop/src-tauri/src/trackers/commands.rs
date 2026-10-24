@@ -65,10 +65,17 @@ pub fn tracker_bookmark_move(trackers: Service<'_>, id: i64, step: i32) -> AppRe
     Ok(trackers.store().shift(id, step.signum())?)
 }
 
-/// Opens a site in the trackers browser over the tab (async: making a webview waits for the main thread)
+/// Shows the site's tab over the «Трекеры» tab, making it with `url` the first time; `navigate`
+/// — an open tab goes to `url` too (async: making a webview waits for the main thread)
 #[tauri::command]
-pub async fn tracker_open(trackers: Service<'_>, url: String, bounds: Bounds) -> AppResult<()> {
-    trackers.open(web_link(&url)?, bounds)
+pub async fn tracker_open(trackers: Service<'_>, url: String, bounds: Bounds, tab: String, navigate: bool) -> AppResult<()> {
+    trackers.open(web_link(&url)?, bounds, &tab, navigate)
+}
+
+/// A deleted bookmark's tab
+#[tauri::command]
+pub async fn tracker_close(trackers: Service<'_>, tab: String) -> AppResult<()> {
+    trackers.close(&tab)
 }
 
 /// Where the page lies, or null — hidden (another screen, a dialog over the tab)

@@ -1,21 +1,25 @@
 import { cn, IconArrowLeft, IconButton, WindowControls } from '@kino/ui'
 import { useTranslation } from 'react-i18next'
 import { useWindowState } from '../../../entities/app-window'
-import { usePlayback } from '../../../entities/playback'
+import { qualityLine, usePlayback } from '../../../entities/playback'
 import { windowIpc } from '../../../shared/ipc/window'
 
 const report = (what: string) => (e: unknown) => console.error(`[window] ${what}`, e)
 
-/** Over the video: back, «The Sopranos · Сезон 1 · Серия 5», window buttons. The empty space drags the window */
+/**
+ * Over the video: back, «The Sopranos · Сезон 1 · Серия 5», the file's quality, size and bitrate,
+ * window buttons. The empty space drags the window
+ */
 export function PlayerTopBar({ hidden, onBack }: { hidden: boolean; onBack: () => void }) {
   const { t } = useTranslation('player')
-  const { t: tl } = useTranslation('library')
+  const { t: tl, i18n } = useTranslation('library')
   const title = usePlayback((s) => s.title)
   const seriesTitle = usePlayback((s) => s.seriesTitle)
   const season = usePlayback((s) => s.season)
   const episode = usePlayback((s) => s.episode)
   const maximized = useWindowState((s) => s.maximized)
   const fullscreen = useWindowState((s) => s.fullscreen)
+  const quality = usePlayback((s) => qualityLine(s, i18n.language))
   const heading = seriesTitle ?? title
   const episodeLine =
     episode == null ? null : season != null ? tl('seasonEpisode', { season, episode }) : tl('episodeOnly', { episode })
@@ -35,6 +39,11 @@ export function PlayerTopBar({ hidden, onBack }: { hidden: boolean; onBack: () =
       <div data-tauri-drag-region className="flex min-w-0 flex-1 items-baseline gap-2.5">
         {heading ? <b className="truncate font-display text-md font-semibold tracking-display text-fg">{heading}</b> : null}
         {episodeLine ? <span className="shrink-0 text-sm text-fg-2">{episodeLine}</span> : null}
+        {quality ? (
+          <span title={t('quality')} className="shrink-0 font-mono text-xs text-fg-3">
+            {quality}
+          </span>
+        ) : null}
       </div>
       {fullscreen ? null : (
         <WindowControls

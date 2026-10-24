@@ -210,6 +210,33 @@ test.describe('трекеры', () => {
     expect(await kino.invoke<unknown[]>('torrent_archive', { query: '' })).toHaveLength(1)
   })
 
+  test('у каждого трекера своя вкладка: переключение не грузит сайт заново, страница — где оставили', async ({ launch, site }) => {
+    const kino = await launch()
+    const { page } = kino
+    await openTrackers(page)
+    await addBookmark(page, site.url, 'Тестовый трекер')
+    const first = await kino.webPage(site.url)
+    await first.getByRole('link', { name: 'Раздача' }).click()
+    await expect.poll(() => first.url()).toBe(`${site.url}/topic/1`)
+    // a mark only this very page has: a reload would lose it
+    await first.evaluate(() => Object.assign(window, { kinoMark: 'still here' }))
+
+    await addBookmark(page, `${site.otherUrl}/elsewhere`, 'Другой сайт')
+    const second = await kino.webPage(site.otherUrl)
+    await expect(second.locator('#where')).toHaveText('Описание фильма на другом сайте')
+    await expect(address(page)).toHaveValue(`${site.otherUrl}/elsewhere`)
+
+    await page.getByRole('button', { name: /^Тестовый трекер/ }).click()
+    await expect(address(page)).toHaveValue(`${site.url}/topic/1`)
+    expect(await first.evaluate(() => (window as unknown as { kinoMark?: string }).kinoMark)).toBe('still here')
+    await expect(page.getByRole('button', { name: /^Тестовый трекер/ })).toHaveAttribute('aria-current', 'true')
+
+    // The shown bookmark again: its first page
+    await page.getByRole('button', { name: /^Тестовый трекер/ }).click()
+    await expect.poll(() => first.url()).toBe(`${site.url}/`)
+    await expect(address(page)).toHaveValue(`${site.url}/`)
+  })
+
   test('сайт не достаёт до Kino; вход на сайт и последний трекер переживают перезапуск', async ({ launch, site }) => {
     const first = await launch()
     await openTrackers(first.page)

@@ -1,9 +1,10 @@
 import { cn, IconDownload, IconMagnet, IconWarning } from '@kino/ui'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { rememberedBookmark, trackersStore, useTrackers } from '../../../entities/tracker'
+import { bookmarkTab, rememberedBookmark, tabOf, trackersStore, useTrackers } from '../../../entities/tracker'
 import { BookmarkList } from '../../../features/manage-bookmarks'
 import { useNativeLayerCovered } from '../../../shared/lib/nativeLayer'
+import type { Bookmark } from '../../../shared/ipc/trackers'
 import { useTrackerLayout } from '../model/useTrackerLayout'
 import { BrowserBar } from './BrowserBar'
 
@@ -25,30 +26,38 @@ export function TrackersPane() {
   // Something is on its way to the page: the last visit's site must not replace it
   const started = useRef(false)
 
-  // A release page from the downloads, or the site of the last visit
+  // A release page from the downloads (in its site's tab), or the site of the last visit
   useEffect(() => {
     if (pending) {
       started.current = true
       trackersStore.set({ pending: null })
-      void open(pending).catch(report)
+      void open(pending, { tab: tabOf(pending, bookmarks), navigate: true }).catch(report)
       return
     }
     if (started.current || opened || !bookmarks.length) return
     const last = bookmarks.find((b) => b.id === rememberedBookmark())
     if (!last) return
     started.current = true
-    void open(last.url, last).catch(report)
+    void open(last.url, { tab: bookmarkTab(last), navigate: false, bookmark: last }).catch(report)
   }, [pending, opened, bookmarks, open])
+
+  // Another bookmark shows its tab as it was left; the shown one again — back to its first page
+  const openBookmark = (bookmark: Bookmark) => {
+    const tab = bookmarkTab(bookmark)
+    void open(bookmark.url, { tab, navigate: trackersStore.get().tab === tab, bookmark }).catch(report)
+  }
+  // A typed address: in the tab shown, like a browser's address bar
+  const navigate = (url: string) => void open(url, { tab: trackersStore.get().tab ?? tabOf(url, bookmarks), navigate: true }).catch(report)
 
   const StatusIcon = status?.kind === 'magnet' ? IconMagnet : status?.kind === 'refused' ? IconWarning : IconDownload
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-line bg-panel">
       <div className="flex min-h-0 pl-3">
-        <BookmarkList onOpen={(bookmark) => void open(bookmark.url, bookmark).catch(report)} />
+        <BookmarkList onOpen={openBookmark} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <BrowserBar onNavigate={(url) => void open(url).catch(report)} />
+        <BrowserBar onNavigate={navigate} />
         {status ? (
           <p
             role="status"

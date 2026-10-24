@@ -42,7 +42,7 @@ describe('TrackersPane (integration)', () => {
   beforeEach(() => {
     mock.reset()
     localStorage.clear()
-    act(() => trackersStore.set({ bookmarks, opened: false, page: { url: null, loading: false, canGoBack: false, canGoForward: false, blockedAds: 0 }, status: null, pending: null }))
+    act(() => trackersStore.set({ bookmarks, opened: false, tab: null, page: { url: null, loading: false, canGoBack: false, canGoForward: false, blockedAds: 0 }, status: null, pending: null }))
     mock.respond('tracker_bookmarks', bookmarks)
   })
 
@@ -54,7 +54,7 @@ describe('TrackersPane (integration)', () => {
     expect(commands('tracker_layout')).toEqual([['tracker_layout', { bounds: null }]])
 
     await user.click(screen.getByRole('button', { name: /^RuTor/ }))
-    expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutor.info/', bounds }]])
+    expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutor.info/', bounds, tab: 'bookmark:2', navigate: false }]])
     expect(trackersStore.get().opened).toBe(true)
     expect(rememberedBookmark()).toBe(2)
     await vi.waitFor(() => expect(commands('tracker_layout').at(-1)).toEqual(['tracker_layout', { bounds }]))
@@ -64,7 +64,24 @@ describe('TrackersPane (integration)', () => {
   it('вкладка открывается на трекере прошлого раза', async () => {
     rememberBookmark(1)
     renderPane()
-    await vi.waitFor(() => expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutracker.org/forum/index.php', bounds }]]))
+    await vi.waitFor(() =>
+      expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://rutracker.org/forum/index.php', bounds, tab: 'bookmark:1', navigate: false }]]),
+    )
+  })
+
+  it('у каждого трекера своя вкладка: другая закладка — показать как оставили, та же ещё раз — на главную', async () => {
+    const { user } = renderPane()
+    await user.click(screen.getByRole('button', { name: /^Рутрекер/ }))
+    await user.click(screen.getByRole('button', { name: /^RuTor/ }))
+    await user.click(screen.getByRole('button', { name: /^Рутрекер/ }))
+    await user.click(screen.getByRole('button', { name: /^Рутрекер/ }))
+    expect(commands('tracker_open').map(([, args]) => args)).toEqual([
+      { url: 'https://rutracker.org/forum/index.php', bounds, tab: 'bookmark:1', navigate: false },
+      { url: 'https://rutor.info/', bounds, tab: 'bookmark:2', navigate: false },
+      { url: 'https://rutracker.org/forum/index.php', bounds, tab: 'bookmark:1', navigate: false },
+      { url: 'https://rutracker.org/forum/index.php', bounds, tab: 'bookmark:1', navigate: true },
+    ])
+    expect(trackersStore.get().tab).toBe('bookmark:1')
   })
 
   it('страница раздачи из загрузок открывается сразу, вместо трекера прошлого раза; закладка её сайта отмечена', async () => {
@@ -72,7 +89,9 @@ describe('TrackersPane (integration)', () => {
     act(() => trackersStore.set({ pending: 'https://bt.rutracker.org/forum/viewtopic.php?t=6593218' }))
     renderPane()
     await vi.waitFor(() =>
-      expect(commands('tracker_open')).toEqual([['tracker_open', { url: 'https://bt.rutracker.org/forum/viewtopic.php?t=6593218', bounds }]]),
+      expect(commands('tracker_open')).toEqual([
+        ['tracker_open', { url: 'https://bt.rutracker.org/forum/viewtopic.php?t=6593218', bounds, tab: 'bookmark:1', navigate: true }],
+      ]),
     )
     expect(trackersStore.get().pending).toBeNull()
     act(() => trackersStore.set({ page: page('https://bt.rutracker.org/forum/viewtopic.php?t=6593218') }))
@@ -103,7 +122,8 @@ describe('TrackersPane (integration)', () => {
     expect(address).toHaveValue('https://rutor.info/torrent/1')
     await user.clear(address)
     await user.type(address, 'rutor.info/search/shogun{Enter}')
-    expect(commands('tracker_open').at(-1)).toEqual(['tracker_open', { url: 'rutor.info/search/shogun', bounds }])
+    // in the tab shown
+    expect(commands('tracker_open').at(-1)).toEqual(['tracker_open', { url: 'rutor.info/search/shogun', bounds, tab: 'bookmark:2', navigate: true }])
   })
 
   it('диалог над вкладкой прячет страницу сайта, после — она снова на месте', async () => {

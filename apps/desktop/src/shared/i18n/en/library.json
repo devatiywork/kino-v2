@@ -70,7 +70,6 @@
   "notChosen": "not chosen",
   "turnedOff": "off",
   "noSound": "no sound",
-  "rememberedNote": "Tracks are matched by language and title, not by number — the order may differ in another episode.",
   "now": "Now",
   "statusWatched": "Watched",
   "statusProgress": "{{time}} of {{total}}",

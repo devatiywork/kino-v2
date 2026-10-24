@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import { setFullscreen, windowStore } from '../../../entities/app-window'
+import { leaveMini, setFullscreen, windowStore } from '../../../entities/app-window'
 import { playerIpc } from '../../../shared/ipc/player'
 import { goBack } from '../../../shared/lib/router'
 
@@ -27,6 +27,7 @@ export function useVideoLayer(): { leave: () => void } {
 
   const leave = useCallback(() => {
     playerIpc.setPaused(true).catch(report('pause'))
+    if (windowStore.get().mini) leaveMini().catch(report('mini player'))
     if (windowStore.get().fullscreen) setFullscreen(false)
     goBack()
   }, [])

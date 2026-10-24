@@ -24,6 +24,11 @@ export const initialPlayback: PlayerSnapshot = {
   subtitlesVisible: true,
   tracks: [],
   hwdec: null,
+  videoWidth: null,
+  videoHeight: null,
+  videoCodec: null,
+  hdr: false,
+  fileSize: null,
 }
 
 /** Player state mirrored from the Rust core; position arrives separately and more often */

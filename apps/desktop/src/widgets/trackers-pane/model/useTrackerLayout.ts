@@ -31,14 +31,17 @@ export function useTrackerLayout(host: RefObject<HTMLDivElement | null>, visible
 
   useEffect(() => () => void trackersIpc.layout(null).catch(report('hide')), [])
 
-  /** A bookmark (remembered for the next time) or any address */
+  /**
+   * A site in its tab: shown at once if the tab is open (`navigate` — it goes to `url` too), made
+   * with `url` otherwise. A bookmark is remembered for the next time
+   */
   return useCallback(
-    async (url: string, bookmark: Bookmark | null = null) => {
+    async (url: string, where: { tab: string; navigate: boolean; bookmark?: Bookmark }) => {
       const el = host.current
       if (!el) return
-      await trackersIpc.open(url, boundsOf(el))
-      trackersStore.set({ opened: true })
-      if (bookmark) rememberBookmark(bookmark.id)
+      await trackersIpc.open(url, boundsOf(el), where.tab, where.navigate)
+      trackersStore.set({ opened: true, tab: where.tab })
+      if (where.bookmark) rememberBookmark(where.bookmark.id)
     },
     [host],
   )

@@ -32,6 +32,15 @@ pub struct PlayerSnapshot {
     pub subtitles_visible: bool,
     pub tracks: Vec<Track>,
     pub hwdec: Option<String>,
+    /// The picture as decoded: 1920×1080 — the quality line of the player (1080p · HEVC · HDR)
+    pub video_width: Option<u32>,
+    pub video_height: Option<u32>,
+    /// mpv's codec name: «h264», «hevc», «av1»
+    pub video_codec: Option<String>,
+    /// PQ or HLG transfer: HDR10, Dolby Vision, HLG
+    pub hdr: bool,
+    /// Bytes; with the duration — the file's average bitrate
+    pub file_size: Option<u64>,
 }
 
 impl Default for PlayerSnapshot {
@@ -59,6 +68,11 @@ impl Default for PlayerSnapshot {
             subtitles_visible: true,
             tracks: Vec::new(),
             hwdec: None,
+            video_width: None,
+            video_height: None,
+            video_codec: None,
+            hdr: false,
+            file_size: None,
         }
     }
 }
@@ -97,6 +111,11 @@ pub const OBSERVED: &[(&str, ObservedFormat)] = &[
     ("sub-visibility", ObservedFormat::Flag),
     ("track-list", ObservedFormat::Str),
     ("hwdec-current", ObservedFormat::Str),
+    ("width", ObservedFormat::Double),
+    ("height", ObservedFormat::Double),
+    ("video-format", ObservedFormat::Str),
+    ("video-params/gamma", ObservedFormat::Str),
+    ("file-size", ObservedFormat::Double),
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -150,6 +169,11 @@ impl PlayerSnapshot {
                 }
             },
             ("hwdec-current", Str(v)) => self.hwdec = Some(v.to_owned()).filter(|s| s != "no"),
+            ("width", Double(v)) => self.video_width = dimension(v),
+            ("height", Double(v)) => self.video_height = dimension(v),
+            ("video-format", Str(v)) => self.video_codec = Some(v.to_owned()).filter(|s| !s.is_empty()),
+            ("video-params/gamma", Str(v)) => self.hdr = is_hdr(v),
+            ("file-size", Double(v)) => self.file_size = (v > 0.0).then_some(v as u64),
             _ => return Change::Ignored,
         }
         Change::State
@@ -174,7 +198,21 @@ impl PlayerSnapshot {
         self.subtitle_id = None;
         self.tracks.clear();
         self.hwdec = None;
+        self.video_width = None;
+        self.video_height = None;
+        self.video_codec = None;
+        self.hdr = false;
+        self.file_size = None;
     }
+}
+
+fn dimension(value: f64) -> Option<u32> {
+    (value >= 1.0).then_some(value as u32)
+}
+
+/// mpv's `video-params/gamma`: «pq» (HDR10, Dolby Vision) and «hlg» are HDR, «bt.1886» and the rest are not
+pub fn is_hdr(gamma: &str) -> bool {
+    matches!(gamma, "pq" | "hlg")
 }
 
 #[cfg(test)]
@@ -222,6 +260,21 @@ mod tests {
         s.apply("track-list", Prop::Str(r#"[{"id":1,"type":"audio"}]"#));
         assert_eq!(s.apply("track-list", Prop::Str("{")), Change::Ignored);
         assert_eq!(s.tracks.len(), 1);
+    }
+
+    #[test]
+    fn the_quality_line_comes_from_the_picture_and_the_file() {
+        let mut s = PlayerSnapshot::default();
+        assert_eq!(s.apply("width", Prop::Double(1920.0)), Change::State);
+        s.apply("height", Prop::Double(800.0));
+        s.apply("video-format", Prop::Str("hevc"));
+        s.apply("video-params/gamma", Prop::Str("pq"));
+        s.apply("file-size", Prop::Double(1_610_612_736.0));
+        assert_eq!((s.video_width, s.video_height, s.video_codec.as_deref(), s.hdr, s.file_size), (Some(1920), Some(800), Some("hevc"), true, Some(1_610_612_736)));
+        s.apply("video-params/gamma", Prop::Str("bt.1886"));
+        assert!(!s.hdr, "SDR");
+        s.apply("idle-active", Prop::Flag(true));
+        assert_eq!((s.video_width, s.video_codec, s.file_size), (None, None, None), "nothing open — no quality");
     }
 
     #[test]

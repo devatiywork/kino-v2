@@ -22,6 +22,13 @@ export function formatRate(bytesPerSecond: number, locale: string): string {
   return `${value}/${second}`
 }
 
+/** A video's bitrate: «4,3 Мбит/с», «850 кбит/с» — decimal units, as bitrates are counted */
+export function formatBitrate(bitsPerSecond: number, locale: string): string {
+  const second = locale.startsWith('ru') ? 'с' : 's'
+  const value = bitsPerSecond >= 1e6 ? unit(locale, bitsPerSecond / 1e6, 'megabit', 1) : unit(locale, bitsPerSecond / 1e3, 'kilobit', 0)
+  return `${value}/${second}`
+}
+
 /** Ratio and other plain numbers with two decimals: «2,31» */
 export function formatDecimal(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)

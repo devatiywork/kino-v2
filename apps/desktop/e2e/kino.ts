@@ -25,6 +25,7 @@ export interface Snapshot {
   hasPrev: boolean
   hasNext: boolean
   tracks: { id: number; kind: string; title: string | null; isExternal: boolean }[]
+  videoHeight: number | null
 }
 
 export interface Kino {
@@ -119,7 +120,7 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
     settings: () => invoke<Record<string, unknown>>('settings_get'),
     startAgain: (...args) =>
       new Promise((resolve, reject) => {
-        const again = spawn(EXE, args, { env: { ...process.env, KINO_DATA_DIR: dataDir, KINO_TEST_OFFLINE: '1', KINO_TEST_MONITOR: '1920x1080' }, stdio: 'ignore' })
+        const again = spawn(EXE, args, { env: { ...process.env, KINO_DATA_DIR: dataDir, KINO_TEST_OFFLINE: '1', KINO_TEST_MONITOR: process.env.KINO_E2E_MONITOR ?? '1920x1080' }, stdio: 'ignore' })
         const timer = setTimeout(() => {
           again.kill()
           reject(new Error('the second Kino did not quit'))

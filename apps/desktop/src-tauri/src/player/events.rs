@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::power::KeepAwake;
 use super::session::{self, Session};
-use super::state::{Change, ObservedFormat, PlayerSnapshot, Prop, OBSERVED};
+use super::state::{is_hdr, Change, ObservedFormat, PlayerSnapshot, Prop, OBSERVED};
 use super::track_defaults::{self, SubtitleChoice};
 use super::tracks::{parse_track_list, Track, TrackKind};
 use crate::library::commands::CHANGED_EVENT;
@@ -165,6 +165,12 @@ fn file_loaded(ctx: &Context) {
         s.season = info.season;
         s.episode = info.episode;
         s.duration = duration;
+        // The new file's own: what is known now; the picture's size comes with its first frame
+        s.file_size = ctx.client.get_property::<i64>("file-size").ok().filter(|v| *v > 0).map(|v| v as u64);
+        s.video_width = ctx.client.get_property::<i64>("width").ok().and_then(|v| u32::try_from(v).ok());
+        s.video_height = ctx.client.get_property::<i64>("height").ok().and_then(|v| u32::try_from(v).ok());
+        s.video_codec = ctx.client.get_property::<String>("video-format").ok().filter(|v| !v.is_empty());
+        s.hdr = ctx.client.get_property::<String>("video-params/gamma").is_ok_and(|g| is_hdr(&g));
         s.tracks = tracks.clone();
         s.idle = false;
         s.eof = false;
