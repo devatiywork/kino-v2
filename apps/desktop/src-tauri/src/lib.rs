@@ -183,11 +183,16 @@ pub(crate) fn bring_forward(app: &AppHandle) {
 
 /// KINO_TEST_HIDDEN: the E2E tests' windows are cloaked — Windows still draws them and the tests
 /// drive them, but the user sees none of them, fullscreen ones included, nor in the taskbar or
-/// Alt+Tab. Called on a window not shown yet
+/// Alt+Tab. Never activated either (WS_EX_NOACTIVATE): a shown window would take the foreground
+/// from the owner, and a fullscreen video losing it gets Windows' taskbar over its bottom edge —
+/// the «white stripe» the owner saw on every launch. Called on a window not shown yet
 pub(crate) fn hide_for_tests(window: &tauri::WebviewWindow) {
     use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CLOAK};
     if std::env::var_os("KINO_TEST_HIDDEN").is_none() {
         return;
+    }
+    if let Err(e) = window.set_focusable(false) {
+        eprintln!("[window] not focusable: {e}");
     }
     if let Err(e) = window.set_skip_taskbar(true) {
         eprintln!("[window] skip taskbar: {e}");

@@ -172,6 +172,11 @@ impl Player {
             if let Some(volume) = std::env::var("KINO_TEST_VOLUME").ok().and_then(|v| v.parse::<f64>().ok()) {
                 init.set_option("volume", volume.clamp(0.0, VOLUME_MAX))?;
             }
+            // KINO_TEST_HIDDEN: unseen and unheard — the tests' sound opens no device at all, the owner's
+            // headphones never get a stream (a wireless set hisses at one even at 1 %)
+            if std::env::var_os("KINO_TEST_HIDDEN").is_some() {
+                init.set_option("ao", "null")?;
+            }
             Ok(())
         })?;
         let snapshot = Arc::new(Mutex::new(PlayerSnapshot::default()));

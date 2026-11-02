@@ -295,9 +295,11 @@ Each launch gets its own temp folder; the core reads these variables:
   `KINO_E2E_VOLUME` / `KINO_E2E_MONITOR`. The test variables work in a release build as well, to try it without a firewall
   prompt
 - `KINO_TEST_HIDDEN` — the windows are cloaked by DWM (lib.rs `hide_for_tests`): drawn and driven by the tests, but nobody
-  sees them, fullscreen and the mini player included, nor in the taskbar or Alt+Tab. The harness sets it, with
+  sees them, fullscreen and the mini player included, nor in the taskbar or Alt+Tab; never activated either (not
+  focusable: taking the foreground would bring the taskbar up over the owner's fullscreen video). The harness sets it, with
   `--disable-features=CalculateNativeWinOcclusion` for WebView2 (a cloaked page would count as covered and stop drawing);
-  `KINO_E2E_SHOW=1` shows the windows. The owner works on this machine during the runs: test windows stay unseen
+  `KINO_E2E_SHOW=1` shows the windows. Unheard too: mpv's sound goes nowhere (`ao=null`), the owner's headphones get no
+  stream. The owner works on this machine during the runs: test windows stay unseen and silent
 - No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys.
   `KINO_TEST_TRAY` — the tray anyway, to check the way back from it (a hand check: the tray icon's window takes
   WM_USER 6002 + WM_LBUTTONUP as a click)
