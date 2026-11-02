@@ -15,6 +15,8 @@ export interface Track {
   isForced: boolean
   isExternal: boolean
   isSelected: boolean
+  /** A Dolby Vision video track: its profile (5, 7, 8…) */
+  dvProfile: number | null
 }
 
 /** Mirrors src-tauri/src/player/state.rs */
@@ -51,8 +53,49 @@ export interface PlayerSnapshot {
   videoCodec: string | null
   /** PQ or HLG: HDR10, Dolby Vision, HLG */
   hdr: boolean
+  /** mpv's video-params/gamma: «pq», «hlg», «bt.1886»… */
+  videoTransfer: string | null
   /** Bytes; with the duration — the average bitrate */
   fileSize: number | null
+}
+
+/** Mirrors src-tauri/src/player/stats.rs: what mpv does with the open file right now */
+export interface PlayerStats {
+  /** «d3d11va», «nvdec»…; «no» — the processor decodes */
+  decoder: string | null
+  codec: string | null
+  /** «p010» (10 bit), «yuv420p» */
+  pixelFormat: string | null
+  width: number | null
+  height: number | null
+  fps: number | null
+  primaries: string | null
+  transfer: string | null
+  matrix: string | null
+  levels: string | null
+  /** HDR metadata, nits */
+  maxLuma: number | null
+  maxCll: number | null
+  maxFall: number | null
+  /** What is rendered for the display */
+  outPrimaries: string | null
+  outTransfer: string | null
+  outPeak: number | null
+  vo: string | null
+  gpuApi: string | null
+  displayFps: number | null
+  videoSync: string | null
+  interpolation: boolean | null
+  dropped: number | null
+  decoderDropped: number | null
+  delayed: number | null
+  mistimed: number | null
+  audioCodec: string | null
+  audioChannels: number | null
+  audioOutChannels: number | null
+  /** «floatp», «s16»; «spdif-…» when the sound goes to the receiver undecoded */
+  audioOutFormat: string | null
+  audioOut: string | null
 }
 
 export type SeekMode = 'absolute' | 'relative'
@@ -83,6 +126,8 @@ export type MediaKey = 'togglePause' | 'next' | 'previous' | 'stop'
 
 export const playerIpc = {
   snapshot: () => invoke<PlayerSnapshot>('player_snapshot'),
+  /** «Статистика воспроизведения» */
+  stats: () => invoke<PlayerStats>('player_stats'),
   /** Continues from the saved position when there is one */
   open: (path: string) => invoke<OpenResult>('player_open', { path }),
   /** −1 previous, +1 next episode of the open one; null when there is none */

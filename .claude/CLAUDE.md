@@ -80,13 +80,13 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          accent, language follow the settings), styles
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, library (chips «Все» /
                          «Сериалы» / «Фильмы» / torrent categories on disk + folders), show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
-                         settings (side menu with scroll spy, sections: appearance, playback, tracks, library, downloads,
+                         settings (side menu with scroll spy, sections: appearance, playback, video (HDR, frame sync, sound out, log), tracks, library, downloads,
                          hotkeys, system; downloads/ — groups by qBittorrent's: SpeedRows, SeedingRows, ConnectionRows,
                          fields bound to one setting (SwitchRow, NumberField, TextSetting with a check, FolderField),
                          checks — time, proxy, tracker lines), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds,
                          category bar, details panel, Ctrl V with a magnet link), placeholder
     widgets/           — app-title-bar (a `search` slot the app fills), global-search (Ctrl K: series, played files,
-                         the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel), continue-hero, continue-grid,
+                         the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel, PlayerStats), continue-hero, continue-grid,
                          history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
                          torrent-details (General with the piece map / Files / Peers with speeds / Trackers with DHT, PeX,
                          LSD and re-announce / Speed chart 1-5-30 min / Options: seeding, check, move, save .torrent;
@@ -105,7 +105,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          free-season («Освободить место» of a watched season), download-series-again (episodes gone from
                          the disk whose torrent is in the archive: «Скачать снова»), archive-backup (save the archive to a
                          file, restore from one)
-    entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels),
+    entities/          — playback (store mirrored from the core, actions, episodes (N/P, autoplay), OSD, resume, track labels,
+                         the quality line with the HDR kind, «Статистика воспроизведения»: statsPanel (the I key), statsRows),
                          settings (store mirrored from the core, optimistic updateSettings, hotkeys: actions, defaults,
                          rebind with swap, key labels, useHotkeyLabel),
                          library (store: continue/history/series/films/folders, libraryView (the chosen shelf),
@@ -128,7 +129,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          series/library/settings/torrents/series-torrents/trackers scenarios, `workdir` fixture, `webPage` (the trackers browser's
                          page by address), global-setup (fixture check + cargo build), fixtures/ (make-media.ps1, subtitle
                          templates, torrent.ts — a .torrent of a file or folder and its magnet link, trackerSite.ts — a tiny
-                         tracker on the loopback, media/ — tiny generated clips: a series of 2 seasons and a film)
+                         tracker on the loopback, media/ — tiny generated clips: a series of 2 seasons, a film and hdr/ — an
+                         HDR10 HEVC Main 10 clip made by ffmpeg with PQ and mastering metadata), readme/ — the README's
+                         screenshots: demo-media.ts, readme.e2e.ts (skipped unless asked), window-shot.ps1
   src-tauri/           — Rust core:
     src/db.rs          — one SQLite file, migrations by PRAGMA user_version; player tables `player_*`, torrent tables `torrent_*`;
                          the only link between them: player_files.source / source_path (an opaque torrent hash)
@@ -141,7 +144,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title),
                          sources (files a source brought: linked, moved to their new place, season files, sidecar tracks),
                          search (series and played files, every word, any case), commands
-    src/player/        — Player (libmpv; apply_settings, clear_history), video_host (child HWND; moves between windows),
+    src/player/        — Player (libmpv; apply_settings — «Видео и звук» are mpv options from Settings::mpv_video_options,
+                         changed live, the sound's output reloaded; clear_history), stats (what mpv does with the file: decoder,
+                         frame, colours, HDR in and out, drops, sound — player_stats), video_host (child HWND; moves between windows),
                          mini (the mini player's own window «mini»: the video host goes in and back, player://mini-closed),
                          events (mpv event thread →
                          player://state, player://position, player://notice, player://autoplay; registers files, chooses tracks:
@@ -207,7 +212,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          installer is per machine: C:\Program Files\Kino v2, asks for admin rights, the registry under HKLM)
   data                 — %APPDATA%\local.kino.app (a debug build: local.kino.app.dev): kino.db, thumbs\<file id>.jpg (served to the page by the asset protocol),
                          torrents\files\<hash>.torrent (the archive), torrents\engine (librqbit state, DHT table),
-                         trackers\downloads (.torrent files the trackers browser caught, cleared at start)
+                         trackers\downloads (.torrent files the trackers browser caught, cleared at start), logs\mpv.log
+                         («Журнал воспроизведения», written anew at every start; a debug build always logs to %TEMP%\kino-mpv.log)
 packages/ui/           — @kino/ui, our UI library
   src/styles/          — tokens.css (single source of design tokens, dark + light in Kino v1's palette; accent presets
                          blue (default)/ember/gold/lime/teal/violet with a shade per theme; `field` — the translucent fill of

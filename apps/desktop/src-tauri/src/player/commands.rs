@@ -2,12 +2,18 @@
 
 use tauri::{AppHandle, State};
 
-use super::{OpenResult, Player, PlayerSnapshot, SeekMode};
+use super::{OpenResult, Player, PlayerSnapshot, PlayerStats, SeekMode};
 use crate::error::AppResult;
 
 #[tauri::command]
 pub fn player_snapshot(player: State<'_, Player>) -> PlayerSnapshot {
     player.snapshot()
+}
+
+/// «Статистика воспроизведения»: the decoder, the frame, the colours, the output, the drops
+#[tauri::command]
+pub fn player_stats(player: State<'_, Player>) -> PlayerStats {
+    player.stats()
 }
 
 /// Opens a file, continuing from the saved position when there is one

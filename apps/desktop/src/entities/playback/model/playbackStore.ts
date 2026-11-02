@@ -28,6 +28,7 @@ export const initialPlayback: PlayerSnapshot = {
   videoHeight: null,
   videoCodec: null,
   hdr: false,
+  videoTransfer: null,
   fileSize: null,
 }
 

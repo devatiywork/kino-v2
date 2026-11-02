@@ -1,4 +1,4 @@
-import { cn, IconClock, IconDownload, IconKeyboard, IconLayers, IconPlay, IconSettings, IconSubtitles, Pressable, ScrollArea } from '@kino/ui'
+import { cn, IconClock, IconDownload, IconGauge, IconKeyboard, IconLayers, IconPlay, IconSettings, IconSubtitles, Pressable, ScrollArea } from '@kino/ui'
 import type { ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useScrollSpy } from '../model/useScrollSpy'
@@ -9,13 +9,15 @@ import { LibrarySection } from './sections/LibrarySection'
 import { PlaybackSection } from './sections/PlaybackSection'
 import { SystemSection } from './sections/SystemSection'
 import { TracksSection } from './sections/TracksSection'
+import { VideoSection } from './sections/VideoSection'
 
-const SECTIONS = ['appearance', 'playback', 'tracks', 'library', 'downloads', 'hotkeys', 'system'] as const
+const SECTIONS = ['appearance', 'playback', 'video', 'tracks', 'library', 'downloads', 'hotkeys', 'system'] as const
 type SectionId = (typeof SECTIONS)[number]
 
 const ICONS: Record<SectionId, ComponentType<{ size?: number }>> = {
   appearance: IconSettings,
   playback: IconPlay,
+  video: IconGauge,
   tracks: IconSubtitles,
   library: IconClock,
   downloads: IconDownload,
@@ -55,6 +57,7 @@ export function SettingsPage() {
         <div className="flex max-w-[900px] flex-col gap-[34px]">
           <AppearanceSection />
           <PlaybackSection />
+          <VideoSection />
           <TracksSection />
           <LibrarySection />
           <DownloadsSection />

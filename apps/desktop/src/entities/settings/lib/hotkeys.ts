@@ -10,6 +10,7 @@ export const PLAYER_ACTIONS = [
   'toggleSubtitles',
   'nextEpisode',
   'prevEpisode',
+  'toggleStats',
 ] as const
 
 export type RebindableAction = (typeof PLAYER_ACTIONS)[number]
@@ -29,6 +30,7 @@ export const DEFAULT_HOTKEYS: Readonly<Hotkeys> = {
   toggleSubtitles: 'KeyS',
   nextEpisode: 'KeyN',
   prevEpisode: 'KeyP',
+  toggleStats: 'KeyI',
 }
 
 /** Escape leaves fullscreen and cancels, Tab moves the focus */

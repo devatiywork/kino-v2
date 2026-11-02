@@ -11,6 +11,7 @@ export function track(patch: Partial<Track> & Pick<Track, 'id' | 'kind'>): Track
     isForced: false,
     isExternal: false,
     isSelected: false,
+    dvProfile: null,
     ...patch,
   }
 }

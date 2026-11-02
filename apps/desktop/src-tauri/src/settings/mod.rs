@@ -89,6 +89,47 @@ pub enum SubtitlePosition {
     High,
 }
 
+/// «Вывод HDR»: HDR to the display when Windows' HDR is on, or always SDR (mpv target-colorspace-hint)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum HdrOutput {
+    #[default]
+    Auto,
+    Off,
+}
+
+/// «HDR-метаданные» (mpv target-colorspace-hint-mode): Kino fits the picture to the display's own
+/// peak, or passes the film's metadata on and lets the display tone map
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum HdrMode {
+    #[default]
+    Display,
+    Source,
+}
+
+/// «Тональное отображение» of HDR that is brighter than the display (mpv tone-mapping)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum ToneMapping {
+    /// mpv's choice: spline
+    #[default]
+    Auto,
+    Bt2390,
+    /// Uses the dynamic metadata (HDR10+, Dolby Vision) when the file has it
+    St209440,
+}
+
+/// «Синхронизация кадров» (mpv video-sync): to the sound, or each frame to the display's refresh
+/// with the sound resampled by a hair
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum VideoSync {
+    #[default]
+    Audio,
+    Display,
+}
+
 /// «Альтернативные лимиты» by the schedule: which days (SPEC 6)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -212,6 +253,21 @@ pub struct Settings {
     /// 0…100: what a run of Kino starts with
     pub default_volume: f64,
     pub hardware_decoding: bool,
+    // Video and sound: mpv's own defaults unless changed
+    pub hdr_output: HdrOutput,
+    pub hdr_mode: HdrMode,
+    /// The display's peak in nits for the tone mapping; 0 — what Windows reports
+    pub hdr_peak: u32,
+    pub tone_mapping: ToneMapping,
+    pub video_sync: VideoSync,
+    /// Frames blended to the display's refresh; works with the display sync only
+    pub interpolation: bool,
+    /// AC3, E-AC3, DTS, DTS-HD and TrueHD go to the receiver undecoded (S/PDIF, HDMI)
+    pub audio_passthrough: bool,
+    /// WASAPI exclusive mode: past Windows' mixer, other programs are silent meanwhile
+    pub audio_exclusive: bool,
+    /// mpv's log in <data>\logs\mpv.log, written anew at every start
+    pub playback_log: bool,
     // Audio and subtitles
     pub preferred_audio: PreferredAudio,
     pub russian_audio_subtitles: RussianAudioSubtitles,
@@ -309,6 +365,15 @@ impl Default for Settings {
             default_speed: 1.0,
             default_volume: 100.0,
             hardware_decoding: true,
+            hdr_output: HdrOutput::Auto,
+            hdr_mode: HdrMode::Display,
+            hdr_peak: 0,
+            tone_mapping: ToneMapping::Auto,
+            video_sync: VideoSync::Audio,
+            interpolation: false,
+            audio_passthrough: false,
+            audio_exclusive: false,
+            playback_log: false,
             preferred_audio: PreferredAudio::Russian,
             russian_audio_subtitles: RussianAudioSubtitles::Forced,
             subtitle_size: SubtitleSize::Medium,
@@ -397,6 +462,7 @@ impl Settings {
         self.max_active_downloads = self.max_active_downloads.min(QUEUE_MAX);
         self.max_active_seeds = self.max_active_seeds.min(QUEUE_MAX);
         self.max_active_total = self.max_active_total.min(QUEUE_MAX);
+        self.hdr_peak = if self.hdr_peak == 0 { 0 } else { self.hdr_peak.clamp(HDR_PEAK_MIN, HDR_PEAK_MAX) };
         self
     }
 
@@ -413,7 +479,38 @@ impl Settings {
             "no"
         }
     }
+
+    /// mpv's options of the video and the sound, as the settings have them (name, value).
+    /// The defaults are mpv's own: nothing changes until a setting does
+    pub fn mpv_video_options(&self) -> [(&'static str, String); 8] {
+        let flag = |on: bool| if on { "yes" } else { "no" }.to_string();
+        [
+            ("target-colorspace-hint", if self.hdr_output == HdrOutput::Off { "no" } else { "auto" }.to_string()),
+            ("target-colorspace-hint-mode", if self.hdr_mode == HdrMode::Source { "source" } else { "target" }.to_string()),
+            ("target-peak", if self.hdr_peak == 0 { "auto".to_string() } else { self.hdr_peak.to_string() }),
+            (
+                "tone-mapping",
+                match self.tone_mapping {
+                    ToneMapping::Auto => "auto",
+                    ToneMapping::Bt2390 => "bt.2390",
+                    ToneMapping::St209440 => "st2094-40",
+                }
+                .to_string(),
+            ),
+            ("video-sync", if self.video_sync == VideoSync::Display { "display-resample" } else { "audio" }.to_string()),
+            // Blending needs the display sync: with the sound's it would be silently off anyway
+            ("interpolation", flag(self.interpolation && self.video_sync == VideoSync::Display)),
+            ("audio-spdif", if self.audio_passthrough { AUDIO_PASSTHROUGH } else { "" }.to_string()),
+            ("audio-exclusive", flag(self.audio_exclusive)),
+        ]
+    }
 }
+
+/// What «Передавать звук на ресивер» sends undecoded
+pub const AUDIO_PASSTHROUGH: &str = "ac3,eac3,dts,dts-hd,truehd";
+/// Nits a display's peak may be set to by hand
+pub const HDR_PEAK_MIN: u32 = 100;
+pub const HDR_PEAK_MAX: u32 = 10_000;
 
 /// "togglePause", "KeyF", "ArrowLeft": an action or a KeyboardEvent.code
 fn is_key_name(s: &str) -> bool {
@@ -668,5 +765,48 @@ mod tests {
         let (_, reset) = again.reset().unwrap();
         assert_eq!(reset, Settings::default());
         assert_eq!(SettingsStore::load(library).get(), Settings::default());
+    }
+
+    #[test]
+    fn the_video_and_sound_defaults_are_mpvs_own() {
+        let options: Vec<(&str, String)> = Settings::default().mpv_video_options().into();
+        let expected = [
+            ("target-colorspace-hint", "auto"),
+            ("target-colorspace-hint-mode", "target"),
+            ("target-peak", "auto"),
+            ("tone-mapping", "auto"),
+            ("video-sync", "audio"),
+            ("interpolation", "no"),
+            ("audio-spdif", ""),
+            ("audio-exclusive", "no"),
+        ];
+        assert_eq!(options, expected.map(|(k, v)| (k, v.to_string())).to_vec());
+    }
+
+    #[test]
+    fn video_and_sound_settings_become_mpv_options() {
+        let s = from_stored(
+            r#"{"hdrOutput":"off","hdrMode":"source","hdrPeak":1000,"toneMapping":"st209440","videoSync":"display",
+                "interpolation":true,"audioPassthrough":true,"audioExclusive":true}"#,
+        );
+        let options: std::collections::HashMap<_, _> = s.mpv_video_options().into_iter().collect();
+        assert_eq!(options["target-colorspace-hint"], "no");
+        assert_eq!(options["target-colorspace-hint-mode"], "source");
+        assert_eq!(options["target-peak"], "1000");
+        assert_eq!(options["tone-mapping"], "st2094-40");
+        assert_eq!(options["video-sync"], "display-resample");
+        assert_eq!(options["interpolation"], "yes");
+        assert_eq!(options["audio-spdif"], AUDIO_PASSTHROUGH);
+        assert_eq!(options["audio-exclusive"], "yes");
+        // Blending without the display sync would be silently off: Kino does not ask for it
+        let by_sound = from_stored(r#"{"interpolation":true}"#);
+        assert!(by_sound.mpv_video_options().contains(&("interpolation", "no".to_string())));
+    }
+
+    #[test]
+    fn a_peak_by_hand_stays_within_reason() {
+        assert_eq!(from_stored(r#"{"hdrPeak":50}"#).hdr_peak, HDR_PEAK_MIN);
+        assert_eq!(from_stored(r#"{"hdrPeak":20000}"#).hdr_peak, HDR_PEAK_MAX);
+        assert_eq!(from_stored(r#"{"hdrPeak":0}"#).hdr_peak, 0, "0 — the display's own");
     }
 }

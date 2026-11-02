@@ -45,5 +45,40 @@
   "loading": "Loading…",
   "miniPlayer": "Mini player",
   "expandPlayer": "Expand the player",
-  "closePlayer": "Close the player"
+  "closePlayer": "Close the player",
+  "stats": {
+    "title": "Playback statistics",
+    "toggle": "Hide — {{key}}",
+    "rows": {
+      "decoder": "Decoder",
+      "video": "Video",
+      "colour": "Colour",
+      "hdr": "HDR",
+      "dolbyVision": "Dolby Vision",
+      "output": "Output",
+      "render": "Renderer",
+      "display": "Display",
+      "frames": "Frames",
+      "audio": "Sound"
+    },
+    "hardware": "{{decoder}} — hardware",
+    "software": "software",
+    "fps": "{{value}} fps",
+    "hz": "{{value}} Hz",
+    "nits": "{{value}} nits",
+    "mastering": "mastered at {{value}}",
+    "dvProfile": "profile {{profile}}",
+    "gamma": "gamma {{value}}",
+    "linear": "linear",
+    "levels": {
+      "limited": "limited range",
+      "full": "full range"
+    },
+    "syncAudio": "frames by the sound",
+    "syncDisplay": "frames by the display",
+    "interpolation": "interpolation",
+    "dropped": "dropped {{output}} · by the decoder {{decoder}} · late {{delayed}} · mistimed {{mistimed}}",
+    "channels": "{{from}} ch → {{to}}",
+    "passthrough": "to the receiver"
+  }
 }

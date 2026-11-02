@@ -8,6 +8,13 @@ export type PreferredAudio = 'russian' | 'original'
 export type RussianAudioSubtitles = 'off' | 'forced' | 'full'
 export type SubtitleSize = 'small' | 'medium' | 'large'
 export type SubtitlePosition = 'bottom' | 'raised' | 'high'
+/** «Вывод HDR»: HDR when Windows' HDR is on, or always SDR */
+export type HdrOutput = 'auto' | 'off'
+/** «HDR-метаданные»: fitted to the display's peak by Kino, or the film's own, tone mapped by the display */
+export type HdrMode = 'display' | 'source'
+export type ToneMapping = 'auto' | 'bt2390' | 'st209440'
+/** «Синхронизация кадров»: to the sound, or each frame to the display's refresh */
+export type VideoSync = 'audio' | 'display'
 /** The days of the alternative limits' schedule */
 export type ScheduleDays = 'everyday' | 'weekdays' | 'weekends'
 export type TorrentProtocol = 'tcpAndUtp' | 'tcp' | 'utp'
@@ -29,6 +36,20 @@ export interface Settings {
   /** 0…100 */
   defaultVolume: number
   hardwareDecoding: boolean
+  hdrOutput: HdrOutput
+  hdrMode: HdrMode
+  /** The display's peak in nits for the tone mapping; 0 — what Windows reports */
+  hdrPeak: number
+  toneMapping: ToneMapping
+  videoSync: VideoSync
+  /** Frames blended to the display's refresh; with the display sync only */
+  interpolation: boolean
+  /** AC3, E-AC3, DTS, DTS-HD and TrueHD to the receiver undecoded */
+  audioPassthrough: boolean
+  /** WASAPI exclusive mode */
+  audioExclusive: boolean
+  /** mpv's log in <data>\logs\mpv.log, written anew at every start */
+  playbackLog: boolean
   preferredAudio: PreferredAudio
   russianAudioSubtitles: RussianAudioSubtitles
   subtitleSize: SubtitleSize
@@ -113,6 +134,15 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultSpeed: 1,
   defaultVolume: 100,
   hardwareDecoding: true,
+  hdrOutput: 'auto',
+  hdrMode: 'display',
+  hdrPeak: 0,
+  toneMapping: 'auto',
+  videoSync: 'audio',
+  interpolation: false,
+  audioPassthrough: false,
+  audioExclusive: false,
+  playbackLog: false,
   preferredAudio: 'russian',
   russianAudioSubtitles: 'forced',
   subtitleSize: 'medium',

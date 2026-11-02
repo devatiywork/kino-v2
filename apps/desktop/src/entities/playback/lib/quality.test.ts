@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { codecLabel, qualityLine, resolutionLabel } from './quality'
+import { track } from '../../../test/tracks'
+import { codecLabel, hdrLabel, qualityLine, resolutionLabel } from './quality'
 
 describe('строка качества в плеере', () => {
   it('разрешение — по высоте и по ширине: широкоформатный фильм не теряет класс', () => {
@@ -19,9 +20,19 @@ describe('строка качества в плеере', () => {
   })
 
   it('качество, HDR, вес и средний битрейт; неизвестное пропускается', () => {
-    const film = { videoWidth: 1920, videoHeight: 1080, videoCodec: 'hevc', hdr: true, fileSize: 1_610_612_736, duration: 2_700 }
+    const film = { videoWidth: 1920, videoHeight: 1080, videoCodec: 'hevc', hdr: true, videoTransfer: null, tracks: [], fileSize: 1_610_612_736, duration: 2_700 }
     expect(qualityLine(film, 'ru')).toBe('1080p · HEVC · HDR · 1,5 ГБ · 4,8 Мбит/с')
     expect(qualityLine({ ...film, videoWidth: null, videoHeight: null, hdr: false, duration: null }, 'ru')).toBe('HEVC · 1,5 ГБ')
     expect(qualityLine({ ...film, fileSize: 300_000_000, duration: 3_600, hdr: false }, 'en')).toBe('1080p · HEVC · 286 MB · 667 kb/s')
+  })
+
+  it('HDR по-настоящему: Dolby Vision с профилем дорожки, HDR10 по PQ, HLG', () => {
+    const base = { hdr: true, videoTransfer: 'pq', tracks: [track({ id: 1, kind: 'video', codec: 'hevc', isSelected: true })] }
+    expect(hdrLabel(base)).toBe('HDR10')
+    expect(hdrLabel({ ...base, videoTransfer: 'hlg' })).toBe('HLG')
+    expect(hdrLabel({ ...base, tracks: [track({ id: 1, kind: 'video', isSelected: true, dvProfile: 8 })] })).toBe('Dolby Vision P8')
+    expect(hdrLabel({ hdr: false, videoTransfer: 'bt.1886', tracks: [] })).toBeNull()
+    const uhd = { videoWidth: 3840, videoHeight: 2160, videoCodec: 'hevc', ...base, fileSize: null, duration: null }
+    expect(qualityLine({ ...uhd, tracks: [track({ id: 1, kind: 'video', isSelected: true, dvProfile: 8 })] }, 'ru')).toBe('2160p · HEVC · Dolby Vision P8')
   })
 })

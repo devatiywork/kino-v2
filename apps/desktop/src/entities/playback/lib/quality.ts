@@ -28,10 +28,22 @@ export function codecLabel(codec: string | null): string | null {
   return CODECS[codec] ?? codec.toUpperCase()
 }
 
-type QualitySource = Pick<PlayerSnapshot, 'videoWidth' | 'videoHeight' | 'videoCodec' | 'hdr' | 'fileSize' | 'duration'>
+type QualitySource = Pick<PlayerSnapshot, 'videoWidth' | 'videoHeight' | 'videoCodec' | 'hdr' | 'videoTransfer' | 'tracks' | 'fileSize' | 'duration'>
 
 /**
- * The player's quality line: «1080p · HEVC · HDR · 1,5 ГБ · 4,3 Мбит/с». The bitrate is the
+ * Which HDR the picture is: «Dolby Vision P8» (by the video track's profile), «HDR10» (PQ), «HLG».
+ * HDR10+ is not told apart: mpv does not say whether a file has its dynamic metadata
+ */
+export function hdrLabel(s: Pick<PlayerSnapshot, 'hdr' | 'videoTransfer' | 'tracks'>): string | null {
+  const dv = s.tracks.find((t) => t.kind === 'video' && t.isSelected)?.dvProfile
+  if (dv != null) return `Dolby Vision P${dv}`
+  if (s.videoTransfer === 'pq') return 'HDR10'
+  if (s.videoTransfer === 'hlg') return 'HLG'
+  return s.hdr ? 'HDR' : null
+}
+
+/**
+ * The player's quality line: «2160p · HEVC · Dolby Vision P8 · 52 ГБ · 47,2 Мбит/с». The bitrate is the
  * file's average (size over duration) — it does not jump from scene to scene. What is not known
  * yet (the picture before its first frame) is left out
  */
@@ -40,7 +52,7 @@ export function qualityLine(s: QualitySource, locale: string): string {
   return [
     resolutionLabel(s.videoWidth, s.videoHeight),
     codecLabel(s.videoCodec),
-    s.hdr ? 'HDR' : null,
+    hdrLabel(s),
     s.fileSize ? formatSize(s.fileSize, locale) : null,
     bitrate ? formatBitrate(bitrate, locale) : null,
   ]

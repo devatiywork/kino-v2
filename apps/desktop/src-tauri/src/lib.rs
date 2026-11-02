@@ -339,7 +339,7 @@ pub fn run() {
                 }
             }
             let settings_for_updates = settings.clone();
-            let player = Player::new(app.handle(), library, settings, hwnd, size.width, size.height)?;
+            let player = Player::new(app.handle(), library, settings, hwnd, size.width, size.height, data.join("logs"))?;
             app.manage(player);
 
             // «Проверять обновления»; the tests never ask GitHub (only their own server)
@@ -421,6 +421,7 @@ pub fn run() {
             app_open_url,
             app_reveal_path,
             pc::player_snapshot,
+            pc::player_stats,
             pc::player_open,
             pc::player_open_neighbor,
             pc::player_stop,

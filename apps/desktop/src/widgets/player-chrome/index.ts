@@ -1,4 +1,5 @@
 export { EpisodesPanel } from './ui/EpisodesPanel'
 export { MiniPlayer } from './ui/MiniPlayer'
 export { PlayerBottomBar } from './ui/PlayerBottomBar'
+export { PlayerStats } from './ui/PlayerStats'
 export { PlayerTopBar } from './ui/PlayerTopBar'

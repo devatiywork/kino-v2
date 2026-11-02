@@ -1,4 +1,4 @@
-import { episode, expect, FILM, test, wakeControls } from './kino'
+import { episode, expect, FILM, media, test, wakeControls } from './kino'
 
 test.describe('плеер', () => {
   test('файл из командной строки открывается в плеере и играет', async ({ launch }) => {
@@ -133,6 +133,33 @@ test.describe('плеер', () => {
     await expect.poll(visible('main')).toBe(false)
     await mini.evaluate(() => (window as unknown as { __TAURI_INTERNALS__: { invoke: (c: string, a: unknown) => Promise<unknown> } }).__TAURI_INTERNALS__.invoke('plugin:window|close', { label: 'mini' })).catch(() => undefined)
     expect(await kino.exits(10_000)).toBe(true)
+  })
+
+  test('HDR10: в строке качества «HDR10», статистика по I — аппаратный декодер, 10 бит, BT.2020 и PQ, метаданные; синхронизация по экрану — сразу', async ({ launch }) => {
+    // 640×360 HEVC Main 10, BT.2020, PQ, mastered at 1000 nits, MaxCLL 1000, MaxFALL 400
+    const kino = await launch({ file: media('hdr', 'HDR10.Sample.mkv') })
+    const { page } = kino
+    await expect.poll(async () => (await kino.snapshot()).videoHeight).toBe(360)
+    await wakeControls(page)
+    await expect(page.getByTitle('Качество, размер и средний битрейт файла')).toHaveText(/^360p · HEVC · HDR10 · /)
+
+    await page.keyboard.press('i')
+    const stats = page.getByRole('region', { name: 'Статистика воспроизведения' })
+    await expect(stats).toBeVisible()
+    await expect(stats).toContainText('d3d11va — аппаратный')
+    await expect(stats).toContainText('HEVC · 640×360 · p010')
+    await expect(stats).toContainText('BT.2020 · PQ (ST 2084)')
+    await expect(stats).toContainText('мастеринг 1000 нит · MaxCLL 1000 · MaxFALL 400')
+    await expect(stats).toContainText('gpu-next · d3d11')
+    await expect(stats).toContainText('кадры по звуку')
+    // What goes out depends on Windows' HDR: either way the panel says which
+    await expect(stats).toContainText(/Вывод(SDR|HDR) · /)
+
+    // A setting of «Видео и звук» reaches the playing mpv at once
+    await kino.invoke('settings_update', { patch: { videoSync: 'display' } })
+    await expect(stats).toContainText('кадры по экрану')
+    await page.keyboard.press('i')
+    await expect(stats).toBeHidden()
   })
 
   test('клик по полосе перематывает к этому месту', async ({ launch }) => {

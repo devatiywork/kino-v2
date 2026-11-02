@@ -3,7 +3,7 @@ import { useState, type MouseEvent, type WheelEvent } from 'react'
 import { changeVolume, clickVideo, Osd, usePlayback, VOLUME_STEP } from '../../../entities/playback'
 import { useMediaKeys, usePlayerHotkeys } from '../../../features/player-hotkeys'
 import { useIdle } from '../../../shared/lib/useIdle'
-import { EpisodesPanel, PlayerBottomBar, PlayerTopBar } from '../../../widgets/player-chrome'
+import { EpisodesPanel, PlayerBottomBar, PlayerStats, PlayerTopBar } from '../../../widgets/player-chrome'
 import { usePanelMargin } from '../model/usePanelMargin'
 import { useSubtitleLift } from '../model/useSubtitleLift'
 import { useVideoLayer } from '../model/useVideoLayer'
@@ -49,6 +49,7 @@ export function PlayerPage() {
       <PlayerTopBar hidden={idle} onBack={leave} />
       <ResumeBanner />
       <Osd />
+      <PlayerStats />
       <PlayerBottomBar
         hidden={idle}
         onMenuOpenChange={setMenuOpen}

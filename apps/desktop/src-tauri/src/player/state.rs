@@ -39,6 +39,8 @@ pub struct PlayerSnapshot {
     pub video_codec: Option<String>,
     /// PQ or HLG transfer: HDR10, Dolby Vision, HLG
     pub hdr: bool,
+    /// mpv's video-params/gamma: «pq», «hlg», «bt.1886»… — which HDR it is
+    pub video_transfer: Option<String>,
     /// Bytes; with the duration — the file's average bitrate
     pub file_size: Option<u64>,
 }
@@ -72,6 +74,7 @@ impl Default for PlayerSnapshot {
             video_height: None,
             video_codec: None,
             hdr: false,
+            video_transfer: None,
             file_size: None,
         }
     }
@@ -172,7 +175,10 @@ impl PlayerSnapshot {
             ("width", Double(v)) => self.video_width = dimension(v),
             ("height", Double(v)) => self.video_height = dimension(v),
             ("video-format", Str(v)) => self.video_codec = Some(v.to_owned()).filter(|s| !s.is_empty()),
-            ("video-params/gamma", Str(v)) => self.hdr = is_hdr(v),
+            ("video-params/gamma", Str(v)) => {
+                self.hdr = is_hdr(v);
+                self.video_transfer = Some(v.to_owned()).filter(|s| !s.is_empty());
+            }
             ("file-size", Double(v)) => self.file_size = (v > 0.0).then_some(v as u64),
             _ => return Change::Ignored,
         }
@@ -202,6 +208,7 @@ impl PlayerSnapshot {
         self.video_height = None;
         self.video_codec = None;
         self.hdr = false;
+        self.video_transfer = None;
         self.file_size = None;
     }
 }

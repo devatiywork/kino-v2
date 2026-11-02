@@ -24,6 +24,8 @@ pub struct Track {
     pub is_forced: bool,
     pub is_external: bool,
     pub is_selected: bool,
+    /// A Dolby Vision video track: its profile (5, 7, 8…)
+    pub dv_profile: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -44,6 +46,8 @@ struct RawTrack {
     external: bool,
     #[serde(default)]
     selected: bool,
+    #[serde(rename = "dolby-vision-profile")]
+    dv_profile: Option<i64>,
 }
 
 /// Parses `track-list`; tracks of unknown types are skipped
@@ -69,6 +73,7 @@ pub fn parse_track_list(json: &str) -> Result<Vec<Track>, serde_json::Error> {
                 is_forced: t.forced,
                 is_external: t.external,
                 is_selected: t.selected,
+                dv_profile: t.dv_profile,
             })
         })
         .collect())
@@ -124,5 +129,14 @@ mod tests {
     #[test]
     fn invalid_json_is_an_error() {
         assert!(parse_track_list("not json").is_err());
+    }
+
+    #[test]
+    fn a_dolby_vision_track_tells_its_profile() {
+        let json = r#"[{"id":1,"type":"video","codec":"hevc","selected":true,"dolby-vision-profile":8,"dolby-vision-level":6},
+            {"id":1,"type":"audio","codec":"truehd","selected":true}]"#;
+        let tracks = parse_track_list(json).unwrap();
+        assert_eq!(tracks[0].dv_profile, Some(8));
+        assert_eq!(tracks[1].dv_profile, None);
     }
 }

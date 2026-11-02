@@ -6,11 +6,12 @@ mod events;
 pub mod mini;
 mod session;
 mod state;
+mod stats;
 mod track_defaults;
 pub(crate) mod tracks;
 mod video_host;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
@@ -28,6 +29,7 @@ use crate::power::KeepAwake;
 use crate::settings::{Settings, SettingsStore};
 use session::Session;
 pub use state::PlayerSnapshot;
+pub use stats::PlayerStats;
 pub use events::STATE_EVENT;
 use tracks::TrackKind;
 use video_host::VideoHost;
@@ -53,8 +55,25 @@ pub(crate) fn load(mpv: &Mpv, library: &Library, settings: &SettingsStore, path:
     Ok(OpenResult { resumed_from })
 }
 
+/// mpv's log: «Журнал воспроизведения» writes <data>\logs\mpv.log anew at every start; a debug
+/// build always keeps one in %TEMP%
+fn log_file(logs: &Path, settings: &Settings) -> Option<PathBuf> {
+    if settings.playback_log {
+        if let Err(e) = std::fs::create_dir_all(logs) {
+            eprintln!("[player] log folder: {e}");
+        }
+        Some(logs.join("mpv.log"))
+    } else if cfg!(debug_assertions) {
+        Some(std::env::temp_dir().join("kino-mpv.log"))
+    } else {
+        None
+    }
+}
+
 pub struct Player {
     mpv: Mpv,
+    /// <data>\logs: where «Журнал воспроизведения» goes
+    logs: PathBuf,
     host: VideoHost,
     app: AppHandle,
     library: Arc<Library>,
@@ -107,10 +126,12 @@ pub struct OpenResult {
 }
 
 impl Player {
-    /// `parent` — HWND of the main window, `width`/`height` — its client area in physical pixels
-    pub fn new(app: &AppHandle, library: Arc<Library>, settings: Arc<SettingsStore>, parent: isize, width: u32, height: u32) -> AppResult<Self> {
+    /// `parent` — HWND of the main window, `width`/`height` — its client area in physical pixels,
+    /// `logs` — the folder of «Журнал воспроизведения»
+    pub fn new(app: &AppHandle, library: Arc<Library>, settings: Arc<SettingsStore>, parent: isize, width: u32, height: u32, logs: PathBuf) -> AppResult<Self> {
         let host = VideoHost::create(parent, width as i32, height as i32)?;
         let initial = settings.get();
+        let log = log_file(&logs, &initial);
         let mpv = Mpv::with_initializer(|init| {
             init.set_option("wid", host.wid())?;
             init.set_option("config", "no")?;
@@ -140,8 +161,11 @@ impl Player {
             // Frames for the home screen cards
             init.set_option("screenshot-format", "jpg")?;
             init.set_option("screenshot-jpeg-quality", 82i64)?;
-            if cfg!(debug_assertions) {
-                let log = std::env::temp_dir().join("kino-mpv.log");
+            // «Видео и звук»: HDR, tone mapping, frame sync, the sound's passthrough and exclusive mode
+            for (name, value) in initial.mpv_video_options() {
+                init.set_option(name, value.as_str())?;
+            }
+            if let Some(log) = &log {
                 init.set_option("log-file", log.to_string_lossy().as_ref())?;
             }
             // KINO_TEST_VOLUME — the tests are quiet from the very first frame (a release build too)
@@ -168,6 +192,7 @@ impl Player {
         })?;
         Ok(Self {
             mpv,
+            logs,
             host,
             app: app.clone(),
             library,
@@ -221,6 +246,27 @@ impl Player {
         if old.keep_awake != new.keep_awake {
             self.awake.set(new.keep_awake && events::lock(&self.snapshot).is_playing());
         }
+        let before = old.mpv_video_options();
+        for (name, value) in new.mpv_video_options() {
+            if before.iter().any(|(n, v)| *n == name && *v != value) {
+                self.set_logged(name, value.as_str());
+            }
+        }
+        // The sound's output opens anew: passthrough and exclusive mode take effect at once
+        if old.audio_passthrough != new.audio_passthrough || old.audio_exclusive != new.audio_exclusive {
+            if let Err(e) = self.mpv.command("ao-reload", &[]) {
+                eprintln!("[player] ao-reload: {e}");
+            }
+        }
+        if old.playback_log != new.playback_log {
+            let log = log_file(&self.logs, new).map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+            self.set_logged("log-file", log.as_str());
+        }
+    }
+
+    /// «Статистика воспроизведения»: what mpv does with the open file right now
+    pub fn stats(&self) -> PlayerStats {
+        stats::read(&self.mpv)
     }
 
     fn set_logged<T: SetData>(&self, name: &str, value: T) {

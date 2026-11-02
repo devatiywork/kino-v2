@@ -81,6 +81,7 @@ mod tests {
             is_forced: false,
             is_external: false,
             is_selected: false,
+            dv_profile: None,
         }
     }
 

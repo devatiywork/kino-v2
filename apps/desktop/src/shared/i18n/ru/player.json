@@ -45,5 +45,40 @@
   "loading": "Загрузка…",
   "miniPlayer": "Мини-плеер",
   "expandPlayer": "Развернуть плеер",
-  "closePlayer": "Закрыть плеер"
+  "closePlayer": "Закрыть плеер",
+  "stats": {
+    "title": "Статистика воспроизведения",
+    "toggle": "Скрыть — {{key}}",
+    "rows": {
+      "decoder": "Декодер",
+      "video": "Видео",
+      "colour": "Цвет",
+      "hdr": "HDR",
+      "dolbyVision": "Dolby Vision",
+      "output": "Вывод",
+      "render": "Рендер",
+      "display": "Экран",
+      "frames": "Кадры",
+      "audio": "Звук"
+    },
+    "hardware": "{{decoder}} — аппаратный",
+    "software": "программный",
+    "fps": "{{value}} к/с",
+    "hz": "{{value}} Гц",
+    "nits": "{{value}} нит",
+    "mastering": "мастеринг {{value}}",
+    "dvProfile": "профиль {{profile}}",
+    "gamma": "гамма {{value}}",
+    "linear": "линейный",
+    "levels": {
+      "limited": "ограниченный диапазон",
+      "full": "полный диапазон"
+    },
+    "syncAudio": "кадры по звуку",
+    "syncDisplay": "кадры по экрану",
+    "interpolation": "интерполяция",
+    "dropped": "пропущено {{output}} · декодером {{decoder}} · с задержкой {{delayed}} · не в такт {{mistimed}}",
+    "channels": "{{from}} кан. → {{to}}",
+    "passthrough": "на ресивер"
+  }
 }

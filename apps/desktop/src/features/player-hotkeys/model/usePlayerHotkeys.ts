@@ -7,6 +7,7 @@ import {
   seekBy,
   toggleMute,
   togglePause,
+  toggleStats,
   toggleSubtitles,
   VOLUME_STEP,
 } from '../../../entities/playback'
@@ -28,6 +29,7 @@ const RUN: Record<PlayerAction, () => void> = {
   toggleSubtitles,
   nextEpisode: () => void openNeighborEpisode(1),
   prevEpisode: () => void openNeighborEpisode(-1),
+  toggleStats,
 }
 
 /** Toggles do not repeat while the key is held; seeking and volume do */
