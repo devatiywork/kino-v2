@@ -143,6 +143,8 @@ export interface TorrentDetails {
   peersSeen: number
   /** Fetched and thrown away */
   lost: number
+  /** Times the peers were reconnected because the download stood still with them */
+  stallReconnects: number
   /** Where else peers come from; a private torrent asks its trackers only */
   discovery: { dht: boolean; pex: boolean; lsd: boolean }
   seeding: Seeding

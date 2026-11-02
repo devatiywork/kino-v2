@@ -95,7 +95,7 @@ describe('statsRows', () => {
   it('HDR на выходе, Dolby Vision, звук на ресивер; программное декодирование; неизвестное пропускается', () => {
     const rows = Object.fromEntries(
       statsRows(
-        { ...hdr10, decoder: 'no', outPrimaries: 'bt.2020', outTransfer: 'pq', outPeak: 1000, audioOutFormat: 'spdif-eac3', maxLuma: null, maxCll: null, maxFall: null },
+        { ...hdr10, decoder: 'no', matrix: 'dolbyvision', outPrimaries: 'bt.2020', outTransfer: 'pq', outPeak: 1000, audioOutFormat: 'spdif-eac3', maxLuma: null, maxCll: null, maxFall: null },
         8,
         t,
         'ru',
@@ -104,6 +104,7 @@ describe('statsRows', () => {
     expect(rows['Декодер']).toBe('программный')
     expect(rows['Вывод']).toBe('HDR · BT.2020 · PQ (ST 2084) · 1000 нит')
     expect(rows['Dolby Vision']).toBe('профиль 8')
+    expect(rows['Цвет']).toBe('BT.2020 · PQ (ST 2084) · Dolby Vision · ограниченный диапазон')
     expect(rows['Звук']).toContain('на ресивер')
     expect(rows['HDR']).toBeUndefined()
     expect(statsRows(empty, null, t, 'ru').map((r) => r.label)).toEqual(['Декодер'])

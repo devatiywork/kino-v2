@@ -19,6 +19,8 @@ function colour(value: string | null, t: T): string | null {
     'display-p3': 'Display P3',
     'bt.2020-ncl': 'BT.2020 NCL',
     'bt.2020-cl': 'BT.2020 CL',
+    // The matrix of a frame mpv reshapes by its Dolby Vision RPU
+    dolbyvision: 'Dolby Vision',
   }
   if (known[value]) return known[value]
   if (value.startsWith('gamma')) return t('stats.gamma', { value: value.slice(5) })
