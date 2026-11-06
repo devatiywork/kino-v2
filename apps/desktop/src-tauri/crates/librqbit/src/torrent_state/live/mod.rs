@@ -118,6 +118,10 @@ use super::{
     utils::{TimedExistence, timeit},
 };
 
+// Kino: speeds are sampled every 100 ms, so upstream's default of 5 samples was a window of half a
+// second and the number jumped. 50 samples: 5 seconds
+const SPEED_WINDOW_SAMPLES: usize = 50;
+
 fn make_piece_bitfield(lengths: &Lengths) -> BF {
     BF::from_boxed_slice(vec![0; lengths.piece_bitfield_bytes()].into_boxed_slice())
 }
@@ -229,8 +233,8 @@ impl TorrentStateLive {
             .upgrade()
             .context("session is dead, cannot start torrent")?;
         let session_stats = session.stats.clone();
-        let down_speed_estimator = SpeedEstimator::default();
-        let up_speed_estimator = SpeedEstimator::default();
+        let down_speed_estimator = SpeedEstimator::new(SPEED_WINDOW_SAMPLES);
+        let up_speed_estimator = SpeedEstimator::new(SPEED_WINDOW_SAMPLES);
 
         let have_bytes = paused.chunk_tracker.get_hns().have_bytes;
         let lengths = *paused.chunk_tracker.get_lengths();
@@ -2095,4 +2099,30 @@ fn format_peer_client_name(value: &ByteBuf<'_>) -> Option<String> {
     }
 
     Some(client_name)
+}
+
+// Kino
+#[cfg(test)]
+mod speed_window_tests {
+    use super::*;
+
+    #[test]
+    fn a_second_without_data_does_not_zero_the_speed() {
+        const MIB: u64 = 1024 * 1024;
+        let estimator = SpeedEstimator::new(SPEED_WINDOW_SAMPLES);
+        let start = Instant::now();
+        let at = |tick: u32| start + Duration::from_millis(100) * tick;
+        // 10 seconds at 10 MiB/s, sampled as the updater samples, every 100 ms
+        for tick in 0..100 {
+            estimator.add_snapshot(u64::from(tick + 1) * MIB, None, at(tick));
+        }
+        let steady = estimator.mbps();
+        assert!((9.9..=10.1).contains(&steady), "steady: {steady}");
+        // A second with nothing: 4 of the last 5 seconds still had data
+        for tick in 100..110 {
+            estimator.add_snapshot(100 * MIB, None, at(tick));
+        }
+        let after_gap = estimator.mbps();
+        assert!((7.9..=8.1).contains(&after_gap), "after the gap: {after_gap}");
+    }
 }

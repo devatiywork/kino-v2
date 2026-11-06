@@ -32,6 +32,9 @@ fraction of the peers qBittorrent gets on the same torrent.
   100 GB film, the download at 0 and the process impossible to kill until the write returned.
 - `storage/filesystem/sparse.rs` — `DeviceIoControl` gets its `lpBytesReturned`, as its documentation
   demands for a synchronous call.
+- `torrent_state/live/mod.rs` — a torrent's speed estimators keep 50 samples (`SPEED_WINDOW_SAMPLES`).
+  The updater samples every 100 ms, so upstream's default of 5 was half a second and the speed jumped;
+  now it is 5 seconds, as the default meant.
 
 ## Worth knowing
 
