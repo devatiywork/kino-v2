@@ -82,7 +82,12 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
   if (!options.dataDir) owned.push(dataDir)
   port += 1
   const cdp = `http://127.0.0.1:${port}`
-  const child: ChildProcess = spawn(EXE, options.file ? [options.file] : [], {
+  // A switch of the host, not WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: WebView2 no longer applies that
+  // variable over the options wry gives it. Kino itself skips an argument that starts with a dash.
+  // CalculateNativeWinOcclusion: a cloaked window would count as covered, the page would stop drawing
+  // and its timers slow down
+  const webview = `--edge-webview-switches=--remote-debugging-port=${port} --disable-features=CalculateNativeWinOcclusion`
+  const child: ChildProcess = spawn(EXE, options.file ? [webview, options.file] : [webview], {
     env: {
       ...process.env,
       KINO_DATA_DIR: dataDir,
@@ -98,8 +103,6 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
       ...(options.adblockList ? { KINO_ADBLOCK_LIST: options.adblockList } : {}),
       // Its own WebView2 browser: never joins another Kino, the CDP port is ours
       WEBVIEW2_USER_DATA_FOLDER: join(dataDir, 'webview2'),
-      // A cloaked window would count as covered: the page would stop drawing and its timers slow down
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --disable-features=CalculateNativeWinOcclusion`,
     },
     stdio: 'ignore',
   })

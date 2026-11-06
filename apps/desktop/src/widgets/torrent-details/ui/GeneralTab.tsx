@@ -48,7 +48,6 @@ export function GeneralTab({ torrent, details }: { torrent: ActiveTorrent; detai
           <Stat label={t('details.downSpeed')} value={formatRate(torrent.downloadSpeed, locale)} />
           <Stat label={t('details.upSpeed')} value={formatRate(torrent.uploadSpeed, locale)} />
           <Stat label={t('details.lost')} value={details ? size(details.lost) : '…'} />
-          {details?.stallReconnects ? <Stat label={t('details.stallReconnects')} value={String(details.stallReconnects)} /> : null}
         </dl>
       </section>
       <section className="flex flex-col gap-2.5">

@@ -171,8 +171,7 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          the source .torrent), policy (the settings' rules the engine lacks, run by the update loop: the
                          alternative limits' schedule by its edges, seeding limits by ratio and time, the queue of
                          downloads / seeds / total with slow torrents left out — state `queued`; the trackers the engine
-                         gets: merged from the same torrent added again + «свои трекеры»), speeds (30 minutes of speeds per torrent, peer speeds), stalls (peers and
-                         nothing coming for 90 s → the torrent's peers reconnected by pause / resume, at most every 5 min), commands (torrents://update
+                         gets: merged from the same torrent added again + «свои трекеры»), speeds (30 minutes of speeds per torrent, peer speeds), commands (torrents://update
                          every second, torrents://changed, torrents://notice; settings://changed when the schedule switched
                          the limits). Engine network options (port, UPnP, protocol, peers, SOCKS5, DHT, LSD) are read at
                          start only. Knows nothing about the player
@@ -194,7 +193,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          «Освободить место» (the torrent leaves the downloads first, an emptied one becomes «Файлы удалены»),
                          moving a torrent's files (the library's episodes move with them)
     src/instance.rs    — one Kino per data folder (SPEC 6 «Одно окно»): a named mutex; a later start hands its arguments
-                         to the running one over WM_COPYDATA to a message-only window and quits → app://open. Keyed by the
+                         to the running one over WM_COPYDATA to a message-only window and quits → app://open; one that does
+                         not answer is on its way out, the later start waits for its mutex and takes over. Keyed by the
                          data folder, so the tests' and a debug build's Kinos never meet the user's one
     src/media_keys.rs  — Windows' media session (System Media Transport Controls): follows player://state, keys →
                          media://key; off in the tests
@@ -281,7 +281,7 @@ Every feature must be covered before it is considered complete:
 - **Integration** — IPC bridge, player service, module interactions with mocks
 - **E2E** — critical user scenarios (open file, continue from history, switch track, autoplay, subtitles; add torrent with category, remove from downloads keeps archive, download again; a tracker's .torrent and magnet caught with the release page)
 
-E2E runs the real debug build: Playwright connects to WebView2 over CDP (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port`).
+E2E runs the real debug build: Playwright connects to WebView2 over CDP (`--edge-webview-switches=--remote-debugging-port=…` on Kino's command line; `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` is no longer applied over the options wry sets).
 Each launch gets its own temp folder; the core reads these variables:
 
 - `KINO_DATA_DIR` — kino.db and thumbs instead of %APPDATA% (all builds), so tests never touch the real history

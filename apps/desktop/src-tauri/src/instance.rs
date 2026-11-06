@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use windows::core::{HSTRING, PCWSTR};
-use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::COPYDATASTRUCT;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::System::Threading::CreateMutexW;
@@ -21,12 +21,16 @@ use windows::Win32::UI::WindowsAndMessaging::{
 const KINO_ARGS: usize = 0x4B49_4E4F;
 /// The running Kino may still be starting: its window comes a moment after its mutex
 const FIND_FOR: Duration = Duration::from_secs(10);
+/// A Kino that does not answer is on its way out: a process ends only when its last disk write
+/// returns, and holds its mutex until then. A later start waits this long to take its place
+const TAKE_OVER_FOR: Duration = Duration::from_secs(15 * 60);
 
 /// What a start of Kino is
 pub enum Instance {
     /// The only one for its data folder: `listen` takes what later starts hand over
     First(Listener),
-    /// Another Kino has this data folder: what this start was given went to it
+    /// Another Kino has this data folder: what this start was given went to it, or that Kino never
+    /// answered and never left. This start ends
     Handed,
 }
 
@@ -57,20 +61,46 @@ pub fn unpack(block: &[u16]) -> Vec<String> {
 
 /// Takes the data folder or hands `args` to the Kino that has it
 pub fn claim(data_dir: &Path, args: &[String]) -> Instance {
-    let key = key_of(data_dir);
-    // SAFETY: a named mutex, left open for the life of the process
-    match unsafe { CreateMutexW(None, false, &HSTRING::from(format!("Local\\{key}"))) } {
-        Ok(_) if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS => return hand_over(&key, args),
-        Ok(_) => {}
-        // No mutex — no single instance, but Kino still works
-        Err(e) => eprintln!("[instance] mutex: {e}"),
-    }
-    Instance::First(Listener { key })
+    claim_within(data_dir, args, FIND_FOR, TAKE_OVER_FOR)
 }
 
-fn hand_over(key: &str, args: &[String]) -> Instance {
+fn claim_within(data_dir: &Path, args: &[String], mut find_for: Duration, take_over_for: Duration) -> Instance {
+    let key = key_of(data_dir);
+    let name = HSTRING::from(format!("Local\\{key}"));
+    let deadline = Instant::now() + take_over_for;
+    loop {
+        // SAFETY: a named mutex; the first Kino leaves it open for the life of the process
+        let mutex = match unsafe { CreateMutexW(None, false, &name) } {
+            Ok(mutex) => mutex,
+            // No mutex — no single instance, but Kino still works
+            Err(e) => {
+                eprintln!("[instance] mutex: {e}");
+                return Instance::First(Listener { key });
+            }
+        };
+        if unsafe { GetLastError() } != ERROR_ALREADY_EXISTS {
+            return Instance::First(Listener { key });
+        }
+        if hand_over(&key, args, find_for) {
+            return Instance::Handed;
+        }
+        // SAFETY: this start's own handle; left open it would keep the name taken by itself
+        if let Err(e) = unsafe { CloseHandle(mutex) } {
+            eprintln!("[instance] mutex: {e}");
+        }
+        if Instant::now() >= deadline {
+            eprintln!("[instance] another Kino has this data folder but does not answer");
+            return Instance::Handed;
+        }
+        find_for = Duration::ZERO;
+        std::thread::sleep(Duration::from_millis(250));
+    }
+}
+
+/// `args` to the Kino that has this key; false — it does not answer
+fn hand_over(key: &str, args: &[String], find_for: Duration) -> bool {
     let class = HSTRING::from(key);
-    let deadline = Instant::now() + FIND_FOR;
+    let deadline = Instant::now() + find_for;
     let window = loop {
         // SAFETY: a lookup among the message-only windows
         match unsafe { FindWindowExW(Some(HWND_MESSAGE), None, &class, PCWSTR::null()) } {
@@ -79,10 +109,7 @@ fn hand_over(key: &str, args: &[String]) -> Instance {
             _ => break None,
         }
     };
-    let Some(window) = window else {
-        eprintln!("[instance] another Kino has this data folder but does not answer");
-        return Instance::Handed;
-    };
+    let Some(window) = window else { return false };
     let mut block = pack(args);
     let data = COPYDATASTRUCT { dwData: KINO_ARGS, cbData: (block.len() * 2) as u32, lpData: block.as_mut_ptr().cast() };
     // SAFETY: the window belongs to the other Kino; `data` outlives the synchronous send
@@ -92,9 +119,9 @@ fn hand_over(key: &str, args: &[String]) -> Instance {
         // This start has the foreground (the user just did it): the other Kino may take it
         let _ = AllowSetForegroundWindow(pid);
         let mut result = 0;
-        SendMessageTimeoutW(window, WM_COPYDATA, WPARAM(0), LPARAM(&data as *const COPYDATASTRUCT as isize), SMTO_ABORTIFHUNG, 5_000, Some(&mut result));
+        let sent = SendMessageTimeoutW(window, WM_COPYDATA, WPARAM(0), LPARAM(&data as *const COPYDATASTRUCT as isize), SMTO_ABORTIFHUNG, 5_000, Some(&mut result));
+        sent.0 != 0 && result == 1
     }
-    Instance::Handed
 }
 
 type OnArgs = Box<dyn Fn(Vec<String>) + Send + Sync>;
@@ -183,5 +210,33 @@ mod tests {
         assert!(matches!(claim(&dir, &given), Instance::Handed));
         assert_eq!(receiver.recv_timeout(Duration::from_secs(5)).unwrap(), given);
         assert!(matches!(claim(&dir.join("other"), &[]), Instance::First(_)), "another data folder — another Kino");
+    }
+
+    /// The mutex of a Kino on its way out: held, with no window to answer
+    fn hold_mutex(dir: &Path) -> windows::Win32::Foundation::HANDLE {
+        // SAFETY: a named mutex the test closes itself
+        unsafe { CreateMutexW(None, false, &HSTRING::from(format!("Local\\{}", key_of(dir)))) }.unwrap()
+    }
+
+    #[test]
+    fn a_later_start_takes_the_place_of_a_kino_that_left() {
+        let dir = std::env::temp_dir().join(format!("kino-instance-left-{}", std::process::id()));
+        let held = hold_mutex(&dir).0 as isize;
+        let leaving = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(600));
+            // SAFETY: the handle made above, closed once
+            unsafe { CloseHandle(windows::Win32::Foundation::HANDLE(held as *mut _)) }.unwrap();
+        });
+        assert!(matches!(claim_within(&dir, &[], Duration::ZERO, Duration::from_secs(20)), Instance::First(_)));
+        leaving.join().unwrap();
+    }
+
+    #[test]
+    fn a_later_start_gives_up_on_a_kino_that_never_leaves() {
+        let dir = std::env::temp_dir().join(format!("kino-instance-stays-{}", std::process::id()));
+        let held = hold_mutex(&dir);
+        assert!(matches!(claim_within(&dir, &[], Duration::ZERO, Duration::from_millis(300)), Instance::Handed));
+        // SAFETY: the handle made above, closed once
+        unsafe { CloseHandle(held) }.unwrap();
     }
 }

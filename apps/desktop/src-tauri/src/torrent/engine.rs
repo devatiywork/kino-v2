@@ -410,6 +410,32 @@ mod tests {
         });
     }
 
+    /// A piece at the far end of a file that is not sparse makes Windows fill everything before it
+    /// with zeros inside that one write: minutes for a big film, the download stands still and the
+    /// process cannot even be killed
+    #[test]
+    fn a_download_is_a_sparse_file() {
+        use std::os::windows::fs::MetadataExt;
+        const FILE_ATTRIBUTE_SPARSE_FILE: u32 = 0x200;
+        let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        runtime.block_on(async {
+            let dir = temp("sparse");
+            let bytes = torrent_of(&dir.join("seed"), "Film.mkv", 200_000).await;
+            let kino = offline_engine(&dir).await;
+            kino.add(bytes, &dir.join("got"), None, false, Vec::new()).await.unwrap();
+            let file = dir.join("got").join("Film.mkv");
+            let sized = async {
+                while !std::fs::metadata(&file).is_ok_and(|m| m.len() == 200_000) {
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+            };
+            tokio::time::timeout(std::time::Duration::from_secs(20), sized).await.expect("the file gets its length");
+            assert_ne!(std::fs::metadata(&file).unwrap().file_attributes() & FILE_ATTRIBUTE_SPARSE_FILE, 0, "not sparse");
+            kino.stop().await;
+            let _ = std::fs::remove_dir_all(&dir);
+        });
+    }
+
     /// MSE/PE between two engines (crates/librqbit/src/mse.rs): a seeder that requires it is
     /// reached by one that prefers it, not by one that has it off; one that has it off is
     /// reached by one that prefers it — after the encrypted try, plain

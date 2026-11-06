@@ -1,6 +1,6 @@
 {
   "name": "kino",
-  "version": "0.31.2",
+  "version": "0.31.3",
   "private": true,
   "description": "Kino — видеоплеер и торрент-клиент для Windows на Tauri, mpv и librqbit",
   "license": "MIT",

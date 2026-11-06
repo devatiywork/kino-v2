@@ -25,6 +25,13 @@ fraction of the peers qBittorrent gets on the same torrent.
   options itself and would otherwise take the default.
 - `Cargo.toml` — `num-bigint` for the 768-bit arithmetic; `sqlx` (the `postgres` feature) dropped:
   its sqlite links clash with Kino's rusqlite once the crate is a workspace member.
+- `storage/filesystem/opened_file.rs` — a file is really marked sparse. Upstream makes the call inside
+  the fields of `tracing::debug!`, and those are evaluated only with debug logging on: Kino has no
+  subscriber, so no file ever was. `set_len` then allocated the whole file, and the first piece written
+  far into it made NTFS fill everything before it with zeros inside that one write — minutes for a
+  100 GB film, the download at 0 and the process impossible to kill until the write returned.
+- `storage/filesystem/sparse.rs` — `DeviceIoControl` gets its `lpBytesReturned`, as its documentation
+  demands for a synchronous call.
 
 ## Worth knowing
 

@@ -186,7 +186,10 @@ impl OpenedFile {
         if !g.tried_marking_sparse {
             g.tried_marking_sparse = true;
             let f = g.fd.as_ref().ok_or(Error::FsFileIsNone)?;
-            tracing::debug!(path=?g.path, marked=super::sparse::mark_file_sparse(f), "marking sparse");
+            // Kino: not inside `debug!`, whose fields are evaluated only with debug logging on.
+            // Without it no file was ever marked (see KINO.md)
+            let marked = super::sparse::mark_file_sparse(f);
+            tracing::debug!(path=?g.path, marked, "marking sparse");
         }
         let g = parking_lot::RwLockWriteGuard::downgrade(g);
         Ok(RwLockReadGuard::try_map(g, |f| f.fd.as_ref()).ok().unwrap())
@@ -202,6 +205,27 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::storage::filesystem::opened_file::OurFileExt;
+
+    // Kino: no tracing subscriber in the tests, as in Kino itself
+    #[cfg(windows)]
+    #[test]
+    fn test_marked_sparse_without_debug_logging() {
+        use std::os::windows::fs::MetadataExt;
+        const FILE_ATTRIBUTE_SPARSE_FILE: u32 = 0x200;
+
+        let td = TempDir::with_prefix("test_marked_sparse").unwrap();
+        let path = td.path().join("file");
+        let file = std::fs::OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(&path)
+            .unwrap();
+        let opened = super::OpenedFile::new(path.clone(), file);
+        drop(opened.try_mark_sparse().unwrap());
+        let attributes = std::fs::metadata(&path).unwrap().file_attributes();
+        assert_ne!(attributes & FILE_ATTRIBUTE_SPARSE_FILE, 0);
+    }
 
     #[test]
     fn test_pwrite_all_vectored() {

@@ -217,7 +217,6 @@
     "tracker": "Tracker address",
     "copyAddress": "Copy address",
     "lost": "Wasted",
-    "stallReconnects": "Peer reconnections on a stall",
     "on": "working",
     "off": "off",
     "offPrivate": "off — private torrent",

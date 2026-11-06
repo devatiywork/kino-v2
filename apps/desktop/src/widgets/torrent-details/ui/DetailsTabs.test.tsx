@@ -10,7 +10,6 @@ const dialog = vi.hoisted(() => ({ open: vi.fn(), save: vi.fn() }))
 vi.mock('@tauri-apps/plugin-dialog', () => dialog)
 
 const { ParamsTab } = await import('./ParamsTab')
-const { GeneralTab } = await import('./GeneralTab')
 const { SpeedTab } = await import('./SpeedTab')
 const { PeersTab, TrackersTab } = await import('./PeersTrackersTabs')
 const { PieceMap } = await import('./PieceMap')
@@ -33,7 +32,6 @@ function details(patch: Partial<TorrentDetails> = {}): TorrentDetails {
     peersLive: 2,
     peersSeen: 9,
     lost: 0,
-    stallReconnects: 0,
     discovery: { dht: true, pex: true, lsd: true },
     seeding: { mode: 'default' },
     ...patch,
@@ -122,13 +120,5 @@ describe('torrent details tabs', () => {
     await user.clear(field)
     await user.type(field, '1,5{Enter}')
     expect(mock.calls().at(-1)).toEqual(['torrent_set_seeding', { id: 7, seeding: { mode: 'ratio', ratio: 1.5 } }])
-  })
-
-  it('«Переподключений при простое» — только когда сторож уже переподключал пиров', () => {
-    const { unmount } = render(<GeneralTab torrent={activeTorrent()} details={details()} />)
-    expect(screen.queryByText('Переподключений при простое')).toBeNull()
-    unmount()
-    render(<GeneralTab torrent={activeTorrent()} details={details({ stallReconnects: 2 })} />)
-    expect(screen.getByText('Переподключений при простое').nextSibling).toHaveTextContent('2')
   })
 })

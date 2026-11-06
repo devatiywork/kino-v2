@@ -7,7 +7,6 @@ pub mod engine;
 pub mod manage;
 mod policy;
 mod speeds;
-mod stalls;
 pub mod store;
 
 use std::collections::HashMap;
@@ -276,8 +275,6 @@ pub struct TorrentDetails {
     pub peers_seen: u32,
     /// Fetched but thrown away (failed checks, duplicates)
     pub lost: u64,
-    /// Times the peers were reconnected because the download stood still with them (stalls.rs)
-    pub stall_reconnects: u32,
     pub discovery: Discovery,
     pub seeding: Seeding,
 }
@@ -308,7 +305,6 @@ pub struct Torrents {
     offline: bool,
     speeds: Mutex<speeds::SpeedHistory>,
     peer_speeds: Mutex<speeds::PeerSpeeds>,
-    stalls: Mutex<stalls::Stalls>,
     /// The .torrent files the add dialog came from: «Удалять исходный .torrent после добавления»
     sources: Mutex<HashMap<String, PathBuf>>,
     /// The limits given to the engine last: (download, upload) KB/s, and whether they are the alternative ones
@@ -404,7 +400,6 @@ impl Torrents {
             offline: options.offline,
             speeds: Mutex::default(),
             peer_speeds: Mutex::default(),
-            stalls: Mutex::default(),
             sources: Mutex::default(),
             applied_limits: Mutex::default(),
             schedule_was: Mutex::default(),
@@ -677,36 +672,10 @@ impl Torrents {
         self.refresh_limits();
         let update = self.snapshot()?;
         lock(&self.speeds).record(update.torrents.iter().map(|t| (t.id, t.download_speed, t.upload_speed)));
-        self.reconnect_stalled(&update).await;
         let downloading = update.torrents.iter().any(|t| t.state == TorrentState::Downloading);
         self.awake.set(downloading && self.settings.read(|s| s.keep_awake_downloads));
         tick.update = update;
         Ok(tick)
-    }
-
-    /// Peers there and nothing coming for a while: the torrent's peers start over (stalls.rs)
-    async fn reconnect_stalled(&self, update: &TorrentsUpdate) {
-        let looks: Vec<stalls::Look> = update
-            .torrents
-            .iter()
-            .map(|t| stalls::Look {
-                id: t.id,
-                downloading: t.state == TorrentState::Downloading,
-                peers: t.peers as usize,
-                download_speed: t.download_speed,
-            })
-            .collect();
-        let kick = lock(&self.stalls).observe(std::time::Instant::now(), &looks);
-        for id in kick {
-            let Some(torrent) = update.torrents.iter().find(|t| t.id == id) else { continue };
-            let restarted = async {
-                self.engine.pause(&torrent.info_hash).await?;
-                self.engine.resume(&torrent.info_hash).await
-            };
-            if let Err(e) = restarted.await {
-                eprintln!("[torrents] reconnecting the peers of {}: {e:#}", torrent.name);
-            }
-        }
     }
 
     /// Something downloads or seeds: closing the window hides Kino in the tray (SPEC 4.6)
@@ -894,7 +863,6 @@ impl Torrents {
             peers_live: live_stats.as_ref().map_or(0, |s| s.snapshot.peer_stats.live),
             peers_seen: live_stats.as_ref().map_or(0, |s| s.snapshot.peer_stats.seen),
             lost: live_stats.as_ref().map_or(0, |s| s.snapshot.fetched_bytes.saturating_sub(s.snapshot.downloaded_and_checked_bytes)),
-            stall_reconnects: lock(&self.stalls).reconnects(id),
             // PeX has no switch in the engine: on whenever the torrent is not private
             discovery: Discovery { dht: discovering, pex: discovering, lsd: discovering },
             seeding: item.seeding,
