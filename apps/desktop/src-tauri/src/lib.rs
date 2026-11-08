@@ -447,6 +447,7 @@ pub fn run() {
             lc::library_history,
             lc::library_series,
             lc::library_films,
+            lc::library_stats,
             lc::library_series_detail,
             lc::library_search,
             links::app_series_sources,

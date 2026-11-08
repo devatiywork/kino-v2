@@ -160,6 +160,17 @@ const MIGRATIONS: &[&str] = &[
     r#"
     ALTER TABLE torrent_items ADD COLUMN trackers TEXT;
     "#,
+    // 11 — «Статистика просмотра» (SPEC 3.2): the seconds a viewing really played and whether the
+    // file was watched through in it (a seek back afterwards does not undo that). Viewings saved
+    // before have neither: the time from their start to the last save, at most the file's length,
+    // and the position they ended at
+    r#"
+    ALTER TABLE player_views ADD COLUMN played REAL NOT NULL DEFAULT 0;
+    ALTER TABLE player_views ADD COLUMN finished INTEGER NOT NULL DEFAULT 0;
+    UPDATE player_views SET
+        played = MAX(0, MIN((ended_at - started_at) / 1000.0, COALESCE(duration, (ended_at - started_at) / 1000.0))),
+        finished = CASE WHEN duration > 0 AND position >= duration * 0.9 THEN 1 ELSE 0 END;
+    "#,
 ];
 
 pub fn open(path: &Path) -> rusqlite::Result<Connection> {
@@ -225,5 +236,31 @@ mod tests {
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         assert_eq!(rows, [("settings".to_string(), r#"{"autoplay":false}"#.to_string())]);
+    }
+
+    #[test]
+    fn viewings_saved_before_the_statistics_get_their_time_and_end() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..10] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 10).unwrap();
+        conn.execute("INSERT INTO player_files (id, path, title) VALUES (1, 'C:\\a.mkv', 'a')", []).unwrap();
+        conn.execute_batch(
+            "INSERT INTO player_views (file_id, started_at, ended_at, position, duration) VALUES
+                (1, 0, 600000, 590.0, 600.0),
+                (1, 0, 7200000, 900.0, 3600.0),
+                (1, 0, 120000, 100.0, NULL);",
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+        let rows: Vec<(f64, bool)> = conn
+            .prepare("SELECT played, finished FROM player_views ORDER BY id")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(rows, [(600.0, true), (3600.0, false), (120.0, false)], "two hours of a pause count as the film's hour at most");
     }
 }

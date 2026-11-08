@@ -86,6 +86,22 @@ export interface AddedFolder {
   films: number
 }
 
+/** «Статистика просмотра» for one period */
+export interface WatchStats {
+  /** Seconds the player really played: a pause is not watching */
+  seconds: number
+  /** Different episodes and films watched through; a release's sample is not a film */
+  episodes: number
+  films: number
+}
+
+/** The last 7, 30 and 365 days */
+export interface WatchStatsByPeriod {
+  week: WatchStats
+  month: WatchStats
+  year: WatchStats
+}
+
 export const libraryIpc = {
   continueWatching: (limit = 24) => invoke<LibraryFile[]>('library_continue_watching', { limit }),
   history: (limit = 300) => invoke<HistoryEntry[]>('library_history', { limit }),
@@ -93,6 +109,8 @@ export const libraryIpc = {
   seriesDetail: (key: string) => invoke<SeriesDetail | null>('library_series_detail', { key }),
   /** «Библиотека» → «Фильмы»: not episodes, from the library folders and the downloads, on disk */
   films: () => invoke<LibraryFile[]>('library_films'),
+  /** «Статистика просмотра» on the home screen */
+  stats: () => invoke<WatchStatsByPeriod>('library_stats'),
   /** Every word must match, in any case */
   search: (query: string, limit = 6) => invoke<LibrarySearch>('library_search', { query, limit }),
   folders: () => invoke<Folder[]>('library_folders'),

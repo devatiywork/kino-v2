@@ -68,7 +68,7 @@ mod tests {
         let lib = Library::in_memory();
         for (path, at) in [(r"D:\S\Тед.Лассо.S01E01.mkv", 1), (r"D:\S\Тед.Лассо.S01E02.mkv", 2), (r"D:\F\Interstellar.2014.mkv", 3)] {
             let file = lib.register(path, &describe(Path::new(path)), Some(1000.0)).unwrap();
-            lib.save_progress(file.id, 100.0 * at as f64, Some(1000.0), &mut None, now_ms()).unwrap();
+            lib.save_progress(file.id, 100.0 * at as f64, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
             // last_played_at is the save's time: keep them apart
             std::thread::sleep(std::time::Duration::from_millis(3));
         }

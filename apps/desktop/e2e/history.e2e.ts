@@ -28,6 +28,27 @@ test.describe('история и продолжение с места', () => {
     await expect.poll(async () => (await kino.snapshot()).position).toBeLessThan(5)
   })
 
+  test('статистика просмотра: досмотренный фильм и время на главной', async ({ launch }) => {
+    const kino = await launch({ file: FILM })
+    const { page } = kino
+    await expect.poll(async () => (await kino.snapshot()).duration).toBeGreaterThan(70)
+    const { duration } = await kino.snapshot()
+    await kino.invoke('player_seek', { seconds: duration - 3, mode: 'absolute' })
+    await expect.poll(async () => (await kino.snapshot()).eof).toBe(true)
+    await wakeControls(page)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+
+    const stats = page.getByRole('region', { name: 'Статистика просмотра' })
+    const figure = (label: string) => stats.getByRole('term').filter({ hasText: label }).locator('xpath=following-sibling::dd')
+    await expect(figure('фильм досмотрен')).toHaveText('1')
+    await expect(figure('серий досмотрено')).toHaveText('0')
+    // A few seconds really played: the seek over the film is not watching
+    await expect(figure('время просмотра')).toHaveText('меньше минуты')
+    await stats.getByRole('radio', { name: 'Год' }).click({ force: true })
+    await expect(stats.getByText('за последние 365 дней')).toBeVisible()
+    await expect(figure('фильм досмотрен')).toHaveText('1')
+  })
+
   test('история переживает перезапуск Kino', async ({ launch }) => {
     const first = await launch({ file: FILM })
     await watchUntil20(first)

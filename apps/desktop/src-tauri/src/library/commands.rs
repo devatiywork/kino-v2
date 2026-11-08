@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, State};
 
 use super::search::LibrarySearch;
 use super::series::SeriesSummary;
+use super::stats::WatchStatsByPeriod;
 use super::{Folder, HistoryEntry, Library, LibraryFile, SeriesDetail};
 use crate::error::{AppError, AppResult};
 
@@ -32,6 +33,12 @@ pub fn library_series(library: State<'_, Arc<Library>>) -> AppResult<Vec<SeriesS
 #[tauri::command]
 pub fn library_films(library: State<'_, Arc<Library>>) -> AppResult<Vec<LibraryFile>> {
     Ok(library.films()?)
+}
+
+/// «Статистика просмотра» on the home screen: the last 7, 30 and 365 days
+#[tauri::command]
+pub fn library_stats(library: State<'_, Arc<Library>>) -> AppResult<WatchStatsByPeriod> {
+    Ok(library.watch_stats(super::now_ms())?)
 }
 
 #[tauri::command]

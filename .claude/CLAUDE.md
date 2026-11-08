@@ -87,7 +87,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          category bar, details panel, Ctrl V with a magnet link), placeholder
     widgets/           — app-title-bar (a `search` slot the app fills), global-search (Ctrl K: series, played files,
                          the torrent archive in one SearchCombo), player-chrome (top bar, bottom controls, EpisodesPanel, PlayerStats), continue-hero, continue-grid,
-                         history-list, series-grid, series-hero, episode-list, downloads-list (rows + «Смотреть»),
+                         history-list, series-grid, series-hero, episode-list, watch-stats («Статистика просмотра»:
+                         week / month / year), downloads-list (rows + «Смотреть»),
                          torrent-details (General with the piece map / Files / Peers with speeds / Trackers with DHT, PeX,
                          LSD and re-announce / Speed chart 1-5-30 min / Options: seeding, check, move, save .torrent;
                          polled every second, resizable),
@@ -143,7 +144,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          episode (S02E05 / 2x05 / «Серия 5» → series key and folder), scan (video files, natural order),
                          series (seasons, next up, neighbours, summaries — pure), track_pref (match by language and title),
                          sources (files a source brought: linked, moved to their new place, season files, sidecar tracks),
-                         search (series and played files, every word, any case), commands
+                         search (series and played files, every word, any case), stats (the last 7 / 30 / 365 days: seconds
+                         played, episodes and films watched through — player_views.played / finished), commands
     src/player/        — Player (libmpv; apply_settings — «Видео и звук» are mpv options from Settings::mpv_video_options,
                          changed live, the sound's output reloaded; clear_history), stats (what mpv does with the file: decoder,
                          frame, colours, HDR in and out, drops, sound — player_stats), video_host (child HWND; moves between windows),
@@ -151,7 +153,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          events (mpv event thread →
                          player://state, player://position, player://notice, player://autoplay; registers files, chooses tracks:
                          series memory first, then track_defaults; scans the series folder of an opened episode, autoplays the
-                         next episode of the season), session (saves the position, takes frames), state (snapshot, pure +
+                         next episode of the season), session (saves the position, takes frames, PlayClock — the time really
+                         played), state (snapshot, pure +
                          tested), tracks (track-list parsing), track_defaults (preferred audio, subtitles with a Russian dub —
                          pure), commands
     src/shell.rs       — Explorer through the shell itself (ShellExecuteW, SHOpenFolderAndSelectItems): a folder, a file

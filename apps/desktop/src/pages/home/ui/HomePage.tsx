@@ -7,6 +7,7 @@ import { ContinueGrid } from '../../../widgets/continue-grid'
 import { ContinueHero } from '../../../widgets/continue-hero'
 import { HistoryList } from '../../../widgets/history-list'
 import { SeriesGrid } from '../../../widgets/series-grid'
+import { WatchStats } from '../../../widgets/watch-stats'
 import { Welcome } from './Welcome'
 
 /** Rows of history shown next to the hero; the rest is on the History screen */
@@ -14,7 +15,7 @@ const HOME_HISTORY = 30
 
 /**
  * Home (SPEC 3.2): «Продолжить» with the frame of the last stop, history by day next to it,
- * «Не досмотрено» below. Nothing watched yet — the first-run screen.
+ * «Статистика просмотра», «Не досмотрено» below. Nothing watched yet — the first-run screen.
  */
 export function HomePage() {
   const { t } = useTranslation('library')
@@ -22,6 +23,7 @@ export function HomePage() {
   const unfinished = useLibrary((s) => s.continueWatching)
   const history = useLibrary((s) => s.history)
   const series = useLibrary((s) => s.series)
+  const stats = useLibrary((s) => s.stats)
 
   if (!loaded) return null
   if (!unfinished.length && !history.length && !series.length) return <Welcome />
@@ -51,6 +53,7 @@ export function HomePage() {
             </ScrollArea>
           </aside>
         </div>
+        {stats ? <WatchStats stats={stats} /> : null}
         <ContinueGrid files={rest} />
         <SeriesGrid series={series} title={t('seriesSection')} />
         <div className="flex items-center gap-3 rounded-lg border border-dashed border-line-2 px-5 py-4 text-sm text-fg-3">

@@ -112,7 +112,7 @@ fn run(ctx: &Context) {
                             last_position = Instant::now();
                             emit(&ctx.app, POSITION_EVENT, position);
                         }
-                        on_progress(ctx, position);
+                        on_progress(ctx, position, paused);
                     }
                     Change::State => {
                         let state = s.clone();
@@ -308,10 +308,11 @@ fn select(ctx: &Context, property: &str, id: Option<i64>) {
     }
 }
 
-/// Periodic save while playing, and the first frame for the card
-fn on_progress(ctx: &Context, position: f64) {
+/// Periodic save while playing, the time played, and the first frame for the card
+fn on_progress(ctx: &Context, position: f64, paused: bool) {
     let mut guard = session::lock(&ctx.session);
     let Some(s) = guard.as_mut() else { return };
+    s.clock.tick(Instant::now(), !paused);
     if s.wants_first_thumb(position) {
         session::take_thumb(&ctx.client, &ctx.library, s);
     }
@@ -330,6 +331,9 @@ fn save_now(ctx: &Context, with_thumb: bool) {
         session::take_thumb(&ctx.client, &ctx.library, s);
     }
     let state = lock(&ctx.snapshot).clone();
+    if state.paused {
+        s.clock.stop();
+    }
     if session::save(&ctx.library, s, &state) {
         emit(&ctx.app, CHANGED_EVENT, ());
     }

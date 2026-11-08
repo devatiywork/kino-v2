@@ -1,4 +1,4 @@
-import { libraryIpc, type Folder, type HistoryEntry, type LibraryFile, type SeriesSummary } from '../../../shared/ipc/library'
+import { libraryIpc, type Folder, type HistoryEntry, type LibraryFile, type SeriesSummary, type WatchStatsByPeriod } from '../../../shared/ipc/library'
 import { createStore, useStore } from '../../../shared/lib/createStore'
 
 interface LibraryState {
@@ -7,6 +7,8 @@ interface LibraryState {
   series: SeriesSummary[]
   films: LibraryFile[]
   folders: Folder[]
+  /** «Статистика просмотра»; null until the core answers */
+  stats: WatchStatsByPeriod | null
   /** The first answer from the core arrived — until then the home screen does not guess */
   loaded: boolean
   /** Grows with every refresh: views with their own data (a series page) refetch on it */
@@ -19,6 +21,7 @@ export const libraryStore = createStore<LibraryState>({
   series: [],
   films: [],
   folders: [],
+  stats: null,
   loaded: false,
   version: 0,
 })
@@ -27,14 +30,15 @@ export const libraryStore = createStore<LibraryState>({
 const REFRESH_DEBOUNCE_MS = 400
 
 export async function refreshLibrary(): Promise<void> {
-  const [continueWatching, history, series, films, folders] = await Promise.all([
+  const [continueWatching, history, series, films, folders, stats] = await Promise.all([
     libraryIpc.continueWatching(),
     libraryIpc.history(),
     libraryIpc.series(),
     libraryIpc.films(),
     libraryIpc.folders(),
+    libraryIpc.stats(),
   ])
-  libraryStore.set((s) => ({ continueWatching, history, series, films, folders, loaded: true, version: s.version + 1 }))
+  libraryStore.set((s) => ({ continueWatching, history, series, films, folders, stats, loaded: true, version: s.version + 1 }))
 }
 
 /** Fetch now and again whenever the core reports a change. Returns the unsubscribe */

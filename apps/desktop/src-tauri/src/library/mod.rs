@@ -7,6 +7,7 @@ pub mod scan;
 pub mod search;
 pub mod series;
 pub mod sources;
+pub mod stats;
 pub mod track_pref;
 
 use std::path::{Path, PathBuf};
@@ -410,8 +411,9 @@ impl Library {
         Ok(row.and_then(|(position, duration, watched)| resume_from(position, duration, watched)))
     }
 
-    /// Position of the file and of the current viewing; the viewing row appears on the first save
-    pub fn save_progress(&self, file_id: i64, position: f64, duration: Option<f64>, view: &mut Option<i64>, started_at: i64) -> rusqlite::Result<()> {
+    /// Position of the file and of the current viewing; the viewing row appears on the first save.
+    /// `played` — the seconds this viewing really played so far
+    pub fn save_progress(&self, file_id: i64, position: f64, duration: Option<f64>, view: &mut Option<i64>, started_at: i64, played: f64) -> rusqlite::Result<()> {
         let now = now_ms();
         let watched = is_watched(position, duration, self.policy().watched_ratio);
         let conn = self.conn();
@@ -423,14 +425,16 @@ impl Library {
         match view {
             Some(id) => {
                 conn.execute(
-                    "UPDATE player_views SET ended_at = ?2, position = ?3, duration = COALESCE(?4, duration) WHERE id = ?1",
-                    params![*id, now, position, duration],
+                    "UPDATE player_views SET ended_at = ?2, position = ?3, duration = COALESCE(?4, duration),
+                        played = ?5, finished = MAX(finished, ?6) WHERE id = ?1",
+                    params![*id, now, position, duration, played, watched],
                 )?;
             }
             None => {
                 conn.execute(
-                    "INSERT INTO player_views (file_id, started_at, ended_at, position, duration) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![file_id, started_at, now, position, duration],
+                    "INSERT INTO player_views (file_id, started_at, ended_at, position, duration, played, finished)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    params![file_id, started_at, now, position, duration, played, watched],
                 )?;
                 *view = Some(conn.last_insert_rowid());
             }
@@ -619,14 +623,14 @@ mod tests {
         let file = open(&lib, r"E:\S\The.Sopranos.S01E01.mkv", 3600.0);
         assert_eq!(file.series_key.as_deref(), Some("show:the sopranos"));
         let mut view = None;
-        lib.save_progress(file.id, 1394.5, Some(3600.0), &mut view, now_ms()).unwrap();
+        lib.save_progress(file.id, 1394.5, Some(3600.0), &mut view, now_ms(), 0.0).unwrap();
         assert!(view.is_some());
         assert_eq!(lib.resume_position(r"E:\S\The.Sopranos.S01E01.mkv").unwrap(), Some(1394.5));
 
-        lib.save_progress(file.id, 3300.0, Some(3600.0), &mut view, now_ms()).unwrap();
+        lib.save_progress(file.id, 3300.0, Some(3600.0), &mut view, now_ms(), 0.0).unwrap();
         assert_eq!(lib.resume_position(r"E:\S\The.Sopranos.S01E01.mkv").unwrap(), None, "92% — watched");
         // rewatching from the start keeps it watched
-        lib.save_progress(file.id, 20.0, Some(3600.0), &mut view, now_ms()).unwrap();
+        lib.save_progress(file.id, 20.0, Some(3600.0), &mut view, now_ms(), 0.0).unwrap();
         let history = lib.history(10).unwrap();
         assert_eq!(history.len(), 1, "one viewing, updated in place");
         assert!(history[0].file.watched);
@@ -637,13 +641,13 @@ mod tests {
     fn continue_watching_offers_the_latest_unfinished_file_per_series() {
         let lib = Library::in_memory();
         let e1 = open(&lib, r"E:\S\The.Sopranos.S01E01.mkv", 3600.0);
-        lib.save_progress(e1.id, 600.0, Some(3600.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(e1.id, 600.0, Some(3600.0), &mut None, now_ms(), 0.0).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(5));
         let e2 = open(&lib, r"E:\S\The.Sopranos.S01E02.mkv", 3600.0);
-        lib.save_progress(e2.id, 3500.0, Some(3600.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(e2.id, 3500.0, Some(3600.0), &mut None, now_ms(), 0.0).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(5));
         let film = open(&lib, r"D:\Films\Interstellar.2014.mkv", 10000.0);
-        lib.save_progress(film.id, 4000.0, Some(10000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(film.id, 4000.0, Some(10000.0), &mut None, now_ms(), 0.0).unwrap();
 
         let list = lib.continue_watching(10).unwrap();
         // E01 was abandoned, E02 watched to the end: the series is not offered; the film is
@@ -695,7 +699,7 @@ mod tests {
         lib.add_scanned(&files, None).unwrap();
         let e1 = &files[1];
         let file = lib.register(&e1.to_string_lossy(), &describe(e1), Some(1000.0)).unwrap();
-        lib.save_progress(file.id, 950.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(file.id, 950.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
 
         let next = lib.continue_watching(10).unwrap();
         assert_eq!(next.iter().map(|f| f.episode).collect::<Vec<_>>(), [Some(2)], "E01 watched → E02 from the start");
@@ -724,7 +728,7 @@ mod tests {
         // The one played comes first
         let heat = root.join("Heat.1995.mkv");
         let file = lib.register(&heat.to_string_lossy(), &describe(&heat), Some(6000.0)).unwrap();
-        lib.save_progress(file.id, 600.0, Some(6000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(file.id, 600.0, Some(6000.0), &mut None, now_ms(), 0.0).unwrap();
 
         let films = lib.films().unwrap();
         assert_eq!(films.iter().map(|f| f.title.as_str()).collect::<Vec<_>>(), ["Heat 1995", "Film 2014"]);
@@ -761,7 +765,7 @@ mod tests {
         let lib = Library::in_memory();
         let file = open(&lib, r"D:\Films\Heat.1995.mkv", 1000.0);
         lib.set_policy(Policy { watched_ratio: 0.95, ..Policy::default() });
-        lib.save_progress(file.id, 920.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(file.id, 920.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
         assert!(!lib.history(10).unwrap()[0].watched, "92% < 95%");
         lib.set_policy(Policy { watched_ratio: 0.85, ..Policy::default() });
         assert!(lib.history(10).unwrap()[0].watched, "92% ≥ 85%");
@@ -785,10 +789,10 @@ mod tests {
         let folder = lib.add_folder(&root.to_string_lossy()).unwrap();
         lib.add_scanned(&files, Some(folder.id)).unwrap();
         let e1 = lib.register(&files[1].to_string_lossy(), &describe(&files[1]), Some(1000.0)).unwrap();
-        lib.save_progress(e1.id, 500.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(e1.id, 500.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
         lib.save_pref("show:show", TrackKind::Sub, &TrackPref::Off).unwrap();
         let film = open(&lib, r"D:\Films\Heat.1995.mkv", 1000.0);
-        lib.save_progress(film.id, 500.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(film.id, 500.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
 
         lib.clear_history().unwrap();
         assert!(lib.history(10).unwrap().is_empty());

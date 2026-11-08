@@ -102,5 +102,21 @@
     "again": "Download again",
     "downloading": "Already downloading",
     "done": "“{{name}}” is downloading again — the episodes will be back in place"
+  },
+  "stats": {
+    "title": "Watching stats",
+    "period": "Period",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year",
+    "since_week": "the last 7 days",
+    "since_month": "the last 30 days",
+    "since_year": "the last 365 days",
+    "watchTime": "watch time",
+    "hours": "{{h}} h",
+    "episodes_one": "episode watched",
+    "episodes_other": "episodes watched",
+    "films_one": "film watched",
+    "films_other": "films watched"
   }
 }

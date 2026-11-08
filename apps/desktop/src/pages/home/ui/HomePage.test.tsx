@@ -19,7 +19,7 @@ const renderHome = () =>
   )
 
 describe('HomePage', () => {
-  beforeEach(() => libraryStore.set({ continueWatching: [], history: [], loaded: true }))
+  beforeEach(() => libraryStore.set({ continueWatching: [], history: [], stats: null, loaded: true }))
 
   it('ничего не смотрели — экран первого запуска', () => {
     renderHome()
@@ -54,5 +54,22 @@ describe('HomePage', () => {
 
     const frame = document.querySelector('img')
     expect(frame?.getAttribute('src')).toContain(encodeURIComponent('C:\\data\\thumbs\\5.jpg'))
+    expect(screen.queryByRole('region', { name: 'Статистика просмотра' })).toBeNull()
+  })
+
+  it('«Статистика просмотра» — когда ядро её прислало', () => {
+    const period = { seconds: 2 * 3600, episodes: 3, films: 1 }
+    act(() =>
+      libraryStore.set({
+        continueWatching: [libraryFile({ id: 5 })],
+        history: [historyEntry(1, new Date(), libraryFile({ id: 5 }))],
+        stats: { week: period, month: period, year: period },
+        loaded: true,
+      }),
+    )
+    renderHome()
+    const block = screen.getByRole('region', { name: 'Статистика просмотра' })
+    expect(within(block).getByText('2 ч')).toBeInTheDocument()
+    expect(within(block).getByText('серии досмотрены')).toBeInTheDocument()
   })
 })

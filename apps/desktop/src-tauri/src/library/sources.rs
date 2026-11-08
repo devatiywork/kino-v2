@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(lib.link_source("abc", &files).unwrap(), 0, "nothing new");
 
         let e1 = lib.register(&files[0].path.to_string_lossy(), &describe(&files[0].path), Some(1000.0)).unwrap();
-        lib.save_progress(e1.id, 950.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(e1.id, 950.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
         std::fs::remove_dir_all(&first).unwrap();
         assert_eq!(lib.series_sources("show:show").unwrap(), [SeriesSource { source: "abc".into(), episodes: 2, missing: 2 }]);
 
@@ -223,7 +223,7 @@ mod tests {
         let files = season(&root, &[1]);
         // Watched before the link existed (an older version, a library folder)
         let known = lib.register(&files[0].path.to_string_lossy(), &describe(&files[0].path), Some(1000.0)).unwrap();
-        lib.save_progress(known.id, 300.0, Some(1000.0), &mut None, now_ms()).unwrap();
+        lib.save_progress(known.id, 300.0, Some(1000.0), &mut None, now_ms(), 0.0).unwrap();
         lib.link_source("abc", &files).unwrap();
         assert_eq!(lib.series_sources("show:show").unwrap()[0].episodes, 1);
 
