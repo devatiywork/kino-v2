@@ -147,6 +147,8 @@ pub struct ArchiveEntry {
     pub completed_at: Option<i64>,
     pub status: ArchiveStatus,
     pub uploaded: u64,
+    /// The files the record downloads; None — all of them
+    pub only_files: Option<Vec<usize>>,
 }
 
 impl ArchiveEntry {
@@ -173,6 +175,7 @@ impl ArchiveEntry {
             completed_at: item.completed_at,
             status,
             uploaded: item.uploaded,
+            only_files: item.only_files.clone(),
         }
     }
 }
@@ -875,12 +878,21 @@ impl Torrents {
         Ok(self.store.archive(query)?.iter().map(ArchiveEntry::of).collect())
     }
 
-    /// «Скачать снова»: the same record into the downloads, to its old folder or a new one
-    pub async fn download_again(&self, id: i64, save_dir: Option<String>, start: bool) -> anyhow::Result<()> {
+    /// «Скачать снова» and «Докачать выбранное»: the same record into the downloads, to its old
+    /// folder or a new one. `files` — the files to have now (None — the record's choice): what is
+    /// on disk already is checked and kept, the rest comes down beside it
+    pub async fn download_again(&self, id: i64, save_dir: Option<String>, start: bool, files: Option<Vec<usize>>) -> anyhow::Result<()> {
         let item = self.item(id)?;
         anyhow::ensure!(!item.in_downloads, "already in the downloads");
+        let only_files = match files {
+            Some(files) => {
+                anyhow::ensure!(!files.is_empty(), "choose at least one file");
+                (files.len() < self.files_of(id).len()).then_some(files)
+            }
+            None => item.only_files.clone(),
+        };
         let save_dir = save_dir.filter(|d| !d.trim().is_empty()).unwrap_or(item.save_dir.clone());
-        self.store.return_to_downloads(id, &save_dir, item.only_files.as_deref(), !start, true)?;
+        self.store.return_to_downloads(id, &save_dir, only_files.as_deref(), !start, true)?;
         self.store.set_incomplete(id, self.incomplete_folder().as_deref())?;
         let item = self.item(id)?;
         if let Err(e) = self.start_item(&item).await {

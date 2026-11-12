@@ -49,7 +49,8 @@ describe('AddTorrentDialog (integration)', () => {
     await open()
     const dialog = screen.getByRole('dialog', { name: 'Добавить торрент' })
     expect(within(dialog).getByText('Shogun.S01.2160p')).toBeInTheDocument()
-    expect(within(dialog).getAllByRole('checkbox', { checked: true })).toHaveLength(4)
+    // «Все файлы», two episodes, the «Subs» folder and its file
+    expect(within(dialog).getAllByRole('checkbox', { checked: true })).toHaveLength(5)
     expect(within(dialog).getByRole('radio', { name: 'Сериалы' })).toBeChecked()
     expect(within(dialog).getByRole('textbox', { name: 'Папка' })).toHaveValue('D:\\Загрузки\\Сериалы')
   })
@@ -60,7 +61,7 @@ describe('AddTorrentDialog (integration)', () => {
     const dialog = screen.getByRole('dialog')
     await user.click(within(dialog).getByText('Игры'))
     expect(within(dialog).getByRole('textbox', { name: 'Папка' })).toHaveValue('E:\\Игры')
-    await user.click(within(dialog).getByText('Subs\\Rus.srt'))
+    await user.click(within(dialog).getByText('Rus.srt'))
     await user.type(within(dialog).getByRole('textbox', { name: 'Страница раздачи' }), 'https://rutor.info/torrent/1')
     mock.respond('torrent_add', 42)
     await user.click(within(dialog).getByRole('button', { name: 'Добавить' }))
@@ -145,6 +146,49 @@ describe('AddTorrentDialog (integration)', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть в загрузках' }))
     expect(mock.calls().filter(([command]) => command !== 'torrent_preview')).toEqual([])
     expect(downloadsView.get()).toMatchObject({ tab: 'downloads', selected: 11 })
+  })
+
+  const seasons = [
+    { index: 0, path: 'Season 1\\Show.S01E01.mkv', size: 1_000 },
+    { index: 1, path: 'Season 1\\Show.S01E02.mkv', size: 1_000 },
+    { index: 2, path: 'Season 2\\Show.S02E01.mkv', size: 1_000 },
+    { index: 3, path: 'Season 2\\Show.S02E02.mkv', size: 1_000 },
+  ]
+
+  it('сезон-папка выбирается одной галочкой; частично выбранная — с чёрточкой', async () => {
+    const user = renderDialog()
+    await open({ files: seasons })
+    const dialog = screen.getByRole('dialog')
+    await user.click(within(dialog).getByRole('checkbox', { name: /^Season 2/ }))
+    expect(within(dialog).getByText('Show.S02E01.mkv').closest('label')?.querySelector('input')).not.toBeChecked()
+    await user.click(within(dialog).getByText('Show.S01E02.mkv'))
+    expect(within(dialog).getByRole('checkbox', { name: /^Season 1/ })).toBePartiallyChecked()
+    mock.respond('torrent_add', 42)
+    await user.click(within(dialog).getByRole('button', { name: 'Добавить' }))
+    expect(mock.calls().find(([command]) => command === 'torrent_add')?.[1]).toMatchObject({ request: { onlyFiles: [0] } })
+  })
+
+  it('первый сезон уже на диске — отмечаю второй и «Докачать выбранное»: та же запись, та же папка', async () => {
+    const user = renderDialog()
+    await open({ files: seasons, duplicate: archiveEntry({ status: 'onDisk', onlyFiles: [0, 1] }) })
+    const dialog = screen.getByRole('dialog', { name: 'Этот торрент уже в архиве' })
+    expect(within(dialog).getAllByText('на диске')).toHaveLength(2)
+    expect(within(dialog).getByRole('button', { name: 'Показать в архиве' })).toBeEnabled()
+    await user.click(within(dialog).getByRole('checkbox', { name: /^Season 2/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Докачать выбранное' }))
+    expect(mock.calls().find(([command]) => command === 'torrent_download_again')).toEqual([
+      'torrent_download_again',
+      { id: 11, saveDir: 'D:\\Загрузки\\Сериалы', start: true, files: [0, 1, 2, 3] },
+    ])
+    expect(downloadsView.get()).toMatchObject({ tab: 'downloads', selected: 11 })
+  })
+
+  it('в загрузках — можно отметить ещё сезон: выбор файлов меняется у той же загрузки', async () => {
+    const user = renderDialog()
+    await open({ files: seasons, duplicate: archiveEntry({ status: 'inDownloads', onlyFiles: [0, 1] }) })
+    await user.click(screen.getByRole('checkbox', { name: /^Season 2/ }))
+    await user.click(screen.getByRole('button', { name: 'Скачать выбранное' }))
+    expect(mock.calls().find(([command]) => command === 'torrent_set_files')).toEqual(['torrent_set_files', { id: 11, files: [0, 1, 2, 3] }])
   })
 
   it('окно добавления выключено — сразу в загрузки: последняя категория и её папка', async () => {

@@ -51,6 +51,7 @@ export function archiveEntry(patch: Partial<ArchiveEntry> = {}): ArchiveEntry {
     completedAt: Date.UTC(2026, 2, 2),
     status: 'filesDeleted',
     uploaded: 39_000_000_000,
+    onlyFiles: null,
     ...patch,
   }
 }

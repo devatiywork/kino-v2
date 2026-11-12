@@ -227,6 +227,7 @@ mod tests {
             completed_at,
             status,
             uploaded: 0,
+            only_files: None,
         }
     }
 

@@ -102,6 +102,45 @@ test.describe('торренты', () => {
     expect(await again.invoke<unknown[]>('torrent_archive', { query: '' })).toHaveLength(1)
   })
 
+  test('сериал по папкам-сезонам: сначала первый сезон, потом «Докачать выбранное» второй — запись одна', async ({ launch, workdir }) => {
+    // Both seasons are in place: «downloading» offline is checking what is there
+    const folder = join(workdir, 'downloads')
+    const show = join(folder, 'Show')
+    for (const season of ['Season 1', 'Season 2']) mkdirSync(join(show, season), { recursive: true })
+    copyFileSync(FILM, join(show, 'Season 1', 'Show.S01E01.mkv'))
+    copyFileSync(FILM, join(show, 'Season 2', 'Show.S02E01.mkv'))
+    const torrent = join(workdir, 'Show.torrent')
+    writeFileSync(torrent, makeTorrent(show))
+
+    const first = await launch({ file: torrent })
+    const dialog = first.page.getByRole('dialog', { name: 'Добавить торрент' })
+    const season2 = dialog.getByRole('checkbox', { name: /^Season 2/ })
+    // Every file is ticked once the dialog has its preview; the folder's name is its box's label
+    await expect(season2).toBeChecked()
+    await dialog.getByText('Season 2', { exact: true }).click()
+    await expect(season2).not.toBeChecked()
+    await addFromDialog(first.page, folder)
+    await expect(row(first.page, 'Show').getByText('Раздача')).toBeVisible()
+    const firstSeason = await first.invoke<{ onlyFiles: number[] | null }[]>('torrent_archive', { query: '' })
+    expect(firstSeason[0]?.onlyFiles).toHaveLength(1)
+    await menu(first.page, row(first.page, 'Show'), 'Действия с торрентом', 'Убрать из загрузок')
+    await expect(first.page.getByText('Убрано из загрузок. Файлы на месте, запись осталась в архиве')).toBeVisible()
+    await first.close()
+
+    const again = await launch({ file: torrent, dataDir: first.dataDir })
+    const known = again.page.getByRole('dialog', { name: 'Этот торрент уже в архиве' })
+    await expect(known.getByText('на диске', { exact: true })).toHaveCount(1)
+    await expect(known.getByRole('button', { name: 'Показать в архиве' })).toBeVisible()
+    await expect(known.getByRole('checkbox', { name: /^Season 2/ })).not.toBeChecked()
+    await known.getByText('Season 2', { exact: true }).click()
+    await expect(known.getByRole('checkbox', { name: /^Season 2/ })).toBeChecked()
+    await known.getByRole('button', { name: 'Докачать выбранное' }).click()
+    await expect(row(again.page, 'Show').getByText('Раздача')).toBeVisible()
+    const archive = await again.invoke<{ onlyFiles: number[] | null }[]>('torrent_archive', { query: '' })
+    expect(archive).toHaveLength(1)
+    expect(archive[0]?.onlyFiles).toBeNull()
+  })
+
   test('magnet-ссылка торрента из архива узнаётся без сети', async ({ launch, workdir }) => {
     const { torrent, folder } = filmTorrent(workdir)
     const kino = await launch({ file: torrent })

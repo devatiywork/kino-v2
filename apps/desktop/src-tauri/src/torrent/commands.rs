@@ -199,8 +199,8 @@ pub fn torrent_archive(torrents: Service<'_>, query: String) -> AppResult<Vec<Ar
 }
 
 #[tauri::command]
-pub async fn torrent_download_again(app: AppHandle, torrents: Service<'_>, id: i64, save_dir: Option<String>, start: bool) -> AppResult<()> {
-    torrents.download_again(id, save_dir, start).await?;
+pub async fn torrent_download_again(app: AppHandle, torrents: Service<'_>, id: i64, save_dir: Option<String>, start: bool, files: Option<Vec<usize>>) -> AppResult<()> {
+    torrents.download_again(id, save_dir, start, files).await?;
     changed(&app);
     Ok(())
 }

@@ -38,7 +38,8 @@ export function useAddForm(preview: Preview | null) {
     // SPEC 4.5: the tracker's page goes into the archive by itself
     setSource(known?.sourceUrl ?? trackerPage ?? '')
     setStart(!startPaused)
-    setSelected(new Set(preview.files.map((f) => f.index)))
+    // A known torrent starts from the files its record has: ticking more downloads them too
+    setSelected(new Set(known?.onlyFiles ?? preview.files.map((f) => f.index)))
   }, [preview, startPaused, trackerPage])
 
   const chooseCategory = (id: number | null) => {

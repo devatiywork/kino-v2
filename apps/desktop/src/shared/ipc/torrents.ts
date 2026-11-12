@@ -67,6 +67,8 @@ export interface ArchiveEntry {
   completedAt: number | null
   status: ArchiveStatus
   uploaded: number
+  /** The files the record downloads; null — all of them */
+  onlyFiles: number[] | null
 }
 
 export interface Category {
@@ -176,7 +178,9 @@ export const torrentsIpc = {
   setFiles: (id: number, files: number[]) => invoke<void>('torrent_set_files', { id, files }),
   details: (id: number) => invoke<TorrentDetails>('torrent_details', { id }),
   archive: (query = '') => invoke<ArchiveEntry[]>('torrent_archive', { query }),
-  downloadAgain: (id: number, saveDir: string | null, start: boolean) => invoke<void>('torrent_download_again', { id, saveDir, start }),
+  /** «Скачать снова» / «Докачать выбранное»; `files` — the files to have now (absent — the record's choice) */
+  downloadAgain: (id: number, saveDir: string | null, start: boolean, files?: number[] | null) =>
+    invoke<void>('torrent_download_again', files ? { id, saveDir, start, files } : { id, saveDir, start }),
   /** SPEC 4.4 «Резервная копия»: the whole archive into a file; the number of records */
   exportArchive: (path: string) => invoke<number>('torrent_export_archive', { path }),
   /** What the archive lacks comes back from a backup */

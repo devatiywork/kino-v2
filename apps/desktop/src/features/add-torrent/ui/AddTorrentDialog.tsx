@@ -8,10 +8,19 @@ import type { AddRequest, ArchiveEntry, Preview } from '../../../shared/ipc/torr
 import { formatSize } from '../../../shared/lib/formatBytes'
 import { useCoverNativeLayer } from '../../../shared/lib/nativeLayer'
 import { closeAddDialog, useAddTorrent } from '../model/addTorrent'
-import { confirmAdd } from '../model/confirmAdd'
+import { addAction, confirmAdd, type AddAction } from '../model/confirmAdd'
 import { defaultRequest, useAddForm } from '../model/useAddForm'
 import { AddFormFields } from './AddFormFields'
 import { FileChecklist } from './FileChecklist'
+
+const CONFIRM: Record<AddAction, string> = {
+  add: 'add.confirm',
+  show: 'add.openInDownloads',
+  setFiles: 'add.downloadSelected',
+  showArchive: 'add.showInArchive',
+  downloadMore: 'add.downloadMore',
+  downloadAgain: 'add.downloadAgain',
+}
 
 /** SPEC 4.1: what the torrent is, where it goes, which files — then «Добавить» */
 export function AddTorrentDialog() {
@@ -31,8 +40,11 @@ export function AddTorrentDialog() {
   useCoverNativeLayer(preview != null && !quick)
   const locale = i18n.language
   const known = preview?.duplicate ?? null
+  // A known torrent keeps its folder and category; its files can always be chosen anew
   const locked = known != null && known.status !== 'filesDeleted'
   const request = form.request()
+  const action = preview ? addAction(preview, request) : 'add'
+  const have = known?.status === 'onDisk' && preview ? new Set(known.onlyFiles ?? preview.files.map((f) => f.index)) : undefined
 
   const send = async (preview: Preview, request: AddRequest) => {
     try {
@@ -40,6 +52,7 @@ export function AddTorrentDialog() {
       const category = categoryName(request.categoryId, categories, t)
       if (outcome.kind === 'added') toast.show({ title: t(request.sourceUrl ? 'toast.addedWithSource' : 'toast.added', { category }), tone: 'success' })
       if (outcome.kind === 'again') toast.show({ title: t('toast.downloadAgain', { name: preview.name }), tone: 'success' })
+      if (outcome.kind === 'more') toast.show({ title: t('toast.downloadMore', { name: preview.name }), tone: 'success' })
     } catch (e: unknown) {
       console.error('[torrents] add', e)
       toast.show({ title: String(e), tone: 'danger', duration: 6000 })
@@ -51,14 +64,6 @@ export function AddTorrentDialog() {
     if (quick && preview) void send(preview, defaultRequest(preview, trackerPage, startPaused))
     // Once per torrent: `send` and the settings are read as they are at that moment
   }, [quick, preview])
-
-  const confirmLabel = !known
-    ? t('add.confirm')
-    : known.status === 'inDownloads'
-      ? t('add.openInDownloads')
-      : known.status === 'onDisk'
-        ? t('add.showInArchive')
-        : t('add.downloadAgain')
 
   return (
     <Modal state={state}>
@@ -74,8 +79,8 @@ export function AddTorrentDialog() {
             <Button variant="secondary" onPress={state.close}>
               {tc('actions.cancel')}
             </Button>
-            <Button variant="primary" isDisabled={!locked && !request} onPress={() => void submit()}>
-              {confirmLabel}
+            <Button variant="primary" isDisabled={!request} onPress={() => void submit()}>
+              {t(CONFIRM[action])}
             </Button>
           </>
         }
@@ -110,9 +115,9 @@ export function AddTorrentDialog() {
             ) : null}
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5">
               <AddFormFields form={form} isDisabled={locked} />
-              <FileChecklist files={preview.files} selected={form.selected} onChange={form.setSelected} isDisabled={locked} />
+              <FileChecklist key={preview.infoHash} files={preview.files} selected={form.selected} onChange={form.setSelected} have={have} />
             </div>
-            {!locked && !form.selected.size ? <p className="text-sm text-danger">{t('add.noFiles')}</p> : null}
+            {!form.selected.size ? <p className="text-sm text-danger">{t('add.noFiles')}</p> : null}
           </div>
         ) : null}
       </Dialog>

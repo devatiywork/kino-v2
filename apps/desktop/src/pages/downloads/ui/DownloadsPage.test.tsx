@@ -29,6 +29,8 @@ describe('DownloadsPage', () => {
       downloadsView.set({ tab: 'downloads', category: 'all', selected: null })
       torrentsStore.set({
         categories,
+        // Loaded: a pasted magnet link does not reload the categories (the mock has none to give)
+        downloadsFolder: 'D:\\Загрузки',
         active: [activeTorrent(), activeTorrent({ id: 8, name: 'Ubuntu 26.04', categoryId: 3, state: 'seeding', progress: 1, ratio: 2.31 })],
         archive: [archiveEntry()],
         archiveCount: 3,

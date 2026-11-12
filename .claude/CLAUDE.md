@@ -99,7 +99,9 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          native page is laid over: useTrackerLayout sends its bounds, hides it when covered or left)
     features/          — open-video, library-folders, seek, volume, switch-tracks, playback-speed, fullscreen, mini-player, player-hotkeys,
                          toggle-autoplay, rebind-hotkey (HotkeyTable), clear-history, reset-settings,
-                         add-torrent (AddTorrentDialog, MagnetDialog, header buttons; duplicates → the archive record),
+                         add-torrent (AddTorrentDialog, MagnetDialog, header buttons; the files as a tree — FileTree,
+                         a folder's box takes all of it; duplicates → the archive record, whose files can be chosen
+                         again: «Докачать выбранное» / «Скачать выбранное» — addAction),
                          torrent-actions (pause, menu, delete with files; the menu also on a right click — useTorrentMenu;
                          AltLimitsButton — the alternative limits on / off),
                          archive-actions (download / seed again, delete record; right click — useArchiveMenu), manage-categories (CategoryBar with right-click edit, CategoryList for the settings),
