@@ -8,6 +8,7 @@ mod links;
 mod media_keys;
 mod player;
 mod power;
+mod presence;
 mod settings;
 mod shell;
 mod torrent;
@@ -443,6 +444,7 @@ pub fn run() {
             pc::player_set_video_visible,
             pc::player_enter_mini,
             pc::player_leave_mini,
+            presence::commands::presence_check,
             lc::library_continue_watching,
             lc::library_history,
             lc::library_series,

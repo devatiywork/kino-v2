@@ -37,7 +37,26 @@
     "volume": "Default volume",
     "volumeHint": "Every run of Kino starts with it",
     "hwdec": "Hardware decoding",
-    "hwdecHint": "Less CPU load for 4K and HEVC. Turn it off if the picture has artefacts"
+    "hwdecHint": "Less CPU load for 4K and HEVC. Turn it off if the picture has artefacts",
+    "away": "Pause when you step away",
+    "awayHint": "While a video plays, Kino looks through the webcam once a second: is anyone in front of the screen. Frames are never kept or sent anywhere",
+    "awayAfter": "Pause after",
+    "awayAfterHint": "This long with nobody in front of the screen. The video goes back to when you left",
+    "awaySeconds": "{{count}} s",
+    "awayResume": "Play on when you are back",
+    "awayResumeHint": "The video goes on by itself once the camera sees a face again",
+    "camera": "Camera",
+    "cameraHint": "Turns the camera on for a few seconds and tells whether it sees you",
+    "cameraCheck": "Check the camera",
+    "cameraChecking": "Checking…",
+    "cameraSeen": "“{{camera}}”: I see you",
+    "cameraNobody": "“{{camera}}”: no face — sit in front of the camera",
+    "cameraUnavailable": {
+      "noCamera": "No webcam found",
+      "denied": "Camera access is off: Windows Settings → Privacy & security → Camera → desktop apps",
+      "noDetector": "This Windows has no face detection",
+      "other": "The camera did not open — another program may hold it"
+    }
   },
   "video": {
     "title": "Video and sound",

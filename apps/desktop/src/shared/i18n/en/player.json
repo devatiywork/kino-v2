@@ -80,5 +80,15 @@
     "dropped": "dropped {{output}} · by the decoder {{decoder}} · late {{delayed}} · mistimed {{mistimed}}",
     "channels": "{{from}} ch → {{to}}",
     "passthrough": "to the receiver"
+  },
+  "away": {
+    "paused": "Paused: nobody in front of the screen",
+    "resumed": "Welcome back — playing on",
+    "unavailable": {
+      "noCamera": "Pause when you step away: no webcam found",
+      "denied": "Pause when you step away: camera access is off in Windows settings (Privacy & security → Camera → desktop apps)",
+      "noDetector": "Pause when you step away: this Windows has no face detection",
+      "other": "Pause when you step away: the camera did not open — another program may hold it"
+    }
   }
 }

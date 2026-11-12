@@ -103,6 +103,8 @@ async function launch(options: LaunchOptions, owned: string[]): Promise<Kino> {
       ...(options.adblockList ? { KINO_ADBLOCK_LIST: options.adblockList } : {}),
       // Its own WebView2 browser: never joins another Kino, the CDP port is ours
       WEBVIEW2_USER_DATA_FOLDER: join(dataDir, 'webview2'),
+      // «Пауза, когда вы отходите» reads this file, never the owner's webcam: «away» — nobody
+      KINO_TEST_PRESENCE: join(dataDir, 'presence.txt'),
     },
     stdio: 'ignore',
   })

@@ -31,6 +31,20 @@ export function useCoreNotices(): void {
     }
   }, [])
 
+  // SPEC 3.1 «Пауза, когда вы отходите»: the camera saw nobody, a face is back, no camera
+  useEffect(() => {
+    const unlisten = playerIpc.onNotice((notice) => {
+      if (notice.type === 'awayPaused' || notice.type === 'awayResumed') {
+        toast.show({ title: t(notice.type === 'awayPaused' ? 'away.paused' : 'away.resumed', { ns: 'player' }), duration: 4000 })
+      } else if (notice.type === 'cameraUnavailable') {
+        toast.show({ title: t(`away.unavailable.${notice.reason}`, { ns: 'player' }), tone: 'danger', duration: 8000 })
+      }
+    })
+    return () => {
+      unlisten.then((u) => u()).catch(report('away notices'))
+    }
+  }, [t, toast])
+
   // SPEC 3.3: «Дорожка "LostFilm" не найдена, выбрана: English»
   useEffect(() => {
     const unlisten = playerIpc.onNotice((notice) => {

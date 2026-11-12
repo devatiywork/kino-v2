@@ -2,7 +2,7 @@
 //! Uses the library (positions, history, track memory). Knows nothing about torrents.
 
 pub mod commands;
-mod events;
+pub(crate) mod events;
 pub mod mini;
 mod session;
 mod state;
@@ -98,6 +98,10 @@ pub struct Stopped {
 }
 
 impl Stopped {
+    pub fn is_set(&self) -> bool {
+        *self.done.lock().unwrap_or_else(|p| p.into_inner())
+    }
+
     fn set(&self) {
         *self.done.lock().unwrap_or_else(|p| p.into_inner()) = true;
         self.changed.notify_all();
@@ -195,6 +199,14 @@ impl Player {
             awake: awake.clone(),
             stopped: stopped.clone(),
         })?;
+        // «Пауза, когда вы отходите»: a client of its own, the same unnamed way
+        crate::presence::spawn(crate::presence::Context {
+            app: app.clone(),
+            client: mpv.create_client(None)?,
+            snapshot: snapshot.clone(),
+            settings: settings.clone(),
+            stopped: stopped.clone(),
+        });
         Ok(Self {
             mpv,
             logs,

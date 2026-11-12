@@ -1,6 +1,29 @@
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { episode, expect, FILM, media, test, wakeControls } from './kino'
 
 test.describe('плеер', () => {
+  test('пауза, когда перед экраном никого нет, и продолжение, когда вернулись', async ({ launch }) => {
+    const kino = await launch({ file: FILM })
+    const { page } = kino
+    const presence = (who: 'here' | 'away') => writeFileSync(join(kino.dataDir, 'presence.txt'), who)
+    presence('here')
+    await kino.invoke('settings_update', { patch: { awayPause: true, awayAfter: 10, awayResume: true } })
+    await expect.poll(async () => (await kino.snapshot()).position).toBeGreaterThan(4)
+
+    // Left at about this second: the pause comes 10 s later and goes back to it
+    const leftAt = (await kino.snapshot()).position
+    presence('away')
+    await expect.poll(async () => (await kino.snapshot()).paused, { timeout: 20_000 }).toBe(true)
+    await expect(page.getByText('Пауза: перед экраном никого нет')).toBeVisible()
+    const pausedAt = (await kino.snapshot()).position
+    expect(pausedAt).toBeLessThan(leftAt + 2)
+
+    presence('here')
+    await expect.poll(async () => (await kino.snapshot()).paused, { timeout: 5_000 }).toBe(false)
+    await expect(page.getByText('С возвращением — продолжаем')).toBeVisible()
+  })
+
   test('файл из командной строки открывается в плеере и играет', async ({ launch }) => {
     const kino = await launch({ file: episode('S01E01') })
     const { page } = kino

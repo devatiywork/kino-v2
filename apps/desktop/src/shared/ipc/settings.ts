@@ -50,6 +50,12 @@ export interface Settings {
   audioExclusive: boolean
   /** mpv's log in <data>\logs\mpv.log, written anew at every start */
   playbackLog: boolean
+  /** «Пауза, когда вы отходите»: the webcam looks for a face while a video plays */
+  awayPause: boolean
+  /** Seconds without a face before the pause: 10 | 20 | 30 | 60 */
+  awayAfter: number
+  /** «Продолжать, когда вернётесь» */
+  awayResume: boolean
   preferredAudio: PreferredAudio
   russianAudioSubtitles: RussianAudioSubtitles
   subtitleSize: SubtitleSize
@@ -143,6 +149,9 @@ export const DEFAULT_SETTINGS: Settings = {
   audioPassthrough: false,
   audioExclusive: false,
   playbackLog: false,
+  awayPause: false,
+  awayAfter: 20,
+  awayResume: true,
   preferredAudio: 'russian',
   russianAudioSubtitles: 'forced',
   subtitleSize: 'medium',

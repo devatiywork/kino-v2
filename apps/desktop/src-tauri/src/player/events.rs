@@ -45,6 +45,12 @@ const POSITION_INTERVAL: Duration = Duration::from_millis(100);
 pub enum Notice {
     /// «Дорожка "LostFilm" не найдена, выбрана: English»
     TrackNotFound { track: TrackKind, wanted: String, chosen: Option<String> },
+    /// «Пауза, когда вы отходите» (presence/): nobody in front of the screen
+    AwayPaused,
+    /// A face is back: the video goes on
+    AwayResumed,
+    /// The setting is on, the camera would not open
+    CameraUnavailable { reason: crate::presence::Unavailable },
 }
 
 pub fn lock(snapshot: &Mutex<PlayerSnapshot>) -> MutexGuard<'_, PlayerSnapshot> {

@@ -80,7 +80,8 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          accent, language follow the settings), styles
     pages/             — home (hero + history + unfinished + series; Welcome when empty), history, library (chips «Все» /
                          «Сериалы» / «Фильмы» / torrent categories on disk + folders), show (one series), player (+ useVideoLayer, useSubtitleLift, usePanelMargin, ResumeBanner),
-                         settings (side menu with scroll spy, sections: appearance, playback, video (HDR, frame sync, sound out, log), tracks, library, downloads,
+                         settings (side menu with scroll spy, sections: appearance, playback (+ AwaySettings: the webcam pause,
+                         «Проверить камеру»), video (HDR, frame sync, sound out, log), tracks, library, downloads,
                          hotkeys, system; downloads/ — groups by qBittorrent's: SpeedRows, SeedingRows, ConnectionRows,
                          fields bound to one setting (SwitchRow, NumberField, TextSetting with a check, FolderField),
                          checks — time, proxy, tracker lines), downloads (tabs «Загрузки» / «Архив» / «Трекеры», speeds,
@@ -157,6 +158,11 @@ apps/desktop/          — Tauri app (@kino/desktop)
                          played), state (snapshot, pure +
                          tested), tracks (track-list parsing), track_defaults (preferred audio, subtitles with a Russian dub —
                          pure), commands
+    src/presence/      — «Пауза, когда вы отходите» (SPEC 3.1): camera (the webcam through WinRT MediaCapture + a frame
+                         reader, Windows' own FaceDetector, shared read-only when it can), watch (when to pause, back to
+                         where the face was seen last, and when to resume — pure), a thread of its own looking once a
+                         second only while it is needed, with a client of the player's mpv; player://notice awayPaused /
+                         awayResumed / cameraUnavailable; presence_check («Проверить камеру»)
     src/shell.rs       — Explorer through the shell itself (ShellExecuteW, SHOpenFolderAndSelectItems): a folder, a file
                          selected — never explorer.exe's command line, whose parser loses quoted paths
     src/power.rs       — KeepAwake: a Windows power request — for a video (screen + system) or for downloads (system)
@@ -306,6 +312,9 @@ Each launch gets its own temp folder; the core reads these variables:
 - No media session (media keys) and no tray while `KINO_TEST_OFFLINE` is set: the tests' videos never take the user's keys.
   `KINO_TEST_TRAY` — the tray anyway, to check the way back from it (a hand check: the tray icon's window takes
   WM_USER 6002 + WM_LBUTTONUP as a click)
+- `KINO_TEST_PRESENCE` — «Пауза, когда вы отходите» reads this file instead of the webcam («away» — nobody in front,
+  anything else or no file — someone). The harness always sets it to `<data>\presence.txt`: the tests never turn on the
+  owner's camera
 - `KINO_ADBLOCK_LIST` — the ad blocker's rules from this file instead of the shipped list (the tests' own)
 - `KINO_UPDATES_URL` — where Kino asks for its latest release instead of GitHub (the tests' own server; the first check
   then runs after a second). Under `KINO_TEST_OFFLINE` without it Kino never asks GitHub

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { SPEEDS } from '../../../../entities/playback'
 import { updateSettings, useSettings } from '../../../../entities/settings'
 import { SettingRow, SettingsSection } from '../SettingsLayout'
+import { AwaySettings } from './AwaySettings'
 
 const SPEED_OPTIONS = SPEEDS.map((speed) => ({ value: String(speed), label: `${speed}×` }))
 
@@ -58,6 +59,7 @@ export function PlaybackSection() {
       <SettingRow label={t('playback.hwdec')} hint={t('playback.hwdecHint')}>
         <Switch aria-label={t('playback.hwdec')} isSelected={hardwareDecoding} onChange={(on) => void updateSettings({ hardwareDecoding: on })} />
       </SettingRow>
+      <AwaySettings />
     </SettingsSection>
   )
 }

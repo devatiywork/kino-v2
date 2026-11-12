@@ -32,7 +32,7 @@ test.describe('история и продолжение с места', () => {
     const kino = await launch({ file: FILM })
     const { page } = kino
     await expect.poll(async () => (await kino.snapshot()).duration).toBeGreaterThan(70)
-    const { duration } = await kino.snapshot()
+    const duration = (await kino.snapshot()).duration ?? 0
     await kino.invoke('player_seek', { seconds: duration - 3, mode: 'absolute' })
     await expect.poll(async () => (await kino.snapshot()).eof).toBe(true)
     await wakeControls(page)

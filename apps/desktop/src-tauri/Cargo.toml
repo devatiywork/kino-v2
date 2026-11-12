@@ -1,6 +1,6 @@
 [package]
 name = "kino-desktop"
-version = "0.32.0"
+version = "0.33.0"
 edition = "2021"
 publish = false
 description = "Kino — video player and torrent client (Tauri core)"
@@ -42,7 +42,14 @@ windows-core = "0.62"
 windows = { version = "0.61", features = [
   # Media keys: Windows' media session (System Media Transport Controls)
   "Foundation",
+  "Foundation_Collections",
   "Media",
+  # «Пауза, когда вы отходите»: the webcam's frames and Windows' own face detector (presence/camera.rs)
+  "Graphics_Imaging",
+  "Media_Capture",
+  "Media_Capture_Frames",
+  "Media_FaceAnalysis",
+  "Media_MediaProperties",
   "Win32_Foundation",
   # The E2E tests' windows cloaked (lib.rs hide_for_tests)
   "Win32_Graphics_Dwm",

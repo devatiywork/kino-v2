@@ -112,8 +112,20 @@ export interface AutoplayEvent {
   episode: number | null
 }
 
+/** Why the webcam is not there (src-tauri/src/presence/mod.rs Unavailable) */
+export type CameraUnavailable = 'noCamera' | 'denied' | 'noDetector' | 'other'
+
 /** Mirrors Notice in src-tauri/src/player/events.rs */
-export type PlayerNotice = { type: 'trackNotFound'; track: TrackKind; wanted: string; chosen: string | null }
+export type PlayerNotice =
+  | { type: 'trackNotFound'; track: TrackKind; wanted: string; chosen: string | null }
+  /** «Пауза, когда вы отходите»: nobody in front of the screen */
+  | { type: 'awayPaused' }
+  /** A face is back: the video goes on */
+  | { type: 'awayResumed' }
+  | { type: 'cameraUnavailable'; reason: CameraUnavailable }
+
+/** «Проверить камеру» (src-tauri/src/presence/commands.rs) */
+export type CameraCheck = { kind: 'seen'; camera: string; faces: number } | { kind: 'unavailable'; reason: CameraUnavailable }
 
 export const VOLUME_MAX = 130
 
@@ -160,6 +172,8 @@ export const playerIpc = {
     listen<PlayerNotice>('player://notice', (e) => handler(e.payload)),
   onAutoplay: (handler: (event: AutoplayEvent) => void): Promise<UnlistenFn> =>
     listen<AutoplayEvent>('player://autoplay', (e) => handler(e.payload)),
+  /** «Проверить камеру»: opens the webcam for a few seconds and looks for a face */
+  checkCamera: () => invoke<CameraCheck>('presence_check'),
   /** SPEC 6 «Медиаклавиши»: a key of Windows' media session (src-tauri/src/media_keys.rs) */
   onMediaKey: (handler: (key: MediaKey) => void): Promise<UnlistenFn> => listen<MediaKey>('media://key', (e) => handler(e.payload)),
 }

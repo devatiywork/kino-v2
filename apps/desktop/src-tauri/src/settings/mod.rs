@@ -186,6 +186,8 @@ impl SubtitlePosition {
 pub const SPEEDS: [f64; 6] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 /// «Считать просмотренной после»
 pub const WATCHED_PERCENTS: [u8; 3] = [85, 90, 95];
+/// «Пауза, когда вы отходите»: seconds without anyone in front of the camera
+pub const AWAY_AFTERS: [u32; 4] = [10, 20, 30, 60];
 /// More than the player has actions: a bound for a hand-edited database
 const HOTKEYS_MAX: usize = 32;
 /// 10 GB/s in KB/s: more is a typo
@@ -268,6 +270,12 @@ pub struct Settings {
     pub audio_exclusive: bool,
     /// mpv's log in <data>\logs\mpv.log, written anew at every start
     pub playback_log: bool,
+    /// «Пауза, когда вы отходите»: the webcam looks for a face while a video plays (presence/)
+    pub away_pause: bool,
+    /// Seconds without a face before the pause, one of AWAY_AFTERS
+    pub away_after: u32,
+    /// «Продолжать, когда вернётесь»: the video goes on by itself once a face is back
+    pub away_resume: bool,
     // Audio and subtitles
     pub preferred_audio: PreferredAudio,
     pub russian_audio_subtitles: RussianAudioSubtitles,
@@ -374,6 +382,10 @@ impl Default for Settings {
             audio_passthrough: false,
             audio_exclusive: false,
             playback_log: false,
+            // The camera never turns on unless asked for
+            away_pause: false,
+            away_after: 20,
+            away_resume: true,
             preferred_audio: PreferredAudio::Russian,
             russian_audio_subtitles: RussianAudioSubtitles::Forced,
             subtitle_size: SubtitleSize::Medium,
@@ -434,6 +446,8 @@ impl Settings {
         if !WATCHED_PERCENTS.contains(&self.watched_percent) {
             self.watched_percent = Settings::default().watched_percent;
         }
+        let away = self.away_after;
+        self.away_after = AWAY_AFTERS.into_iter().min_by_key(|seconds| seconds.abs_diff(away)).unwrap_or(20);
         self.hotkeys.retain(|action, code| is_key_name(action) && is_key_name(code));
         while self.hotkeys.len() > HOTKEYS_MAX {
             self.hotkeys.pop_last();
@@ -705,6 +719,16 @@ mod tests {
         assert_eq!((s.theme, s.language, s.watched_percent), (Theme::Dark, Language::Ru, 90));
         assert!(s.resume && s.autoplay && s.keep_history && s.keep_awake && s.hardware_decoding);
         assert_eq!(s.watched_ratio(), 0.9);
+        assert!(!s.away_pause, "the camera never turns on unless asked for");
+        assert_eq!((s.away_after, s.away_resume), (20, true));
+    }
+
+    #[test]
+    fn the_away_time_snaps_to_the_offered_ones() {
+        let next = merge(&Settings::default(), &patch(json!({ "awayPause": true, "awayAfter": 45 }))).unwrap();
+        assert!(next.away_pause);
+        assert_eq!(next.away_after, 30);
+        assert_eq!(merge(&Settings::default(), &patch(json!({ "awayAfter": 1 }))).unwrap().away_after, 10);
     }
 
     #[test]
