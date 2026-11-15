@@ -334,8 +334,7 @@ fn keep_a_port(settings: &SettingsStore) {
     if settings.read(|s| s.listen_port) != 0 {
         return;
     }
-    let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0) ^ std::process::id();
-    let port = pick_port(seed, |port| std::net::TcpListener::bind(("0.0.0.0", port)).is_ok());
+    let port = pick_port(seed(), |port| std::net::TcpListener::bind(("0.0.0.0", port)).is_ok());
     if port == 0 {
         return;
     }
@@ -344,6 +343,23 @@ fn keep_a_port(settings: &SettingsStore) {
     if let Err(e) = settings.update(&patch) {
         eprintln!("[torrents] keep the port {port}: {e}");
     }
+}
+
+/// Where a pick of a port starts: another one at every start
+fn seed() -> u32 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0) ^ std::process::id()
+}
+
+/// What the engine starts with: the settings, then the defaults, then without the DHT. A port
+/// taken by another program or reserved by Windows, or a dead proxy, must not keep Kino from starting
+fn engine_tries(network: Network) -> Vec<Network> {
+    let mut tries = vec![network];
+    for fallback in [Network::default(), Network { dht: false, ..Network::default() }] {
+        if !tries.contains(&fallback) {
+            tries.push(fallback);
+        }
+    }
+    tries
 }
 
 /// The first free port from a pseudo-random start in PORT_RANGE; 0 — none of 20 tries was free
@@ -382,15 +398,18 @@ impl Torrents {
             dht: s.dht,
             lsd: s.lsd,
         });
-        // A port taken by another program or a dead proxy must not keep Kino from starting
-        let engine = match Engine::start(engine_options(network.clone())).await {
-            Ok(engine) => engine,
-            Err(e) if network != Network::default() => {
-                eprintln!("[torrents] the engine with the connection settings: {e:#}; starting with the defaults");
-                Engine::start(engine_options(Network::default())).await?
+        let tries = engine_tries(network);
+        let count = tries.len();
+        let mut engine = Err(anyhow::anyhow!("no engine"));
+        // Not the settings themselves in the log: the proxy's address may hold a password
+        for (i, network) in tries.into_iter().enumerate() {
+            engine = Engine::start(engine_options(network)).await;
+            match &engine {
+                Ok(_) => break,
+                Err(e) => eprintln!("[torrents] the engine, try {} of {count}: {e:#}", i + 1),
             }
-            Err(e) => return Err(e),
-        };
+        }
+        let engine = engine?;
         let torrents = Arc::new(Self {
             store: TorrentStore::open(&options.db_path)?,
             engine,
@@ -963,6 +982,17 @@ mod tests {
         assert!(PORT_RANGE.contains(&port), "{port}");
         keep_a_port(&settings);
         assert_eq!(settings.read(|s| s.listen_port), port, "kept at the next start");
+    }
+
+    #[test]
+    fn the_engine_falls_back_to_the_defaults_then_to_no_dht() {
+        let no_dht = Network { dht: false, ..Network::default() };
+        let mine = Network { port: 30_000, proxy: "socks5://127.0.0.1:1".into(), ..Network::default() };
+        assert_eq!(engine_tries(mine.clone()), [mine, Network::default(), no_dht.clone()]);
+        assert_eq!(engine_tries(Network::default()), [Network::default(), no_dht.clone()]);
+        // DHT off in the settings: the defaults bring it back only as the second try
+        let off = Network { dht: false, port: 30_000, ..Network::default() };
+        assert_eq!(engine_tries(off.clone()), [off, Network::default(), no_dht]);
     }
 
     #[test]

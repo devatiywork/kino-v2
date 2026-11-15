@@ -158,22 +158,57 @@ pub struct Engine {
     session: Arc<Session>,
 }
 
+/// Windows' dynamic ports start here: Hyper-V, WSL and Docker reserve ranges of them at boot, a
+/// different set each time — a port that worked yesterday is refused today (WSAEACCES)
+const DYNAMIC_PORTS: u16 = 49_152;
+
+/// The port librqbit stored with the DHT's routing table
+fn stored_dht_port(dht_file: &Path) -> Option<u16> {
+    #[derive(serde::Deserialize)]
+    struct Stored {
+        addr: std::net::SocketAddr,
+    }
+    let file = std::fs::File::open(dht_file).ok()?;
+    serde_json::from_reader::<_, Stored>(std::io::BufReader::new(file)).ok().map(|s| s.addr.port())
+}
+
+/// The DHT's UDP port. librqbit takes a random one the first time — from the dynamic range — and
+/// keeps it in dht.json for good. Kino keeps the stored one only below that range and only while
+/// it is free; otherwise a new one from Kino's own range (the routing table stays).
+/// None — the stored port; Some(0) — a random one for this run, none of Kino's was free
+fn dht_port(dht_file: &Path, free: impl Fn(u16) -> bool, seed: u32) -> Option<u16> {
+    let stored = stored_dht_port(dht_file);
+    if stored.is_some_and(|port| port < DYNAMIC_PORTS && free(port)) {
+        return None;
+    }
+    let port = super::pick_port(seed, &free);
+    eprintln!("[torrents] the DHT's port: {} instead of {stored:?}", if port == 0 { "a random one".to_string() } else { port.to_string() });
+    Some(port)
+}
+
+/// Whether Windows gives this UDP port to Kino, on both stacks: the DHT listens on [::] with IPv4 too
+fn udp_free(port: u16) -> bool {
+    let v4 = std::net::UdpSocket::bind(("0.0.0.0", port)).is_ok();
+    v4 && std::net::UdpSocket::bind(("::", port)).is_ok()
+}
+
 impl Engine {
     pub async fn start(options: EngineOptions) -> anyhow::Result<Self> {
         std::fs::create_dir_all(&options.state_dir)?;
         let net = &options.network;
         let host = if options.offline { "127.0.0.1" } else { "[::]" };
         let listen_addr = format!("{host}:{}", if options.offline { 0 } else { net.port });
+        let dht_file = options.state_dir.join("dht.json");
+        // Not the listening port: uTP takes it over UDP before the DHT starts
+        let dht_port = if !options.offline && net.dht { dht_port(&dht_file, |port| port != net.port && udp_free(port), super::seed()) } else { None };
         let session = Session::new_with_opts(
             options.default_folder,
             SessionOptions {
                 fastresume: true,
                 persistence: Some(SessionPersistenceConfig::Json { folder: Some(options.state_dir.join("session")) }),
                 dht: (!options.offline && net.dht).then(|| DhtSessionConfig {
-                    persistence: Some(DhtPersistenceConfig {
-                        config_filename: Some(options.state_dir.join("dht.json")),
-                        ..Default::default()
-                    }),
+                    port: dht_port,
+                    persistence: Some(DhtPersistenceConfig { config_filename: Some(dht_file), ..Default::default() }),
                     ..Default::default()
                 }),
                 disable_trackers: options.offline,
@@ -337,6 +372,39 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("kino-engine-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir
+    }
+
+    #[test]
+    fn the_dht_keeps_its_port_only_below_the_dynamic_range_and_while_it_is_free() {
+        let dir = temp("dht-port");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("dht.json");
+        let kinos = |port: Option<u16>| port.is_some_and(|p| super::super::PORT_RANGE.contains(&p));
+        // The first start: a port of Kino's range, not the engine's random one
+        assert!(kinos(dht_port(&file, |_| true, 1)));
+        // librqbit's random port of the dynamic range (the owner's 58672, reserved by Windows after a reboot)
+        std::fs::write(&file, r#"{"addr":"[::]:58672","table":{"id":"00"}}"#).unwrap();
+        let moved = dht_port(&file, |_| true, 1);
+        assert!(kinos(moved));
+        let moved = moved.unwrap();
+        // Kino's own, still free: kept with the table
+        std::fs::write(&file, format!(r#"{{"addr":"[::]:{moved}","table":{{}}}}"#)).unwrap();
+        assert_eq!(dht_port(&file, |_| true, 1), None);
+        // ... refused now: another one
+        let other = dht_port(&file, |p| p != moved, 1);
+        assert!(kinos(other) && other != Some(moved));
+        // Nothing of Kino's range is free: a random one for this run
+        assert_eq!(dht_port(&file, |_| false, 1), Some(0));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_udp_port_held_by_another_socket_is_not_free() {
+        let held = std::net::UdpSocket::bind(("0.0.0.0", 0)).unwrap();
+        let port = held.local_addr().unwrap().port();
+        assert!(!udp_free(port));
+        drop(held);
+        assert!(udp_free(port));
     }
 
     async fn offline_engine(dir: &Path) -> Engine {
